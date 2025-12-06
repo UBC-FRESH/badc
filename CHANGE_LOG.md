@@ -1,3 +1,12 @@
+# 2025-12-06 — Manifest hashing improvement
+- `badc chunk manifest --hash-chunks` now hashes the source file per chunk row (still placeholder
+  until actual chunk files exist).
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs docs/_build/html -W`
+
 # 2025-12-06 — GPU CLI knobs planned
 - Noted in `notes/pipeline-plan.md` that `badc infer run` should expose `--max-gpus` and worker
   pool overrides, defaulting to auto-detected GPU counts.
