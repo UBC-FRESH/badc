@@ -11,7 +11,7 @@ execution notes live alongside task-specific files under `notes/`.
 - [x] Document DataLad repo strategy (bogus vs. production datasets + CLI expectations) in
       `notes/datalad-plan.md`.
 - [x] Establish minimal Python package layout (`pyproject.toml`, `src/badc`, Typer CLI entry).
-- [ ] Stand up CI stubs (lint/test placeholders) and pre-commit config.
+- [x] Stand up pre-commit config and CI workflow (ruff/pytest/Sphinx).
 - [ ] Mirror FHOPS doc stack: Sphinx skeleton + GitHub Pages deployment workflow.
 
 ## Phase 1 — HawkEars Integration & Local Workflow
@@ -61,15 +61,13 @@ execution notes live alongside task-specific files under `notes/`.
 - [ ] Prep outreach materials (README story, example notebook, thesis-aligned figures).
 
 ## Detailed Next Steps
-1. **CI + automation scaffold** — add `.pre-commit-config.yaml` plus GitHub Actions (or
-   alternative) pipelines that run ruff, pytest, and Sphinx builds on every push/PR.
-2. **HawkEars submodule onboarding** — add the fork as a submodule, document how to sync it, and
+1. **HawkEars submodule onboarding** — add the fork as a submodule, document how to sync it, and
    draft the wrapper API that normalises configs/logging.
-3. **Chunk-size probe utility** — script the automated GPU-memory probing routine, log results for
+2. **Chunk-size probe utility** — script the automated GPU-memory probing routine, log results for
    the 1 min / 7 min / 60 min samples, and store telemetry in `notes/chunking.md`.
-4. **Data pipeline sketch** — outline the chunking → inference → aggregation temp-dir structure and
+3. **Data pipeline sketch** — outline the chunking → inference → aggregation temp-dir structure and
    define the canonical events schema before coding.
-5. **Data management plan** — flesh out `notes/datalad-plan.md`, scaffold the bogus dataset, and
+4. **Data management plan** — flesh out `notes/datalad-plan.md`, scaffold the bogus dataset, and
    draft the Chinook special-remote workflow ahead of the 60 TB ingest.
 
 ## Backlog & Ideas

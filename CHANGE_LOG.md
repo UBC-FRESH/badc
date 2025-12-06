@@ -1,3 +1,14 @@
+# 2025-12-06 — Pre-commit + CI automation
+- Added `.pre-commit-config.yaml` with Ruff hooks and documented the setup in `README.md` so local
+  workflows stay aligned with the agent contract.
+- Introduced `.github/workflows/ci.yml` to run Ruff format/lint, `pytest`, and the Sphinx build on
+  every push/PR; marked the roadmap task complete.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs docs/_build/html -W`
+
 # 2025-12-06 — DataLad installation guidance
 - Expanded `notes/datalad-plan.md` with git-annex + DataLad install instructions (pip extras,
   NeuroDebian/Homebrew, and the `datalad-installer` shortcut) so future setup scripts have a

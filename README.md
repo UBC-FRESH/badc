@@ -11,7 +11,10 @@ PhD analyses.
    ```bash
    pip install -e .[dev]
    ```
-3. Run the standard command cadence (per `AGENTS.md`): `ruff format`, `ruff check`, `pytest`, and
-   eventually `sphinx-build` once docs grow.
+3. Run `pre-commit install` so the Ruff hooks run automatically before each commit.
+4. Run the standard command cadence (per `AGENTS.md`): `ruff format`, `ruff check`, `pytest`, and
+   `sphinx-build` once docs grow.
+
+GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push/PR.
 
 The CLI entry point is `badc`. Use `badc --help` to inspect the available commands.
