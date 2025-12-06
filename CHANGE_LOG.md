@@ -27,6 +27,13 @@
   forthcoming bogus DataLad repository.
 - Commands executed: `mkdir -p data/datalad/bogus && touch data/datalad/bogus/README.md`
 
+# 2025-12-06 — Data connect/disconnect stubs
+- Added CLI stubs for `badc data connect/disconnect` (points to `data/datalad/<name>`), plus README/docs notes ahead of wiring the bogus DataLad repo.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+
 # 2025-12-06 — HawkEars runner subprocess wiring
 - `badc infer run` now shells out to the HawkEars CLI (when `--runner-cmd` is provided), sets
   `CUDA_VISIBLE_DEVICES`, captures stdout/stderr, and logs telemetry per attempt; stub mode remains

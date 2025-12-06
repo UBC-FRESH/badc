@@ -28,4 +28,7 @@ also available::
     Detected GPUs:
      - #0: NVIDIA Quadro RTX 4000 (8129 MiB)
 
+    $ badc data connect bogus --path data/datalad
+    TODO: implement DataLad clone/register logic.
+
 The commands run locally without GPU dependencies so we can test the scaffolding in CI.

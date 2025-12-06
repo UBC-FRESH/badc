@@ -40,23 +40,17 @@ def version() -> None:
 
 @data_app.command("connect")
 def data_connect(
-    name: Annotated[
-        str,
-        typer.Argument(help="Logical dataset name (e.g., 'bogus', 'production')."),
-    ],
+    name: Annotated[str, typer.Argument(help="Dataset name, e.g., 'bogus'.")],
     path: Annotated[
-        Path | None,
-        typer.Option("--path", help="Local path where the dataset should be cloned or registered."),
-    ] = None,
+        Path,
+        typer.Option("--path", help="Target path for the dataset.", dir_okay=True, file_okay=False),
+    ] = Path("data/datalad"),
 ) -> None:
     """Stub for future DataLad dataset attach workflow."""
 
-    target_path = path or (Path.cwd() / DEFAULT_DATALAD_PATH)
-    console.print(
-        "[yellow]TODO:[/] implement DataLad clone/register logic.",
-        style="bold",
-    )
-    console.print(f"Requested dataset: [cyan]{name}[/] @ {target_path}")
+    target_path = path / name
+    console.print("[yellow]TODO:[/] implement DataLad clone/register logic.", style="bold")
+    console.print(f"Dataset: [cyan]{name}[/] -> {target_path}")
 
 
 @data_app.command("disconnect")
