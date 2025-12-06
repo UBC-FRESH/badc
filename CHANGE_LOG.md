@@ -1,3 +1,10 @@
+# 2025-12-06 — Chunk manifest sample
+- Added a sample chunk manifest CSV (`data/chunk_manifest_sample.csv`) and noted the future
+  `badc chunk manifest` command in `notes/chunking.md` to clarify the metadata contract.
+- Commands executed:
+  - `cat > data/chunk_manifest_sample.csv`
+  - `apply_patch notes/chunking.md`
+
 # 2025-12-06 — Aggregation/reporting plan details
 - Enriched `notes/pipeline-plan.md` with DuckDB table sketches, QC/report artifact expectations,
   and CLI implications for `badc aggregate/report`.

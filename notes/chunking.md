@@ -27,6 +27,7 @@ then design automation that splits ~60 TB of recordings accordingly.
 3. CLI commands integrating the probe:
    - `badc chunk probe --file data/audio/foo.wav --max-duration 900 --gpu 0`
    - `badc chunk split --file ... --chunk-duration <sec>`
+   - `badc chunk manifest` (future) to emit a manifest CSV ingestible by `badc infer run`.
 4. Documentation capturing the empirically determined safe durations per environment.
 
 ## Implementation notes
