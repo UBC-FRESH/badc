@@ -5,6 +5,11 @@
   - `cat > notes/inference-plan.md`
   - `apply_patch notes/roadmap.md`
 
+# 2025-12-06 — Inference telemetry plan
+- Expanded `notes/inference-plan.md` with telemetry logging details (JSONL storage, command
+  metadata, retry info).
+- Commands executed: `apply_patch notes/inference-plan.md`
+
 # 2025-12-06 — Inference scheduler scaffolding
 - Added `src/badc/infer_scheduler.py` + CLI hooks so `badc infer run --manifest ...` loads chunk jobs
   and reports detected GPU workers; updated tests to reflect manifest-based invocation.

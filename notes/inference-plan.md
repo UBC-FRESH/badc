@@ -18,7 +18,8 @@
    - Return status + path to raw output.
 4. **Telemetry**:
    - Log start/end timestamps, GPU index/name, VRAM usage, runtime, exit code.
-   - Persist to `data/telemetry/infer/<manifest_id>.jsonl`.
+   - Persist to `data/telemetry/infer/<manifest_id>.jsonl` and summarise per worker.
+   - Record HawkEars command, chunk id, retry counter, and failure reason for post-mortems.
 5. **Output storage**:
    - Store raw HawkEars CSV/JSON outputs in `artifacts/infer/<recording>/chunk_id.*`.
    - Convert to canonical detection schema (Parquet) for aggregation.
