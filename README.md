@@ -39,7 +39,8 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
 - `badc chunk run` — splits audio into chunk WAVs and produces a manifest for inference.
 - `badc infer run --manifest manifest.csv` — loads chunk jobs, detects GPUs, and runs the HawkEars
   runner (pass `--use-hawkears` to invoke the embedded `vendor/HawkEars/analyze.py`, or `--runner-cmd`
-  to supply a custom command; stub mode remains the default for local tests).
+  to supply a custom command; stub mode remains the default for local tests). Use `--cpu-workers N`
+  to process chunks concurrently when no GPUs are available.
 - `badc infer aggregate artifacts/infer` — reads detection JSON files and writes a summary CSV.
 - `badc telemetry --log data/telemetry/infer/log.jsonl` — tail recent telemetry entries.
 - `badc gpus` — lists detected GPUs via `nvidia-smi` so we can size the HawkEars worker pool.

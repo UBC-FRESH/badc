@@ -17,13 +17,14 @@
 # 2025-12-06 — HawkEars runner integration
 - Added `--use-hawkears` flag to `badc infer run`, implemented the HawkEars subprocess call
   (per-chunk `vendor/HawkEars/analyze.py` invocation) with telemetry logging, parsing of
-  `HawkEars_labels.csv` into the JSON payload consumed by `badc infer aggregate`, and support for
-  pass-through arguments via `--hawkears-arg`. Stub mode remains the default for CI/tests. Added unit
-  tests for the CSV parser and documentation on how to use the new flag.
+  `HawkEars_labels.csv` into the JSON payload consumed by `badc infer aggregate`, and added a
+  thread-per-worker scheduler so each GPU (or `--cpu-workers` fallback) processes jobs concurrently.
+  Stub mode remains the default for CI/tests. Added unit tests for the CSV parser plus CLI coverage
+  for the new scheduler knobs, and documented how to pass through HawkEars args.
 - Commands executed:
   - `apply_patch src/badc/hawkears_runner.py src/badc/cli/main.py README.md docs/usage.rst`
   - `apply_patch notes/inference-plan.md notes/roadmap.md`
-  - `apply_patch tests/test_hawkears_runner.py`
+  - `apply_patch tests/test_hawkears_runner.py tests/test_cli.py`
   - `ruff format src tests`
   - `ruff check src tests`
   - `pytest`

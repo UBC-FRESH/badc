@@ -12,6 +12,8 @@
    - Detect GPUs via `badc.gpu.detect_gpus()`.
    - Allow CLI overrides (`--max-gpus`, `--workers`).
    - For each GPU, run a worker process that pops chunk jobs and invokes HawkEars.
+     *(Implemented via thread-per-worker; `--cpu-workers` provides concurrency when GPUs are absent.
+     Future work: true async queue feeding HPC jobs).*
 3. **HawkEars runner**:
    - Shell out to `vendor/HawkEars` CLI (initially) with arguments for input WAV, config, and
      optional GPU index (via env var or CLI flag).

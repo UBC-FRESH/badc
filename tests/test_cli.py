@@ -78,3 +78,31 @@ def test_data_connect_and_disconnect(tmp_path, monkeypatch) -> None:
     assert not target_dir.exists()
     new_config = tomllib.loads(config_path.read_text(encoding="utf-8"))
     assert new_config["datasets"]["bogus"]["status"] == "disconnected"
+
+
+def test_infer_run_stub_cpu_workers(tmp_path) -> None:
+    chunk_path = tmp_path / "chunk.wav"
+    chunk_path.write_text("stub audio", encoding="utf-8")
+    manifest = tmp_path / "manifest.csv"
+    manifest.write_text(
+        "recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes\n"
+        f"rec1,chunk_a,{chunk_path},0,1000,0,hash,\n"
+        f"rec1,chunk_b,{chunk_path},0,1000,0,hash,\n"
+        f"rec1,chunk_c,{chunk_path},0,1000,0,hash,\n",
+        encoding="utf-8",
+    )
+    result = runner.invoke(
+        app,
+        [
+            "infer",
+            "run",
+            str(manifest),
+            "--cpu-workers",
+            "2",
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    out_dir = Path("artifacts/infer/rec1")
+    assert (out_dir / "chunk_a.json").exists()
+    assert (out_dir / "chunk_b.json").exists()
+    assert (out_dir / "chunk_c.json").exists()

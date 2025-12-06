@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import queue
 import subprocess
+import threading
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Sequence
 
 import typer
 from rich.console import Console
@@ -14,7 +16,8 @@ from badc import data as data_utils
 from badc.audio import get_wav_duration
 from badc.chunk_writer import ChunkMetadata, iter_chunk_metadata
 from badc.gpu import detect_gpus
-from badc.infer_scheduler import GPUWorker, load_jobs, plan_workers
+from badc.hawkears_runner import run_job
+from badc.infer_scheduler import GPUWorker, InferenceJob, load_jobs, plan_workers
 from badc.telemetry import load_telemetry
 
 console = Console()
@@ -350,6 +353,13 @@ def infer_run(
             help="Extra argument to pass to HawkEars analyze.py (repeatable).",
         ),
     ] = None,
+    cpu_workers: Annotated[
+        int,
+        typer.Option(
+            "--cpu-workers",
+            help="Number of concurrent workers when running without GPUs.",
+        ),
+    ] = 1,
 ) -> None:
     """Run HawkEars inference for each chunk listed in the manifest."""
 
@@ -361,32 +371,81 @@ def infer_run(
     jobs = load_jobs(manifest)
     extra_args = hawkears_arg or []
     workers = plan_workers(max_gpus=max_gpus)
-    from badc.hawkears_runner import run_job
-
     if not jobs:
         console.print("No jobs found in manifest.", style="yellow")
         return
-    worker_pool: list[GPUWorker | None]
     if not workers:
         console.print("No GPUs detected; running without GPU affinity.", style="yellow")
-        worker_pool = [None]
+        worker_pool: list[GPUWorker | None] = [None] * max(cpu_workers, 1)
     else:
         worker_pool = workers
+    _run_scheduler(
+        jobs=jobs,
+        worker_pool=worker_pool,
+        output_dir=output_dir,
+        runner_cmd=runner_cmd,
+        max_retries=max_retries,
+        use_hawkears=use_hawkears,
+        hawkears_args=extra_args,
+    )
+    console.print(f"Processed {len(jobs)} jobs; outputs stored in {output_dir}")
 
-    processed = 0
-    for idx, job in enumerate(jobs):
-        worker = worker_pool[idx % len(worker_pool)]
-        run_job(
-            job=job,
-            worker=worker,  # type: ignore[arg-type]
-            output_dir=output_dir,
-            runner_cmd=runner_cmd,
-            max_retries=max_retries,
-            use_hawkears=use_hawkears,
-            hawkears_args=extra_args,
-        )
-        processed += 1
-    console.print(f"Processed {processed} jobs; outputs stored in {output_dir}")
+
+def _run_scheduler(
+    jobs: Sequence[InferenceJob],
+    worker_pool: list[GPUWorker | None],
+    output_dir: Path,
+    runner_cmd: str | None,
+    max_retries: int,
+    use_hawkears: bool,
+    hawkears_args: Sequence[str],
+) -> None:
+    if not worker_pool:
+        worker_pool = [None]
+    job_queue: queue.Queue = queue.Queue()
+    sentinel = object()
+    for job in jobs:
+        job_queue.put(job)
+    for _ in worker_pool:
+        job_queue.put(sentinel)
+
+    stop_event = threading.Event()
+    errors: list[Exception] = []
+    runner_args = list(hawkears_args)
+
+    def worker_loop(worker: GPUWorker | None) -> None:
+        while True:
+            job = job_queue.get()
+            try:
+                if job is sentinel:
+                    return
+                if stop_event.is_set():
+                    continue
+                run_job(
+                    job=job,
+                    worker=worker,  # type: ignore[arg-type]
+                    output_dir=output_dir,
+                    runner_cmd=runner_cmd,
+                    max_retries=max_retries,
+                    use_hawkears=use_hawkears,
+                    hawkears_args=runner_args,
+                )
+            except Exception as exc:  # pragma: no cover - propagated to main thread
+                errors.append(exc)
+                stop_event.set()
+            finally:
+                job_queue.task_done()
+
+    threads = [
+        threading.Thread(target=worker_loop, args=(worker,), daemon=True) for worker in worker_pool
+    ]
+    for thread in threads:
+        thread.start()
+    job_queue.join()
+    for thread in threads:
+        thread.join()
+    if errors:
+        raise errors[0]
 
 
 @infer_app.command("aggregate")

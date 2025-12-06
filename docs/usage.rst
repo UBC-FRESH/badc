@@ -40,6 +40,9 @@ scaffolding::
     $ badc infer run chunk_manifest.csv --use-hawkears --hawkears-arg --fast
     Processed 1 jobs; outputs stored in artifacts/infer
 
+    $ badc infer run chunk_manifest.csv --cpu-workers 4
+    Processed 3 jobs; outputs stored in artifacts/infer
+
     $ badc gpus
     Detected GPUs:
      - #0: NVIDIA Quadro RTX 4000 (8129 MiB)
