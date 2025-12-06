@@ -1,3 +1,12 @@
+# 2025-12-06 — GPU monitoring plan note
+- Added `notes/gpu-monitoring.md` outlining tooling (nvidia-smi, NVML, Nsight) and documenting the
+  2-GPU dev vs. 4-GPU Sockeye environments so we can verify HawkEars utilizes available CUDA
+  capacity.
+- Updated `notes/roadmap.md` Detailed Next Steps with a dedicated GPU telemetry task.
+- Commands executed:
+  - `cat > notes/gpu-monitoring.md`
+  - `apply_patch notes/roadmap.md`
+
 # 2025-12-06 — Pre-commit + CI automation
 - Added `.pre-commit-config.yaml` with Ruff hooks and documented the setup in `README.md` so local
   workflows stay aligned with the agent contract.

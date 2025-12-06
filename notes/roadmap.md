@@ -24,6 +24,8 @@ execution notes live alongside task-specific files under `notes/`.
 - [ ] Build local temp-dir workflow: chunk staging, HawkEars inference, raw-output collection,
       JSON/CSV/Parquet parsing into a canonical events table.
 - [ ] Provide smoke tests using the short audio sample plus CLI how-to docs.
+- [ ] Implement GPU utilization monitoring/profiling (see `notes/gpu-monitoring.md`) so we can
+      verify HawkEars saturates available CUDA cores on 2-GPU dev boxes and 4-GPU Sockeye nodes.
 
 ## Phase 2 — Data Automation & Analysis Layer
 - [ ] Implement chunker orchestrator that walks large datasets, schedules HawkEars jobs, and tracks
@@ -69,6 +71,9 @@ execution notes live alongside task-specific files under `notes/`.
    define the canonical events schema before coding.
 4. **Data management plan** — flesh out `notes/datalad-plan.md`, scaffold the bogus dataset, and
    draft the Chinook special-remote workflow ahead of the 60 TB ingest.
+5. **GPU monitoring plan** — implement the telemetry helper from `notes/gpu-monitoring.md` so
+   chunking/inference runs capture CUDA utilization across both the 2-GPU dev server and 4-GPU
+   Sockeye nodes.
 
 ## Backlog & Ideas
 - GPU-aware scheduling heuristics that prioritise short chunks when VRAM is scarce.
