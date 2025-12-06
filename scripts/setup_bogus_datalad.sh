@@ -9,10 +9,16 @@ if [[ ! -f "$CONFIG_PATH" ]]; then
 fi
 source "$CONFIG_PATH"
 
-if [[ -z "${GITHUB_REPO_URL:-}" ]]; then
-  echo "GITHUB_REPO_URL is not set in $CONFIG_PATH" >&2
+if [[ -z "${GITHUB_ORG:-}" || -z "${GITHUB_REPO_NAME:-}" ]]; then
+  echo "GITHUB_ORG and GITHUB_REPO_NAME must be set in $CONFIG_PATH" >&2
   exit 1
 fi
+if [[ -z "${DATALAD_GITHUB_TOKEN:-}" ]]; then
+  echo "DATALAD_GITHUB_TOKEN must be set in $CONFIG_PATH" >&2
+  exit 1
+fi
+
+export GITHUBTOKEN="$DATALAD_GITHUB_TOKEN"
 
 DATASET_DIR="$REPO_DIR/tmp/badc-bogus-data"
 rm -rf "$DATASET_DIR"
@@ -23,13 +29,6 @@ datalad create --force
 mkdir -p audio
 cp "$REPO_DIR/data/audio"/*.wav audio/ 2>/dev/null || true
 datalad save -m "Add sample audio"
-
-if ! git ls-remote "$GITHUB_REPO_URL" >/dev/null 2>&1; then
-  echo "Remote $GITHUB_REPO_URL not reachable. Create the GitHub repo and rerun." >&2
-  exit 1
-fi
-git remote remove origin >/dev/null 2>&1 || true
-git remote add origin "$GITHUB_REPO_URL"
 
 cat <<CFG > .gitmodules
 [submodule "vendor/HawkEars"]
@@ -49,4 +48,12 @@ git annex initremote arbutus-s3 \
   requeststyle=path \
   autoenable=true
 
-echo "Dataset prepared at $DATASET_DIR (manual push required)."
+datalad create-sibling-github \
+  --github-organization "$GITHUB_ORG" \
+  --name origin \
+  --publish-depends arbutus-s3 \
+  "$GITHUB_REPO_NAME"
+
+git config remote.arbutus-s3.annex-multipartthreshold 50M
+
+echo "Dataset prepared at $DATASET_DIR and GitHub repo created (push already executed by DataLad)."
