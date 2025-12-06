@@ -1,3 +1,10 @@
+# 2025-12-06 — Chunking note audio details
+- Updated `notes/chunking.md` to document the 60 min (`GNWT-290_20230331_235938.wav`) and 7 min
+  (`XXXX-000_20251001_093000.wav`) test clips, highlight the HawkEars reference paper in
+  `reference/`, and capture the plan to move these samples into a mini DataLad dataset.
+- Commands executed:
+  - `apply_patch notes/chunking.md`
+
 # 2025-12-06 — Chunking probe planning note
 - Added `notes/chunking.md` detailing the chunk-size probing workflow (binary search, telemetry
   capture, CLI surface) and documenting the GPU inventories we must account for.

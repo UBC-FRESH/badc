@@ -5,6 +5,10 @@ then design automation that splits ~60 TB of recordings accordingly.
 
 ## Inputs
 - Sample WAVs under `data/audio/` (1 min, 7 min, 60 min placeholders; more to follow).
+  - `data/audio/GNWT-290_20230331_235938.wav`: ~60-minute recording (likely no grouse activity;
+    useful for “no hit” validation runs).
+  - `data/audio/XXXX-000_20251001_093000.wav`: ~7-minute clip with suspected ruffed grouse
+    drumming (need to verify HawkEars actually detects these calls).
 - HawkEars fork (`vendor/HawkEars`).
 - GPU inventory:
   - Dev server: 2 × NVIDIA Quadro RTX 4000 (8 GB VRAM each).
@@ -35,6 +39,10 @@ then design automation that splits ~60 TB of recordings accordingly.
   4. Record results (duration, outcome, GPU stats) in JSONL for later analysis.
 - Consider binary search to converge quickly on the maximum safe chunk length.
 - Allow per-GPU overrides; chunking may differ between dev server and Sockeye due to hardware.
+- Reference: peer-reviewed HawkEars paper stored under `reference/` for grounding detection
+  assumptions.
+- Consider moving sample audio files into a tiny DataLad dataset (submodule) so the `badc data
+  connect` workflow can fetch them cleanly before we scale to 60 TB.
 
 ## Open questions
 - Does HawkEars expose a Python API we can call directly, or do we shell out to its CLI?
