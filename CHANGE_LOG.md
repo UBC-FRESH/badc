@@ -1,3 +1,12 @@
+# 2025-12-06 — Notebook gallery scaffold
+- Documented the planned chunk probe / stub infer / aggregate analysis notebooks (repo layout, execution guidelines) and added starter `.ipynb` files under `notebooks/` so contributors can iterate inside a consistent structure.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `pre-commit run --all-files`
+
 # 2025-12-06 — HPC docs baseline
 - Filled in `docs/hpc/sockeye.rst`, `docs/hpc/chinook.rst`, and `docs/hpc/apptainer.rst` with the agreed UBC ARC workflows (resource requests, DataLad push/pull patterns, container build instructions).
 - Added the `docs/howto/infer-hpc.rst` cookbook so people can submit HawkEars runs on Sockeye without spelunking notes.
