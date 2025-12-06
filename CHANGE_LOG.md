@@ -1,3 +1,11 @@
+# 2025-12-06 — Chunk run CLI test
+- Added regression test for `badc chunk run` ensuring chunk files + manifest are created.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs docs/_build/html -W`
+
 # 2025-12-06 — Chunk run CLI scaffold
 - Added `badc chunk run` command (dry-run + chunk writing), chunk writer overlap handling, and docs.
 - Commands executed:
