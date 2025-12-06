@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
 
-from badc.audio import compute_sha256
+from badc.chunk_writer import ChunkMetadata, iter_chunk_metadata
 
 
 @dataclass(frozen=True)
@@ -97,22 +97,34 @@ def write_manifest(
 ) -> Path:
     """Write a chunk manifest CSV (placeholder hashing)."""
 
-    ranges = plan_chunk_ranges(duration_s, chunk_duration_s)
     lines = ["recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes"]
     recording_id = audio_path.stem
-    for start, end in ranges:
-        chunk_id = f"{recording_id}_{int(start * 1000)}_{int(end * 1000)}"
-        sha256 = compute_sha256(audio_path) if compute_hashes else "TODO_HASH"
+    metadata_iter: Iterable[ChunkMetadata]
+    if compute_hashes:
+        metadata_iter = iter_chunk_metadata(audio_path, chunk_duration_s)
+    else:
+        metadata_iter = [
+            ChunkMetadata(
+                chunk_id=f"{recording_id}_{int(start * 1000)}_{int(end * 1000)}",
+                path=audio_path,
+                start_ms=int(start * 1000),
+                end_ms=int(end * 1000),
+                overlap_ms=0,
+                sha256="TODO_HASH",
+            )
+            for start, end in plan_chunk_ranges(duration_s, chunk_duration_s)
+        ]
+    for meta in metadata_iter:
         lines.append(
             ",".join(
                 [
                     recording_id,
-                    chunk_id,
-                    str(audio_path),
-                    str(int(start * 1000)),
-                    str(int(end * 1000)),
-                    "0",
-                    sha256,
+                    meta.chunk_id,
+                    str(meta.path),
+                    str(meta.start_ms),
+                    str(meta.end_ms),
+                    str(meta.overlap_ms),
+                    meta.sha256,
                     "",
                 ]
             )
