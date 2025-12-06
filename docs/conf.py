@@ -13,7 +13,7 @@ sys.path.insert(0, str(SRC_PATH))
 from badc import __version__  # noqa: E402  (import after sys.path mutation)
 
 project = "Bird Acoustic Data Cruncher"
-author = "UBC Freshwater Research Lab"
+author = "UBC Forest Resources and Ecosystem Services Hub (FRESH) Lab"
 copyright = f"{_dt.datetime.now().year}, {author}"
 release = __version__
 
