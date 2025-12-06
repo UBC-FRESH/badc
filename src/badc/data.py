@@ -20,8 +20,13 @@ class DatasetSpec:
     """Definition for a known dataset target."""
 
     name: str
+    """Short name used on the CLI (e.g., ``bogus``)."""
+
     url: str
+    """Clone URL for the dataset."""
+
     description: str = ""
+    """Free-form description shown in docs/tests."""
 
 
 DEFAULT_DATASETS: dict[str, DatasetSpec] = {
@@ -34,6 +39,15 @@ DEFAULT_DATASETS: dict[str, DatasetSpec] = {
 
 
 def get_data_config_path() -> Path:
+    """Return the path to the dataset registry TOML file.
+
+    Returns
+    -------
+    Path
+        ``~/.config/badc/data.toml`` by default or the location pointed to by
+        ``BADC_DATA_CONFIG``.
+    """
+
     env_path = os.environ.get(BADC_DATA_CONFIG)
     if env_path:
         return Path(env_path).expanduser()
@@ -41,6 +55,19 @@ def get_data_config_path() -> Path:
 
 
 def load_data_config(config_path: Path | None = None) -> dict[str, Any]:
+    """Load the dataset registry (if present).
+
+    Parameters
+    ----------
+    config_path
+        Optional custom path. When ``None``, :func:`get_data_config_path` is used.
+
+    Returns
+    -------
+    dict
+        Parsed TOML dictionary with at least a ``datasets`` key.
+    """
+
     path = config_path or get_data_config_path()
     if not path.exists():
         return {"datasets": {}}
@@ -50,6 +77,16 @@ def load_data_config(config_path: Path | None = None) -> dict[str, Any]:
 
 
 def save_data_config(config: dict[str, Any], config_path: Path | None = None) -> None:
+    """Persist the registry to disk in TOML form.
+
+    Parameters
+    ----------
+    config
+        Dictionary produced by :func:`load_data_config` (or compatible structure).
+    config_path
+        Optional override location.
+    """
+
     path = config_path or get_data_config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     lines = []
@@ -68,12 +105,43 @@ def save_data_config(config: dict[str, Any], config_path: Path | None = None) ->
 
 
 def get_dataset_spec(name: str) -> DatasetSpec:
+    """Return the built-in dataset specification for ``name``.
+
+    Parameters
+    ----------
+    name
+        Dataset identifier (e.g., ``bogus``).
+
+    Returns
+    -------
+    DatasetSpec
+        The canonical specification.
+
+    Raises
+    ------
+    KeyError
+        If the dataset name is unknown.
+    """
+
     if name not in DEFAULT_DATASETS:
         raise KeyError(name)
     return DEFAULT_DATASETS[name]
 
 
 def available_method(preferred: str | None = None) -> str:
+    """Determine which clone method to use.
+
+    Parameters
+    ----------
+    preferred
+        Optional user-provided choice (``git`` or ``datalad``).
+
+    Returns
+    -------
+    str
+        Method string to feed into the clone/update helpers.
+    """
+
     if preferred:
         return preferred.lower()
     if shutil.which("datalad"):
@@ -94,6 +162,29 @@ def connect_dataset(
     dry_run: bool = False,
     config_path: Path | None = None,
 ) -> str:
+    """Clone or refresh ``spec`` into ``target_dir`` and record it.
+
+    Parameters
+    ----------
+    spec
+        Dataset definition (name + URL).
+    target_dir
+        Destination directory for the clone.
+    method
+        Optional override for ``git`` vs ``datalad`` (auto-detected otherwise).
+    pull_existing
+        When ``True``, run ``git pull``/``datalad update`` if the path already exists.
+    dry_run
+        When ``True``, compute the status but skip filesystem writes/registry updates.
+    config_path
+        Optional registry location.
+
+    Returns
+    -------
+    str
+        "cloned", "updated", or "exists" depending on the action performed.
+    """
+
     target_dir = target_dir.expanduser()
     target_dir.parent.mkdir(parents=True, exist_ok=True)
 
@@ -131,6 +222,27 @@ def disconnect_dataset(
     dry_run: bool = False,
     config_path: Path | None = None,
 ) -> str:
+    """Mark a dataset as disconnected and optionally delete its files.
+
+    Parameters
+    ----------
+    name
+        Dataset name recorded in the registry.
+    dataset_path
+        Filesystem location to remove/update.
+    drop_content
+        When ``True``, delete the directory (equivalent to ``datalad drop`` + ``rm``).
+    dry_run
+        Print the intended action without touching disk/config.
+    config_path
+        Optional registry location.
+
+    Returns
+    -------
+    str
+        "removed" when content is deleted, otherwise "detached".
+    """
+
     dataset_path = dataset_path.expanduser()
     action = "detached"
     if drop_content and dataset_path.exists():
@@ -184,6 +296,19 @@ def _record_status_only(
 
 
 def list_tracked_datasets(config_path: Path | None = None) -> dict[str, dict[str, Any]]:
+    """Return the dataset registry.
+
+    Parameters
+    ----------
+    config_path
+        Optional override for the registry location.
+
+    Returns
+    -------
+    dict
+        Mapping of dataset name to metadata (path, url, status, etc.).
+    """
+
     config = load_data_config(config_path)
     return config.get("datasets", {})
 
@@ -193,6 +318,23 @@ def resolve_dataset_path(
     base_path: Path,
     config_path: Path | None = None,
 ) -> Path:
+    """Resolve the expected filesystem path for ``name``.
+
+    Parameters
+    ----------
+    name
+        Dataset identifier.
+    base_path
+        Base directory (e.g., ``data/datalad``) used when the registry lacks an entry.
+    config_path
+        Optional registry location.
+
+    Returns
+    -------
+    Path
+        Registered path or ``base_path / name`` when unknown.
+    """
+
     datasets = list_tracked_datasets(config_path)
     entry = datasets.get(name)
     if entry and entry.get("path"):
@@ -201,6 +343,19 @@ def resolve_dataset_path(
 
 
 def find_dataset_root(path: Path) -> Path | None:
+    """Walk parents until a DataLad dataset (``.datalad``) is located.
+
+    Parameters
+    ----------
+    path
+        File or directory path inside (or near) a dataset.
+
+    Returns
+    -------
+    Path or None
+        Root directory containing ``.datalad`` or ``None`` when not found.
+    """
+
     candidate = path.expanduser()
     if candidate.is_file():
         candidate = candidate.parent
@@ -211,6 +366,21 @@ def find_dataset_root(path: Path) -> Path | None:
 
 
 def override_spec_url(spec: DatasetSpec, url: str | None) -> DatasetSpec:
+    """Return a new spec with ``url`` overridden when provided.
+
+    Parameters
+    ----------
+    spec
+        Original dataset specification.
+    url
+        Replacement URL or ``None`` to keep the existing value.
+
+    Returns
+    -------
+    DatasetSpec
+        The original spec when ``url`` is ``None``; otherwise a clone with the new URL.
+    """
+
     if not url:
         return spec
     return replace(spec, url=url)

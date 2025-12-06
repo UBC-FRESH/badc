@@ -1,4 +1,9 @@
-"""Chunk file writer implementation."""
+"""Chunk writer utilities used by CLI and batch workflows.
+
+`badc chunk run` and related notebooks import this module to turn long recordings
+into evenly sized WAV snippets plus metadata that downstream inference and
+telemetry consumers rely on. See ``notes/chunking.md`` for broader context.
+"""
 
 from __future__ import annotations
 
@@ -12,12 +17,25 @@ from badc.audio import compute_sha256
 
 @dataclass
 class ChunkMetadata:
+    """Metadata describing a chunk produced by ``iter_chunk_metadata``."""
+
     chunk_id: str
+    """Identifier derived from the source stem and time bounds."""
+
     path: Path
+    """Filesystem path to the chunk WAV."""
+
     start_ms: int
+    """Chunk start offset in milliseconds from the source origin."""
+
     end_ms: int
+    """Chunk end offset in milliseconds from the source origin."""
+
     overlap_ms: int
+    """Overlap applied to the chunk in milliseconds (0 when none)."""
+
     sha256: str
+    """SHA256 checksum of the emitted WAV (hex)."""
 
 
 def iter_chunk_metadata(
@@ -26,6 +44,38 @@ def iter_chunk_metadata(
     overlap_s: float = 0,
     output_dir: Path | None = None,
 ) -> Iterator[ChunkMetadata]:
+    """Generate chunk WAVs and metadata for a single audio file.
+
+    Parameters
+    ----------
+    audio_path
+        Path to the source WAV file (must exist).
+    chunk_duration_s
+        Target duration for each chunk in seconds (strictly positive).
+    overlap_s
+        Optional overlap between chunks in seconds. Defaults to ``0``.
+    output_dir
+        Directory used to store chunk WAVs. When ``None``, files are written
+        under ``artifacts/chunks/<stem>`` relative to the current working tree.
+
+    Yields
+    ------
+    ChunkMetadata
+        Dataclass describing the chunk identifier, offsets, overlap, and hash.
+
+    Raises
+    ------
+    ValueError
+        If ``chunk_duration_s`` <= 0 or ``overlap_s`` < 0.
+    FileNotFoundError
+        If ``audio_path`` does not exist.
+
+    Notes
+    -----
+    Each iteration writes the chunk WAV to disk before yielding the metadata, so
+    consumers should expect filesystem side effects as they traverse the
+    generator.
+    """
     if chunk_duration_s <= 0:
         raise ValueError("chunk_duration_s must be positive")
     if overlap_s < 0:

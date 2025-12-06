@@ -10,6 +10,11 @@ HAWKEARS_ROOT = Path(__file__).resolve().parents[2] / "vendor" / "HawkEars"
 def get_hawkears_root() -> Path:
     """Return the absolute path to the HawkEars submodule.
 
+    Returns
+    -------
+    Path
+        Root of ``vendor/HawkEars`` within the repository.
+
     Raises
     ------
     FileNotFoundError

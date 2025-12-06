@@ -11,6 +11,8 @@ from typing import Any
 
 @dataclass
 class TelemetryRecord:
+    """Serializable telemetry payload for scheduler events."""
+
     chunk_id: str
     gpu_index: int | None
     gpu_name: str | None
@@ -22,16 +24,47 @@ class TelemetryRecord:
 
 
 def log_telemetry(record: TelemetryRecord, out_path: Path) -> None:
+    """Append ``record`` to ``out_path`` as a JSON line.
+
+    Parameters
+    ----------
+    record
+        Telemetry payload to serialize.
+    out_path
+        Log file path (created if missing).
+    """
+
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("a") as fh:
         fh.write(json.dumps(asdict(record)) + "\n")
 
 
 def now_iso() -> str:
+    """Return the current UTC timestamp in ISO-8601 form.
+
+    Returns
+    -------
+    str
+        Timestamp including timezone offset (``+00:00``).
+    """
+
     return datetime.now(UTC).isoformat()
 
 
 def load_telemetry(path: Path) -> list[TelemetryRecord]:
+    """Load telemetry records from ``path`` (if it exists).
+
+    Parameters
+    ----------
+    path
+        JSONL log file produced by :func:`log_telemetry`.
+
+    Returns
+    -------
+    list of TelemetryRecord
+        Parsed records ordered as they appear in the file.
+    """
+
     if not path.exists():
         return []
     records: list[TelemetryRecord] = []

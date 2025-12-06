@@ -8,7 +8,25 @@ from pathlib import Path
 
 
 def get_wav_duration(path: Path) -> float:
-    """Return WAV duration in seconds."""
+    """Return WAV duration in seconds.
+
+    Parameters
+    ----------
+    path
+        Path to a local WAV file.
+
+    Returns
+    -------
+    float
+        Duration in seconds.
+
+    Raises
+    ------
+    FileNotFoundError
+        If ``path`` does not exist.
+    ValueError
+        If the WAV header reports a zero frame rate.
+    """
 
     if not path.exists():
         raise FileNotFoundError(path)
@@ -21,7 +39,23 @@ def get_wav_duration(path: Path) -> float:
 
 
 def compute_sha256(path: Path) -> str:
-    """Return SHA256 hash of the file contents."""
+    """Return SHA256 hash of the file contents.
+
+    Parameters
+    ----------
+    path
+        File whose contents should be hashed.
+
+    Returns
+    -------
+    str
+        Hex-encoded SHA256 digest.
+
+    Raises
+    ------
+    FileNotFoundError
+        If ``path`` does not exist.
+    """
 
     if not path.exists():
         raise FileNotFoundError(path)

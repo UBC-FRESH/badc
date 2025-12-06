@@ -1,4 +1,9 @@
-"""HawkEars runner implementation with optional stub fallback."""
+"""Interface between BADC chunk manifests and HawkEars inference.
+
+`badc infer run` calls this module to execute either the vendored HawkEars
+`analyze.py` script or a custom runner, collect outputs, and record telemetry as
+outlined in ``notes/inference-plan.md``.
+"""
 
 from __future__ import annotations
 
@@ -116,6 +121,46 @@ def run_job(
     hawkears_args: Sequence[str] | None = None,
     dataset_root: Path | None = None,
 ) -> Path:
+    """Execute a single inference job and return the JSON output path.
+
+    Parameters
+    ----------
+    job
+        Chunk metadata describing the recording id, chunk path, and manifest row.
+    worker
+        GPU affinity information (index + UUID) or ``None`` for CPU runs.
+    output_dir
+        Root directory that will receive per-recording JSON + HawkEars artifacts.
+    runner_cmd
+        External command to invoke instead of the built-in HawkEars/stub logic.
+    max_retries
+        Maximum number of retries for a failing chunk (default ``2``).
+    use_hawkears
+        When ``True``, run the vendored ``analyze.py`` script and parse its CSV.
+    hawkears_args
+        Extra arguments forwarded to HawkEars (e.g., ``--config`` flags).
+    dataset_root
+        Optional DataLad dataset root used to embed provenance in the JSON.
+
+    Returns
+    -------
+    Path
+        Location of the JSON payload summarizing detections/telemetry for the job.
+
+    Raises
+    ------
+    RuntimeError
+        If HawkEars continues to fail after ``max_retries`` attempts.
+    subprocess.CalledProcessError
+        Propagated when ``runner_cmd`` fails and retries are exhausted.
+
+    Notes
+    -----
+    This function logs scheduler events via ``log_scheduler_event`` for every
+    start/success/failure, including runtime seconds and recent stdout/stderr.
+    When ``use_hawkears`` is false and ``runner_cmd`` is ``None``, the stub writer
+    emits deterministic JSON for CI coverage.
+    """
     recording_dir = output_dir / job.recording_id
     recording_dir.mkdir(parents=True, exist_ok=True)
     output_path = recording_dir / f"{job.chunk_id}.json"

@@ -9,13 +9,27 @@ from typing import List
 
 @dataclass
 class GPUInfo:
+    """Properties reported by ``nvidia-smi`` for a single GPU."""
+
     index: int
+    """Zero-based device index."""
+
     name: str
+    """GPU product name."""
+
     memory_total_mb: int
+    """Total memory capacity (MiB)."""
 
 
 def detect_gpus() -> List[GPUInfo]:
-    """Detect GPUs using nvidia-smi; fallback to empty list."""
+    """Detect GPUs using ``nvidia-smi`` and return structured metadata.
+
+    Returns
+    -------
+    list of GPUInfo
+        One entry per GPU reported by ``nvidia-smi``. Returns an empty list when
+        the command is unavailable or fails.
+    """
 
     try:
         result = subprocess.run(

@@ -10,6 +10,8 @@ from typing import Iterable, List
 
 @dataclass
 class DetectionRecord:
+    """Normalized detection entry used for CSV summaries."""
+
     recording_id: str
     chunk_id: str
     timestamp_ms: int | None
@@ -55,6 +57,19 @@ def _parse_detection_entries(
 
 
 def load_detections(root: Path) -> List[DetectionRecord]:
+    """Load detection JSON payloads under ``root``.
+
+    Parameters
+    ----------
+    root
+        Directory containing per-chunk JSON files (one per inference run).
+
+    Returns
+    -------
+    list of DetectionRecord
+        Parsed detections, one record per event or status placeholder.
+    """
+
     records: List[DetectionRecord] = []
     for path in root.rglob("*.json"):
         try:
@@ -68,6 +83,21 @@ def load_detections(root: Path) -> List[DetectionRecord]:
 
 
 def write_summary_csv(records: Iterable[DetectionRecord], out_path: Path) -> Path:
+    """Write detection records to ``out_path`` in CSV form.
+
+    Parameters
+    ----------
+    records
+        Iterable of :class:`DetectionRecord` objects.
+    out_path
+        Destination CSV path. Parent directories are created automatically.
+
+    Returns
+    -------
+    Path
+        The ``out_path`` provided (for chaining).
+    """
+
     lines = ["recording_id,chunk_id,timestamp_ms,label,confidence,status,source_path"]
     for rec in records:
         ts = "" if rec.timestamp_ms is None else rec.timestamp_ms
