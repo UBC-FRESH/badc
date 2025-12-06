@@ -1,3 +1,8 @@
+# 2025-12-06 — Aggregation/reporting plan details
+- Enriched `notes/pipeline-plan.md` with DuckDB table sketches, QC/report artifact expectations,
+  and CLI implications for `badc aggregate/report`.
+- Commands executed: `apply_patch notes/pipeline-plan.md`
+
 # 2025-12-06 — Pipeline schema details
 - Expanded `notes/pipeline-plan.md` with manifest and detection schema definitions (chunk IDs,
   timestamps, model metadata) so downstream automation has concrete targets.

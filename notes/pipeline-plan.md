@@ -40,10 +40,20 @@ Stages:
 - Combine chunk-level detections, dedupe overlapping windows, and normalize timestamps relative to original recording.
 - Store in DuckDB + export CSV for downstream stats; optionally push to DataLad dataset for provenance.
 - CLI: `badc aggregate detections.parquet --out aggregated.db`.
+- DuckDB schema sketch:
+  - Table `detections_raw` (mirrors detection schema).
+  - Table `detections_normalized` (timestamps corrected for chunk offsets).
+  - Table `processing_log` (chunk status, runtimes, GPU info).
+- Aggregation outputs:
+  - Species/site summaries (CSV, Markdown).
+  - QC metrics (chunks attempted, failures, runtime distributions).
 
 ## Report stage
 - Produce summary tables (per species/per site), quality-control metrics (chunks processed, failures), and GPU utilization charts.
 - CLI: `badc report summary --input aggregated.db`.
+- Reporting artifacts:
+  - Markdown/CSV for thesis tables.
+  - Optional Plotly/Matplotlib PNGs showing detection counts vs. time.
 
 ## Implementation next steps
 1. Finalize manifest format (CSV + JSON metadata) and chunk ID naming scheme.
