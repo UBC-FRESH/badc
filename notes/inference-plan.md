@@ -16,6 +16,8 @@
    - Shell out to `vendor/HawkEars` CLI (initially) with arguments for input WAV and config.
    - Capture stdout/stderr, parse output to JSONL (chunk-level detections).
    - Return status + path to raw output.
+   - Retry policy: up to 2 automatic retries per chunk with exponential backoff; mark failures in
+     telemetry and manifest.
 4. **Telemetry**:
    - Log start/end timestamps, GPU index/name, VRAM usage, runtime, exit code.
    - Persist to `data/telemetry/infer/<manifest_id>.jsonl` and summarise per worker.

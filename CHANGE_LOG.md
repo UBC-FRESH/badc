@@ -6,6 +6,8 @@
   - `apply_patch notes/roadmap.md`
 
 # 2025-12-06 — Telemetry utilities
+# 2025-12-06 — HawkEars runner plan
+- Added retry/backoff details to `notes/inference-plan.md` (up to 2 retries per chunk, telemetry\n+  annotation).\n+- Commands executed: `apply_patch notes/inference-plan.md`\n+\n # 2025-12-06 — Telemetry utilities
 - Added `telemetry.py` and hooked it into `infer_scheduler` to log JSONL events per chunk/worker.
 - Commands executed:
   - `ruff format src tests`
