@@ -44,9 +44,10 @@ then design automation that splits ~60 TB of recordings accordingly.
   assumptions.
 - Consider moving sample audio files into a tiny DataLad dataset (submodule) so the `badc data
   connect` workflow can fetch them cleanly before we scale to 60 TB.
-- `badc chunk manifest` now emits placeholder CSVs; follow-ups: compute real SHA256 hashes, include
-  overlap offsets, and store chunk file locations within the temp directory structure defined in
-  `notes/pipeline-plan.md`.
+- `badc chunk manifest` now emits placeholder CSVs; follow-ups: compute real SHA256 hashes for each
+  chunk, include overlap offsets, and store chunk file locations within the temp directory
+  structure defined in `notes/pipeline-plan.md`. SHA256 should cover the actual chunk file contents
+  once chunking is implemented, not just the source path.
 
 ## Open questions
 - Does HawkEars expose a Python API we can call directly, or do we shell out to its CLI?

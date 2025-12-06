@@ -1,3 +1,8 @@
+# 2025-12-06 — Manifest hashing note
+- Clarified in `notes/chunking.md` that SHA256 hashes must cover the chunk file bytes (not just
+  placeholders) when the chunking engine lands.
+- Commands executed: `apply_patch notes/chunking.md`
+
 # 2025-12-06 — Chunk manifest follow-ups noted
 - Documented in `notes/chunking.md` that `badc chunk manifest` currently writes placeholder hashes
   and needs SHA256 + overlap metadata in the upcoming implementation.
