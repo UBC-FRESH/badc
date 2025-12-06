@@ -16,6 +16,8 @@ contributors can test `badc data connect`/`disconnect` without touching the 60 T
 3. Add as git submodule here (`data/datalad/bogus`).
 4. Update `badc data connect bogus` to clone/pull the dataset if missing and record status in config.
 5. Document steps in README + docs.
+6. Provide `badc data connect bogus --path data/audio` example; `badc data disconnect bogus`
+   drops annexed content.
 
 ## Open questions
 - How to automate downsampling (FFmpeg scripts) to keep <10 MB?

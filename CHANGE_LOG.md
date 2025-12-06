@@ -15,6 +15,13 @@
   - `ruff check src tests`
   - `pytest`
 
+# 2025-12-06 — Bogus DataLad workflow note
+- Updated `notes/bogus-datalad.md` + roadmap to capture the upcoming `badc data connect` wiring for
+  the bogus dataset (clone, connect, disconnect flow).
+- Commands executed:
+  - `apply_patch notes/bogus-datalad.md`
+  - `apply_patch notes/roadmap.md`
+
 # 2025-12-06 — HawkEars runner subprocess wiring
 - `badc infer run` now shells out to the HawkEars CLI (when `--runner-cmd` is provided), sets
   `CUDA_VISIBLE_DEVICES`, captures stdout/stderr, and logs telemetry per attempt; stub mode remains
