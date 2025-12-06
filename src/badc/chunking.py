@@ -1,0 +1,70 @@
+"""Chunking utilities and placeholder probe logic."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Iterable
+
+
+@dataclass(frozen=True)
+class ChunkProbeResult:
+    """Represents the outcome of a chunk-size probe run."""
+
+    file: Path
+    max_duration_s: float
+    strategy: str = "placeholder"
+    notes: str = ""
+
+
+def probe_chunk_duration(audio_path: Path, initial_duration_s: float = 60.0) -> ChunkProbeResult:
+    """Return a placeholder probe result for the given audio file.
+
+    Parameters
+    ----------
+    audio_path:
+        Path to the audio file under test.
+    initial_duration_s:
+        Starting duration (seconds) for the probe routine.
+    """
+
+    if initial_duration_s <= 0:
+        raise ValueError("initial_duration_s must be positive")
+    if not audio_path.exists():
+        raise FileNotFoundError(audio_path)
+    resolved = audio_path.resolve()
+    return ChunkProbeResult(
+        file=resolved,
+        max_duration_s=initial_duration_s,
+        notes="Probe stub — replace with HawkEars-powered binary search",
+    )
+
+
+def plan_chunk_ranges(duration_s: float, chunk_duration_s: float) -> list[tuple[float, float]]:
+    """Return evenly spaced chunk ranges for the requested duration.
+
+    Parameters
+    ----------
+    duration_s:
+        Total length of the source audio (seconds).
+    chunk_duration_s:
+        Desired chunk size (seconds).
+    """
+
+    if chunk_duration_s <= 0:
+        raise ValueError("chunk_duration_s must be positive")
+    ranges: list[tuple[float, float]] = []
+    start = 0.0
+    while start < duration_s:
+        end = min(start + chunk_duration_s, duration_s)
+        ranges.append((start, end))
+        start = end
+    return ranges
+
+
+def iter_chunk_placeholders(audio_path: Path, chunk_duration_s: float) -> Iterable[str]:
+    """Yield placeholder chunk identifiers for documentation/testing."""
+
+    fake_duration = chunk_duration_s * 3
+    for start, end in plan_chunk_ranges(fake_duration, chunk_duration_s):
+        yield f"{audio_path.stem}_{int(start)}_{int(end)}"

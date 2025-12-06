@@ -33,7 +33,8 @@ execution notes live alongside task-specific files under `notes/`.
 - [ ] Design the aggregated “bird call events” datastore (likely DuckDB/Parquet) and expose query
       helpers for down-stream stats/figures.
 - [ ] Wire Typer CLI commands for end-to-end runs (`badc chunk`, `badc infer`, `badc aggregate`,
-      `badc report`).
+      `badc report`). *(Scaffolded chunk commands exist; still need real HawkEars + telemetry
+      integration.)*
 - [ ] Add CLI plumbing for DataLad attachments (`badc data connect`, `badc data disconnect`,
       `badc data status`) so deployments can swap between bogus/test and production datasets at
       runtime.

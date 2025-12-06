@@ -8,14 +8,16 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
-from badc import __version__
+from badc import __version__, chunking
 
 console = Console()
 app = typer.Typer(help="Utilities for chunking and processing large bird audio corpora.")
 DEFAULT_DATALAD_PATH = Path("data") / "datalad"
 
 data_app = typer.Typer(help="Manage DataLad-backed audio repositories (stub commands).")
+chunk_app = typer.Typer(help="Chunking utilities and HawkEars probe helpers.")
 app.add_typer(data_app, name="data")
+app.add_typer(chunk_app, name="chunk")
 
 
 def _print_header() -> None:
@@ -77,6 +79,40 @@ def data_status() -> None:
     """Placeholder for reporting attached DataLad datasets."""
 
     console.print("[yellow]TODO:[/] list connected datasets and their availability.")
+
+
+@chunk_app.command("probe")
+def chunk_probe(
+    file: Annotated[Path, typer.Argument(help="Path to audio file to probe.")],
+    initial_duration: Annotated[
+        float,
+        typer.Option("--initial-duration", help="Starting chunk duration in seconds."),
+    ] = 60.0,
+) -> None:
+    """Run the placeholder chunk-size probe."""
+
+    result = chunking.probe_chunk_duration(file, initial_duration)
+    console.print(
+        f"Probe placeholder: max chunk {result.max_duration_s:.2f}s for {result.file}",
+        style="cyan",
+    )
+    console.print("Notes: " + result.notes)
+
+
+@chunk_app.command("split")
+def chunk_split(
+    file: Annotated[Path, typer.Argument(help="Path to audio file to plan splits for.")],
+    chunk_duration: Annotated[
+        float,
+        typer.Option("--chunk-duration", help="Desired chunk duration in seconds."),
+    ] = 60.0,
+) -> None:
+    """Emit placeholder chunk IDs for the given audio file."""
+
+    placeholders = list(chunking.iter_chunk_placeholders(file, chunk_duration))
+    console.print(f"Planned {len(placeholders)} placeholder chunks for {file}:")
+    for chunk_id in placeholders:
+        console.print(f" - {chunk_id}")
 
 
 def main() -> None:

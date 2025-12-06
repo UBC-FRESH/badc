@@ -21,4 +21,11 @@ PhD analyses.
 
 GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push/PR.
 
+## CLI preview
+
+- `badc version` — display current package version.
+- `badc data ...` — placeholder commands for future DataLad integration.
+- `badc chunk probe|split` — scaffold commands for chunk-size experiments (currently stubs until
+  HawkEars + GPU telemetry wiring lands).
+
 The CLI entry point is `badc`. Use `badc --help` to inspect the available commands.

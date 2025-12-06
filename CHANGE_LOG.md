@@ -1,3 +1,13 @@
+# 2025-12-06 — Chunk CLI scaffolding
+- Added `badc.chunk` subcommands (`probe`, `split`) plus `badc/chunking.py` utilities and tests to
+  prepare for the real HawkEars/GPU integration.
+- Documented the commands in README/docs and kept CI green via ruff/pytest/Sphinx builds.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs docs/_build/html -W`
+
 # 2025-12-06 — Chunking note audio details
 - Updated `notes/chunking.md` to document the 60 min (`GNWT-290_20230331_235938.wav`) and 7 min
   (`XXXX-000_20251001_093000.wav`) test clips, highlight the HawkEars reference paper in
