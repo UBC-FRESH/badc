@@ -1,3 +1,10 @@
+# 2025-12-06 — GPU parallelism planning
+- Updated `notes/gpu-monitoring.md` and `notes/pipeline-plan.md` to capture automatic GPU
+  detection and multi-process HawkEars scheduling (one worker per GPU with NVML telemetry).
+- Commands executed:
+  - `apply_patch notes/gpu-monitoring.md`
+  - `apply_patch notes/pipeline-plan.md`
+
 # 2025-12-06 — Chunk manifest hashing option
 - Added SHA256 utility + `--hash-chunks` option so `badc chunk manifest` can embed real hashes (per
   file for now) and documented the behavior in README/docs + tests.

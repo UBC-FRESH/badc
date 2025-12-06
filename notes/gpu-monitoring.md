@@ -29,9 +29,13 @@ and automation we will use to monitor/record GPU utilization.
    runs.
 3. During chunk-size probing, capture both GPU utilization and CUDA OOM errors to correlate max
    chunk length with VRAM usage.
-4. For Sockeye runs (up to 4 GPUs), detect `CUDA_VISIBLE_DEVICES` and log per-device stats; when
+4. Auto-detect available GPUs via NVML or `nvidia-smi -L`, capture model names + VRAM, and expose
+   them to the scheduler. Default worker pool size = number of GPUs (cap at environment limit).
+5. For Sockeye runs (up to 4 GPUs), detect `CUDA_VISIBLE_DEVICES` and log per-device stats; when
    only 2 GPUs are present (dev server), adapt scheduling accordingly.
-5. Store telemetry summaries in `notes/chunking.md` and/or a dedicated `data/telemetry/` folder for
+6. Run HawkEars processes in parallel (one per GPU) with affinity controlled via environment
+   variables or CLI flags (e.g., `CUDA_VISIBLE_DEVICES=0`).
+7. Store telemetry summaries in `notes/chunking.md` and/or a dedicated `data/telemetry/` folder for
    reproducibility.
 
 ## Open questions
