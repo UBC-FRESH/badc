@@ -1,3 +1,11 @@
+# 2025-12-06 — Chunking probe planning note
+- Added `notes/chunking.md` detailing the chunk-size probing workflow (binary search, telemetry
+  capture, CLI surface) and documenting the GPU inventories we must account for.
+- Roadmap now references the note for the chunk-size discovery task.
+- Commands executed:
+  - `cat > notes/chunking.md`
+  - `apply_patch notes/roadmap.md`
+
 # 2025-12-06 — HawkEars submodule onboarding
 - Added the HawkEars fork as a git submodule under `vendor/HawkEars` and exposed
   `badc.hawkears.get_hawkears_root()` so CLI/tools can locate it.
