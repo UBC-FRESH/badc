@@ -4,6 +4,11 @@
   - `echo ... > data/datalad/bogus/README.md`
   - `apply_patch README.md docs/usage.rst`
 
+# 2025-12-06 — Datalad bootstrap script
+- Added `setup/datalad_config.template.sh` and `scripts/setup_bogus_datalad.sh` to automate dataset
+  creation (`datalad create`, audio copy, GitHub remote, and `git annex initremote` to spawn the S3
+  bucket). Documentation updated in `notes/datalad-plan.md`.
+
 # 2025-12-06 — HawkEars runner + telemetry hooks
 - Added `hawkears_runner.py`, wired `badc infer run --manifest` to process chunk jobs (with retries,
   telemetry, and output dir handling), and documented README/docs/tests updates.
