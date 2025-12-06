@@ -12,11 +12,28 @@ Stages:
 - Temp layout: `artifacts/chunk/<recording>/<chunk_id>.wav` plus `chunk_manifest.csv`.
 - CLI commands: `badc chunk probe`, `badc chunk split`, `badc chunk run` (future, orchestrates splitting + manifest writing).
 - Telemetry: chunk durations, GPU assignments, disk usage.
+- Manifest schema (CSV + JSON metadata):
+  - `recording_id` (str)
+  - `chunk_id` (str; `<recording>_<start_ms>_<end_ms>`)
+  - `source_path` (relative path)
+  - `start_ms` / `end_ms`
+  - `overlap_ms`
+  - `sha256` of chunk file
+  - `notes` (optional)
 
 ## Infer stage
 - Inputs: chunk manifest.
 - Execution: schedule HawkEars jobs; capture stdout/stderr, GPU telemetry, and exit codes.
 - Output schema: JSONL/Parquet with fields (chunk_id, species_label, confidence, timestamp, model_version).
+- Detection schema (Parquet):
+  - `recording_id`
+  - `chunk_id`
+  - `call_timestamp_ms`
+  - `species_label`
+  - `confidence`
+  - `probabilities` (JSON/dict)
+  - `model_version`
+  - `runtime_s`
 - CLI: `badc infer run` (per manifest), `badc infer monitor` (watch GPU usage using NVML hooks).
 
 ## Aggregate stage

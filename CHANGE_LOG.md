@@ -1,3 +1,8 @@
+# 2025-12-06 — Pipeline schema details
+- Expanded `notes/pipeline-plan.md` with manifest and detection schema definitions (chunk IDs,
+  timestamps, model metadata) so downstream automation has concrete targets.
+- Commands executed: `apply_patch notes/pipeline-plan.md`
+
 # 2025-12-06 — Pipeline planning note
 - Added `notes/pipeline-plan.md` describing the chunk → infer → aggregate → report stages,
   including manifests, telemetry expectations, and CLI hooks.
