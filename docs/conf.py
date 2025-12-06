@@ -22,6 +22,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
+    "nbsphinx",
 ]
 
 autosummary_generate = True
@@ -31,3 +32,9 @@ exclude_patterns: list[str] = []
 
 html_theme = "furo"
 html_static_path = ["_static"]
+
+napoleon_numpy_docstring = True
+napoleon_google_docstring = False
+
+nbsphinx_execute = "never"
+nbsphinx_allow_errors = False

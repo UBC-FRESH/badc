@@ -9,3 +9,8 @@ chunking, inference, and HPC deployment tooling described in ``notes/roadmap.md`
    :caption: Contents
 
    usage
+   cli/index
+   api/index
+   howto/index
+   hpc/index
+   notebooks/index

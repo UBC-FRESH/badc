@@ -1,3 +1,25 @@
+# 2025-12-06 — Data CLI + datalad run docs
+- Enabled `nbsphinx` plus Napoleon NumPy-only parsing in `docs/conf.py` so we can document notebook
+  workflows and enforce the docstring contract from `AGENTS.md`.
+- Filled in `docs/cli/data.rst` with end-to-end guidance for `badc data connect/disconnect/status`,
+  including config file details, automation tips, and examples.
+- Authored the first full how-to (`docs/howto/datalad-run.rst`) showing how to pair `badc infer run`
+  with `datalad run` so inference outputs stay inside the dataset that supplied the audio.
+- Initial `pytest` invocation failed because the editable install still referenced the pre-rename
+  path; rerunning `pip install -e .` re-pointed the package and the test suite now passes.
+- Commands executed:
+  - `python - <<'PY' ...` (insert `nbsphinx` into docs/conf.py)
+  - `python - <<'PY' ...` (append Napoleon/nbsphinx settings)
+  - `cat <<'EOF' > docs/cli/data.rst`
+  - `cat <<'EOF' > docs/howto/datalad-run.rst`
+  - `python - <<'PY' ...` (fix CLI heading underlines)
+  - `pip install -e .`
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `pre-commit run --all-files`
+
 # 2025-12-06 — Documentation scaffolding kickoff
 - Enabled `sphinx.ext.autosummary` (with generation) in `docs/conf.py` and expanded
   `notes/documentation-plan.md` with the docstring sweep requirement so every module/function/class
