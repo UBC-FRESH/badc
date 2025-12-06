@@ -32,6 +32,8 @@ execution notes live alongside task-specific files under `notes/`.
       provenance for each output segment.
 - [ ] Implement HawkEars inference scheduler per `notes/inference-plan.md` (manifest loader, GPU
       worker pool, telemetry, output persistence).
+- [ ] Parse HawkEars JSON outputs into canonical detection schema and wire DuckDB aggregation (`notes/pipeline-plan.md`).
+- [ ] Wire `badc data connect` to the bogus dataset submodule once published (`notes/bogus-datalad.md`).
 - [ ] Build `badc chunk run` per `notes/chunk-files.md` (real chunk WAV writer + manifest linking).
 - [ ] Design the aggregated “bird call events” datastore (likely DuckDB/Parquet) and expose query
       helpers for down-stream stats/figures.

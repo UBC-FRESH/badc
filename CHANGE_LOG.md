@@ -333,3 +333,6 @@
   - `ruff format src tests`
   - `ruff check src tests`
   - `pytest`
+# 2025-12-06 — Roadmap next steps
+- Added roadmap bullets for HawkEars JSON parsing + DuckDB work and the upcoming bogus DataLad connect wiring.
+- Commands executed: `apply_patch notes/roadmap.md`
