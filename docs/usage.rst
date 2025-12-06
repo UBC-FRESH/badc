@@ -29,7 +29,7 @@ also available::
      - #0: NVIDIA Quadro RTX 4000 (8129 MiB)
 
     $ badc data connect bogus --path data/datalad
-    TODO: implement DataLad clone/register logic.
+    TODO: implement DataLad clone/register logic (target repo: UBC-FRESH/badc-bogus-audio).
 
     $ badc infer aggregate artifacts/infer --output artifacts/aggregate/summary.csv
     Wrote detection summary to artifacts/aggregate/summary.csv

@@ -1,3 +1,9 @@
+# 2025-12-06 — Bogus DataLad scaffolding
+- Updated `data/datalad/bogus/README.md`, README/docs, and notest to document the upcoming `badc data connect` wiring to `UBC-FRESH/badc-bogus-audio`.
+- Commands executed:
+  - `echo ... > data/datalad/bogus/README.md`
+  - `apply_patch README.md docs/usage.rst`
+
 # 2025-12-06 — HawkEars runner + telemetry hooks
 - Added `hawkears_runner.py`, wired `badc infer run --manifest` to process chunk jobs (with retries,
   telemetry, and output dir handling), and documented README/docs/tests updates.
