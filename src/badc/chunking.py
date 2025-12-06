@@ -1,4 +1,10 @@
-"""Chunking utilities and placeholder probe logic."""
+"""Chunk planning helpers plus placeholder probe/aggregation logic.
+
+See ``notes/chunking.md`` for the longer-term Plan A (HawkEars-driven probes,
+chunk overlap heuristics, manifest hashing, etc.). The functions below stay
+lightweight so CLI/tests can exercise the workflow while the more advanced
+algorithms are being built.
+"""
 
 from __future__ import annotations
 
@@ -20,14 +26,26 @@ class ChunkProbeResult:
 
 
 def probe_chunk_duration(audio_path: Path, initial_duration_s: float = 60.0) -> ChunkProbeResult:
-    """Return a placeholder probe result for the given audio file.
+    """Return a placeholder probe result for ``audio_path``.
 
     Parameters
     ----------
-    audio_path:
-        Path to the audio file under test.
-    initial_duration_s:
+    audio_path
+        Path to the audio file under test (must exist).
+    initial_duration_s
         Starting duration (seconds) for the probe routine.
+
+    Returns
+    -------
+    ChunkProbeResult
+        Dataclass describing the file, suggested duration, and notes.
+
+    Raises
+    ------
+    ValueError
+        If ``initial_duration_s`` is not positive.
+    FileNotFoundError
+        If ``audio_path`` does not exist.
     """
 
     if initial_duration_s <= 0:
@@ -43,14 +61,24 @@ def probe_chunk_duration(audio_path: Path, initial_duration_s: float = 60.0) -> 
 
 
 def plan_chunk_ranges(duration_s: float, chunk_duration_s: float) -> list[tuple[float, float]]:
-    """Return evenly spaced chunk ranges for the requested duration.
+    """Return evenly spaced ranges that cover ``duration_s`` seconds.
 
     Parameters
     ----------
-    duration_s:
+    duration_s
         Total length of the source audio (seconds).
-    chunk_duration_s:
+    chunk_duration_s
         Desired chunk size (seconds).
+
+    Returns
+    -------
+    list[tuple[float, float]]
+        Start/end pairs (seconds) suitable for manifest rows.
+
+    Raises
+    ------
+    ValueError
+        If ``chunk_duration_s`` is not positive.
     """
 
     if chunk_duration_s <= 0:
@@ -65,7 +93,20 @@ def plan_chunk_ranges(duration_s: float, chunk_duration_s: float) -> list[tuple[
 
 
 def iter_chunk_placeholders(audio_path: Path, chunk_duration_s: float) -> Iterable[str]:
-    """Yield placeholder chunk identifiers for documentation/testing."""
+    """Yield placeholder chunk identifiers for documentation/testing.
+
+    Parameters
+    ----------
+    audio_path
+        Path whose stem seeds the chunk identifiers.
+    chunk_duration_s
+        Duration used to compute dummy ranges.
+
+    Yields
+    ------
+    str
+        Identifiers such as ``file_0_60`` (seconds).
+    """
 
     fake_duration = chunk_duration_s * 3
     for start, end in plan_chunk_ranges(fake_duration, chunk_duration_s):
@@ -73,7 +114,7 @@ def iter_chunk_placeholders(audio_path: Path, chunk_duration_s: float) -> Iterab
 
 
 def run_inference_on_chunks(chunk_ids: Sequence[str]) -> list[str]:
-    """Placeholder inference runner; returns mocked detection IDs."""
+    """Return mocked detection IDs for each ``chunk_id``."""
 
     return [f"{chunk_id}_detected" for chunk_id in chunk_ids]
 
@@ -96,7 +137,29 @@ def write_manifest(
     compute_hashes: bool = False,
     chunk_rows: Iterable[ChunkMetadata] | None = None,
 ) -> Path:
-    """Write a chunk manifest CSV (placeholder hashing)."""
+    """Write a chunk manifest CSV (placeholder hashing).
+
+    Parameters
+    ----------
+    audio_path
+        Source audio file referenced by the manifest.
+    chunk_duration_s
+        Target chunk duration in seconds.
+    output_csv
+        Destination CSV path.
+    duration_s
+        Total duration of the recording in seconds.
+    compute_hashes
+        When ``True``, call :func:`badc.chunk_writer.iter_chunk_metadata` to
+        materialize chunks and compute SHA256 hashes.
+    chunk_rows
+        Optional iterable of :class:`ChunkMetadata` generated elsewhere.
+
+    Returns
+    -------
+    Path
+        The ``output_csv`` path (for chaining).
+    """
 
     lines = ["recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes"]
     recording_id = audio_path.stem

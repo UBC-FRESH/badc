@@ -1,3 +1,12 @@
+# 2025-12-06 — Chunking docstrings
+- Ported `badc.chunking` to the same NumPy-style docstring format (module + public helpers) so the autosummary page finally renders real descriptions.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `pre-commit run --all-files`
+
 # 2025-12-06 — API docstring sweep kickoff
 - Added NumPy-style docstrings plus attribute descriptions for the core modules feeding the Sphinx API docs (`badc.audio`, `badc.aggregate`, `badc.chunk_writer`, `badc.data`, `badc.gpu`, `badc.hawkears`, `badc.hawkears_runner`, `badc.infer_scheduler`, and `badc.telemetry`).
 - Updated `notes/documentation-plan.md` to record the modules covered so far and highlight the remaining surfaces (CLI commands, chunking helper stubs, etc.).
