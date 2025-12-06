@@ -1,3 +1,17 @@
+# 2025-12-06 — Python/CLI/docs scaffolding
+- Added initial project scaffold: `pyproject.toml`, `src/badc` package with Typer CLI stubs,
+  editable install via Hatch, and README instructions.
+- Introduced tooling + docs baselines: ruff/pytest config, `.gitignore`, `tests/test_cli.py`, and a
+  minimal Sphinx tree (`docs/conf.py`, `docs/index.rst`, `docs/usage.rst`) that builds with the
+  Furo theme.
+- Ran the standard command cadence to prove the scaffold works locally.
+- Commands executed:
+  - `python -m pip install -e .[dev]`
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs docs/_build/html -W`
+
 # 2025-12-06 — DataLad planning note + roadmap update
 - Added `notes/datalad-plan.md` describing the bogus/test vs. production DataLad repositories and
   the required `badc data connect|disconnect|status` CLI surface.

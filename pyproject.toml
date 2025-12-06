@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling>=1.17"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bird-acoustic-data-cruncher"
+version = "0.1.0"
+description = "CLI + Python toolkit for chunking and processing large bird audio corpora with HawkEars."
+readme = "README.md"
+authors = [{ name = "UBC Freshwater Research Lab" }]
+license = { text = "Proprietary" }
+requires-python = ">=3.12"
+dependencies = [
+    "typer>=0.12.5",
+    "rich>=13.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=5.0",
+    "ruff>=0.7",
+    "sphinx>=7.3",
+    "furo>=2024.8.6",
+]
+
+[project.scripts]
+badc = "badc.cli.main:main"
+
+[tool.hatch.version]
+path = "src/badc/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/badc"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "README.md", "pyproject.toml", "docs", "notes"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",  # default pycodestyle/pyflakes
+    "I",              # isort
+    "B",              # bugbear
+]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]

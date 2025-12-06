@@ -10,7 +10,7 @@ execution notes live alongside task-specific files under `notes/`.
 - [x] Add coding-agent contract (`AGENTS.md`, `CONTRIBUTING.md`) and changelog scaffolding.
 - [x] Document DataLad repo strategy (bogus vs. production datasets + CLI expectations) in
       `notes/datalad-plan.md`.
-- [ ] Establish minimal Python package layout (`pyproject.toml`, `src/badc`, Typer CLI entry).
+- [x] Establish minimal Python package layout (`pyproject.toml`, `src/badc`, Typer CLI entry).
 - [ ] Stand up CI stubs (lint/test placeholders) and pre-commit config.
 - [ ] Mirror FHOPS doc stack: Sphinx skeleton + GitHub Pages deployment workflow.
 
@@ -61,8 +61,8 @@ execution notes live alongside task-specific files under `notes/`.
 - [ ] Prep outreach materials (README story, example notebook, thesis-aligned figures).
 
 ## Detailed Next Steps
-1. **Repo scaffold** — create the Python package, Typer CLI stub, and tooling configs (ruff,
-   pytest, sphinx). Document dev-env bootstrap instructions in README + changelog.
+1. **CI + automation scaffold** — add `.pre-commit-config.yaml` plus GitHub Actions (or
+   alternative) pipelines that run ruff, pytest, and Sphinx builds on every push/PR.
 2. **HawkEars submodule onboarding** — add the fork as a submodule, document how to sync it, and
    draft the wrapper API that normalises configs/logging.
 3. **Chunk-size probe utility** — script the automated GPU-memory probing routine, log results for
