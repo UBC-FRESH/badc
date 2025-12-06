@@ -37,16 +37,30 @@ cat <<CFG > .gitmodules
 CFG
 
 annex_host=${S3_ENDPOINT_URL#https://}
-git annex initremote arbutus-s3 \
-  type=S3 \
-  encryption=none \
-  bucket="$S3_BUCKET_NAME" \
-  public=yes \
-  publicurl="$S3_ENDPOINT_URL/$S3_BUCKET_NAME" \
-  host="$annex_host" \
-  protocol=https \
-  requeststyle=path \
+existing_uuid=""
+if aws s3 ls "s3://$S3_BUCKET_NAME/git-annex-uuid" >/dev/null 2>&1; then
+  existing_uuid=$(aws s3 cp "s3://$S3_BUCKET_NAME/git-annex-uuid" - | tr -d '\r\n' || true)
+fi
+
+init_params=(
+  arbutus-s3
+  type=S3
+  bucket="$S3_BUCKET_NAME"
+  public=yes
+  publicurl="$S3_ENDPOINT_URL/$S3_BUCKET_NAME"
+  host="$annex_host"
+  protocol=https
+  requeststyle=path
   autoenable=true
+)
+
+if [[ -n "$existing_uuid" ]]; then
+  init_params+=(--sameas="$existing_uuid")
+else
+  init_params+=(encryption=none)
+fi
+
+git annex initremote "${init_params[@]}"
 
 datalad create-sibling-github \
   --github-organization "$GITHUB_ORG" \

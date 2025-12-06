@@ -10,6 +10,8 @@
   bucket). Documentation updated in `notes/datalad-plan.md`.
 - 2025-12-06: Script now shells out to `datalad create-sibling-github` so the GitHub repo is
   auto-created (per lab docs) and uses `GITHUB_ORG`/`GITHUB_REPO_NAME` env vars.
+- 2025-12-06: Added S3 bucket reuse detection (reads `git-annex-uuid` and passes `--sameas=UUID` to
+  `git annex initremote`) so reruns don’t fail if the bucket already exists.
 
 # 2025-12-06 — HawkEars runner + telemetry hooks
 - Added `hawkears_runner.py`, wired `badc infer run --manifest` to process chunk jobs (with retries,
