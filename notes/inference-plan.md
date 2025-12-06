@@ -30,7 +30,9 @@
 ## CLI plan
 - `badc infer run --manifest chunk_manifest.csv --output artifacts/infer --max-gpus 2 --worker-per-gpu 1`.
 - `badc infer monitor` to tail telemetry / summarise in real time.
-- Provide dry-run flag to simulate scheduling without invoking HawkEars.
+- Provide dry-run flag to simulate scheduling without invoking HawkEars. *(Implemented via stub
+  mode; passing `--use-hawkears` now shells out to `vendor/HawkEars/analyze.py` and parses the
+  generated `HawkEars_labels.csv` into the JSON payload used by `badc infer aggregate`.)*
 
 ## Testing strategy
 - Mock HawkEars runner (fake script) to ensure scheduler distributes work across GPUs.

@@ -1,27 +1,104 @@
-"""HawkEars runner stub with retry logic."""
+"""HawkEars runner implementation with optional stub fallback."""
 
 from __future__ import annotations
 
+import csv
 import json
 import os
 import shlex
+import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
+from typing import Sequence
 
+from badc import hawkears
 from badc.infer_scheduler import GPUWorker, InferenceJob, log_scheduler_event
 from badc.telemetry import now_iso
 
+RAW_OUTPUT_SUFFIX = "_hawkears"
+LABELS_FILENAME = "HawkEars_labels.csv"
 
-def _build_command(runner_cmd: str, job: InferenceJob, output_path: Path) -> list[str]:
+
+def _build_command(
+    runner_cmd: str, job: InferenceJob, output_path: Path
+) -> tuple[list[str], Path | None]:
     base = shlex.split(runner_cmd)
-    return base + ["--input", str(job.chunk_path), "--output", str(output_path)]
+    return base + ["--input", str(job.chunk_path), "--output", str(output_path)], None
+
+
+def _build_hawkears_command(
+    job: InferenceJob,
+    output_dir: Path,
+    extra_args: Sequence[str] | None,
+) -> tuple[list[str], Path]:
+    root = hawkears.get_hawkears_root()
+    script = root / "analyze.py"
+    cmd = [
+        sys.executable,
+        str(script),
+        "-i",
+        str(job.chunk_path.resolve()),
+        "-o",
+        str(output_dir.resolve()),
+        "--rtype",
+        "csv",
+        "--merge",
+        "0",
+    ]
+    if extra_args:
+        cmd.extend(extra_args)
+    return cmd, root
 
 
 def _write_stub_output(job: InferenceJob, output_path: Path, attempt: int) -> None:
-    output_path.write_text(
-        json.dumps({"chunk_id": job.chunk_id, "status": "stub", "attempt": attempt})
-    )
+    payload = {
+        "chunk_id": job.chunk_id,
+        "recording_id": job.recording_id,
+        "source_path": str(job.chunk_path),
+        "status": "stub",
+        "detections": [],
+        "meta": {"attempt": attempt},
+    }
+    output_path.write_text(json.dumps(payload))
+
+
+def _seconds_to_ms(value: str | None) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        return int(float(value) * 1000)
+    except ValueError:
+        return None
+
+
+def _parse_hawkears_labels(csv_path: Path, job: InferenceJob) -> dict:
+    detections: list[dict[str, object]] = []
+    if csv_path.exists():
+        with csv_path.open() as fh:
+            reader = csv.DictReader(fh)
+            for row in reader:
+                filename = Path(row.get("filename", "")).name
+                if filename and filename != job.chunk_path.name:
+                    continue
+                label = row.get("class_code") or row.get("class_name") or "unknown"
+                detections.append(
+                    {
+                        "timestamp_ms": _seconds_to_ms(row.get("start_time")),
+                        "end_ms": _seconds_to_ms(row.get("end_time")),
+                        "label": label,
+                        "confidence": float(row["score"]) if row.get("score") else None,
+                    }
+                )
+    status = "ok" if detections else "no_detections" if csv_path.exists() else "no_output"
+    return {
+        "chunk_id": job.chunk_id,
+        "recording_id": job.recording_id,
+        "source_path": str(job.chunk_path),
+        "status": status,
+        "detections": detections,
+    }
 
 
 def run_job(
@@ -30,10 +107,13 @@ def run_job(
     output_dir: Path,
     runner_cmd: str | None = None,
     max_retries: int = 2,
+    use_hawkears: bool = False,
+    hawkears_args: Sequence[str] | None = None,
 ) -> Path:
-    output_dir = output_dir / job.recording_id
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / f"{job.chunk_id}.json"
+    recording_dir = output_dir / job.recording_id
+    recording_dir.mkdir(parents=True, exist_ok=True)
+    output_path = recording_dir / f"{job.chunk_id}.json"
+    hawkears_output_dir = recording_dir / f"{job.chunk_id}{RAW_OUTPUT_SUFFIX}"
 
     attempts = 0
     while attempts <= max_retries:
@@ -46,30 +126,56 @@ def run_job(
             {"attempt": attempts},
         )
         try:
+            cmd: list[str] | None = None
+            cwd: Path | None = None
+            env = os.environ.copy()
+            if worker is not None:
+                env["CUDA_VISIBLE_DEVICES"] = str(worker.index)
+
             if runner_cmd:
-                cmd = _build_command(runner_cmd, job, output_path)
-                env = os.environ.copy()
-                if worker is not None:
-                    env["CUDA_VISIBLE_DEVICES"] = str(worker.index)
-                result = subprocess.run(
-                    cmd,
-                    env=env,
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                )
-                details = {
-                    "attempt": attempts,
-                    "output": str(output_path),
-                    "stdout": (result.stdout or "")[-500:],
-                }
+                cmd, cwd = _build_command(runner_cmd, job, output_path)
+            elif use_hawkears:
+                if hawkears_output_dir.exists():
+                    shutil.rmtree(hawkears_output_dir)
+                hawkears_output_dir.mkdir(parents=True, exist_ok=True)
+                cmd, cwd = _build_hawkears_command(job, hawkears_output_dir, hawkears_args)
             else:
                 _write_stub_output(job, output_path, attempts)
-                details = {
-                    "attempt": attempts,
-                    "output": str(output_path),
-                    "note": "stub runner",
-                }
+                runtime = time.time() - start
+                log_scheduler_event(
+                    job.chunk_id,
+                    worker,
+                    "success",
+                    {
+                        "attempt": attempts,
+                        "output": str(output_path),
+                        "runner": "stub",
+                    },
+                    runtime_s=runtime,
+                    finished_at=now_iso(),
+                )
+                return output_path
+
+            result = subprocess.run(
+                cmd,
+                env=env,
+                cwd=str(cwd) if cwd else None,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+
+            if use_hawkears:
+                labels_path = hawkears_output_dir / LABELS_FILENAME
+                payload = _parse_hawkears_labels(labels_path, job)
+                payload["hawkears_output"] = str(hawkears_output_dir)
+                output_path.write_text(json.dumps(payload))
+            details = {
+                "attempt": attempts,
+                "output": str(output_path),
+                "runner": "hawkears" if use_hawkears else "custom",
+                "stdout": (result.stdout or "")[-500:],
+            }
             runtime = time.time() - start
             log_scheduler_event(
                 job.chunk_id,

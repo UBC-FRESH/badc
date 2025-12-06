@@ -38,7 +38,8 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
   via `--hash-chunks`.
 - `badc chunk run` — splits audio into chunk WAVs and produces a manifest for inference.
 - `badc infer run --manifest manifest.csv` — loads chunk jobs, detects GPUs, and runs the HawkEars
-  runner (stubbed until the real CLI is wired).
+  runner (pass `--use-hawkears` to invoke the embedded `vendor/HawkEars/analyze.py`, or `--runner-cmd`
+  to supply a custom command; stub mode remains the default for local tests).
 - `badc infer aggregate artifacts/infer` — reads detection JSON files and writes a summary CSV.
 - `badc telemetry --log data/telemetry/infer/log.jsonl` — tail recent telemetry entries.
 - `badc gpus` — lists detected GPUs via `nvidia-smi` so we can size the HawkEars worker pool.
@@ -50,6 +51,9 @@ The bogus DataLad dataset is now a git submodule at `data/datalad/bogus`. After 
 ```bash
 git submodule update --init --recursive
 badc data connect bogus --pull
+
+# Example HawkEars invocation once CUDA deps are installed:
+badc infer run --manifest chunk_manifest.csv --use-hawkears --hawkears-arg --fast
 ```
 
 The `badc data connect` command prefers `datalad clone` (falls back to git) and records the dataset

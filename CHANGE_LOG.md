@@ -8,6 +8,27 @@
   - `apply_patch data/audio/README.md AGENTS.md data/chunk_manifest_sample.csv`
   - `apply_patch docs/usage.rst notes/bogus-datalad.md notes/chunking.md notes/datalad-plan.md`
   - `apply_patch notes/erin-notes.md scripts/setup_bogus_datalad.sh tests/test_infer_cli.py`
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `pre-commit run --all-files`
+
+# 2025-12-06 — HawkEars runner integration
+- Added `--use-hawkears` flag to `badc infer run`, implemented the HawkEars subprocess call
+  (per-chunk `vendor/HawkEars/analyze.py` invocation) with telemetry logging, parsing of
+  `HawkEars_labels.csv` into the JSON payload consumed by `badc infer aggregate`, and support for
+  pass-through arguments via `--hawkears-arg`. Stub mode remains the default for CI/tests. Added unit
+  tests for the CSV parser and documentation on how to use the new flag.
+- Commands executed:
+  - `apply_patch src/badc/hawkears_runner.py src/badc/cli/main.py README.md docs/usage.rst`
+  - `apply_patch notes/inference-plan.md notes/roadmap.md`
+  - `apply_patch tests/test_hawkears_runner.py`
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `pre-commit run --all-files`
 
 # 2025-12-06 — Bogus dataset submodule
 - Pushed the generated dataset in `tmp/badc-bogus-data` to GitHub (`datalad push --to origin`)

@@ -31,7 +31,9 @@ execution notes live alongside task-specific files under `notes/`.
 - [ ] Implement chunker orchestrator that walks large datasets, schedules HawkEars jobs, and tracks
       provenance for each output segment.
 - [ ] Implement HawkEars inference scheduler per `notes/inference-plan.md` (manifest loader, GPU
-      worker pool, telemetry, output persistence).
+      worker pool, telemetry, output persistence). *(Manifest loader + telemetry exist; `--use-hawkears`
+      now shells out to the embedded analyzer per chunk. Need parallel workers + JSON parsing for
+      full label coverage.)*
 - [ ] Parse HawkEars JSON outputs into canonical detection schema and wire DuckDB aggregation (`notes/pipeline-plan.md`).
 - [ ] Wire `badc data connect` to the bogus dataset submodule once published (`notes/bogus-datalad.md`).
 - [ ] Build `badc chunk run` per `notes/chunk-files.md` (real chunk WAV writer + manifest linking).

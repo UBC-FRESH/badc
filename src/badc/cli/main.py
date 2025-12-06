@@ -336,10 +336,30 @@ def infer_run(
         int,
         typer.Option("--max-retries", help="Maximum retries per chunk."),
     ] = 2,
+    use_hawkears: Annotated[
+        bool,
+        typer.Option(
+            "--use-hawkears/--stub-runner",
+            help="Invoke the embedded HawkEars analyze.py script instead of the stub runner.",
+        ),
+    ] = False,
+    hawkears_arg: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--hawkears-arg",
+            help="Extra argument to pass to HawkEars analyze.py (repeatable).",
+        ),
+    ] = None,
 ) -> None:
-    """Placeholder inference command using manifest."""
+    """Run HawkEars inference for each chunk listed in the manifest."""
+
+    if runner_cmd and use_hawkears:
+        raise typer.BadParameter(
+            "Use either --runner-cmd or --use-hawkears, not both.", param_hint="runner"
+        )
 
     jobs = load_jobs(manifest)
+    extra_args = hawkears_arg or []
     workers = plan_workers(max_gpus=max_gpus)
     from badc.hawkears_runner import run_job
 
@@ -362,6 +382,8 @@ def infer_run(
             output_dir=output_dir,
             runner_cmd=runner_cmd,
             max_retries=max_retries,
+            use_hawkears=use_hawkears,
+            hawkears_args=extra_args,
         )
         processed += 1
     console.print(f"Processed {processed} jobs; outputs stored in {output_dir}")
