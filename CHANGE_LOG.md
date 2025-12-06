@@ -22,6 +22,11 @@
   - `apply_patch notes/bogus-datalad.md`
   - `apply_patch notes/roadmap.md`
 
+# 2025-12-06 — Bogus dataset skeleton
+- Created `data/datalad/bogus/README.md` (placeholder) to reserve the submodule mount point for the
+  forthcoming bogus DataLad repository.
+- Commands executed: `mkdir -p data/datalad/bogus && touch data/datalad/bogus/README.md`
+
 # 2025-12-06 — HawkEars runner subprocess wiring
 - `badc infer run` now shells out to the HawkEars CLI (when `--runner-cmd` is provided), sets
   `CUDA_VISIBLE_DEVICES`, captures stdout/stderr, and logs telemetry per attempt; stub mode remains
