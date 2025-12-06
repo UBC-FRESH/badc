@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import List
 
 from badc.gpu import detect_gpus
+from badc.telemetry import TelemetryRecord, log_telemetry, now_iso
 
 
 @dataclass
@@ -46,3 +47,19 @@ def plan_workers(max_gpus: int | None = None) -> List[GPUWorker]:
     if max_gpus is not None:
         workers = workers[:max_gpus]
     return workers
+
+
+def log_scheduler_event(
+    chunk_id: str, worker: GPUWorker | None, status: str, details: dict
+) -> None:
+    record = TelemetryRecord(
+        chunk_id=chunk_id,
+        gpu_index=worker.index if worker else None,
+        gpu_name=worker.name if worker else None,
+        status=status,
+        started_at=now_iso(),
+        finished_at=None,
+        runtime_s=None,
+        details=details,
+    )
+    log_telemetry(record, Path("data/telemetry/infer/log.jsonl"))

@@ -5,6 +5,14 @@
   - `cat > notes/inference-plan.md`
   - `apply_patch notes/roadmap.md`
 
+# 2025-12-06 — Telemetry utilities
+- Added `telemetry.py` and hooked it into `infer_scheduler` to log JSONL events per chunk/worker.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs docs/_build/html -W`
+
 # 2025-12-06 — Inference telemetry plan
 - Expanded `notes/inference-plan.md` with telemetry logging details (JSONL storage, command
   metadata, retry info).
