@@ -1,3 +1,14 @@
+# 2025-12-06 — Sample audio now lives in DataLad
+- Removed the raw WAVs from `data/audio/`, added a README pointing users to
+  `data/datalad/bogus/audio/`, refreshed docs/notes/tests to reference the submodule paths, and
+  made the bogus bootstrap script look for audio in either `data/audio` or the submodule. This keeps
+  large binaries out of the main Git repo.
+- Commands executed:
+  - `rm data/audio/*.wav`
+  - `apply_patch data/audio/README.md AGENTS.md data/chunk_manifest_sample.csv`
+  - `apply_patch docs/usage.rst notes/bogus-datalad.md notes/chunking.md notes/datalad-plan.md`
+  - `apply_patch notes/erin-notes.md scripts/setup_bogus_datalad.sh tests/test_infer_cli.py`
+
 # 2025-12-06 — Bogus dataset submodule
 - Pushed the generated dataset in `tmp/badc-bogus-data` to GitHub (`datalad push --to origin`)
   and added `data/datalad/bogus` as a git submodule pointing at `UBC-FRESH/badc-bogus-data`.
@@ -7,6 +18,7 @@
   - `source setup/datalad_config.sh && cd tmp/badc-bogus-data && datalad push --to origin`
   - `git submodule add https://github.com/UBC-FRESH/badc-bogus-data.git data/datalad/bogus`
   - `apply_patch notes/datalad-plan.md notes/bogus-datalad.md notes/roadmap.md`
+  - `apply_patch README.md docs/usage.rst`
 
 # 2025-12-06 — Bogus submodule pending
 - Tried to add `UBC-FRESH/badc-bogus-data` as `data/datalad/bogus`, but the GitHub repo currently

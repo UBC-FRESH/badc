@@ -1,14 +1,22 @@
 Usage Overview
 ==============
 
-The CLI entry point is ``badc``. Today it exposes dataset management helpers plus the initial
-chunking/inference scaffolding::
+The CLI entry point is ``badc``. To bootstrap a new checkout, run::
+
+    $ git submodule update --init --recursive
+    $ badc data connect bogus --pull
+
+That clones the HawkEars fork and the bogus DataLad dataset (if `datalad` is installed) and records
+the dataset path in ``~/.config/badc/data.toml``.
+
+After bootstrapping, the CLI exposes dataset management helpers plus the initial chunking/inference
+scaffolding::
 
     $ badc version
     BADC version: 0.1.0
 
-    $ badc data connect bogus --path data/datalad
-    Cloned dataset bogus at data/datalad/bogus.
+    $ badc data connect bogus --path data/datalad --pull
+    Updated dataset bogus at data/datalad/bogus.
 
     $ badc data status
     Tracked datasets:
@@ -17,13 +25,13 @@ chunking/inference scaffolding::
     $ badc data disconnect bogus --drop-content
     Dataset bogus marked as disconnected; data removed.
 
-    $ badc chunk probe data/audio/XXXX-000_20251001_093000.wav --initial-duration 120
+    $ badc chunk probe data/datalad/bogus/audio/XXXX-000_20251001_093000.wav --initial-duration 120
     Probe placeholder: max chunk 120.00s for ...
 
-    $ badc chunk manifest data/audio/XXXX-000_20251001_093000.wav --chunk-duration 60 --hash-chunks
+    $ badc chunk manifest data/datalad/bogus/audio/XXXX-000_20251001_093000.wav --chunk-duration 60 --hash-chunks
     Wrote manifest with chunk duration 60s to chunk_manifest.csv (with hashes)
 
-    $ badc chunk run data/audio/XXXX-000_20251001_093000.wav --chunk-duration 60 --manifest chunks.csv
+    $ badc chunk run data/datalad/bogus/audio/XXXX-000_20251001_093000.wav --chunk-duration 60 --manifest chunks.csv
     Wrote chunk files and manifest entries...
 
     $ badc infer run chunk_manifest.csv --runner-cmd "echo hawkears-stub"

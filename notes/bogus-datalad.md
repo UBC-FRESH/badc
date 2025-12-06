@@ -4,8 +4,8 @@ Purpose: provide a lightweight, public DataLad dataset containing short audio cl
 contributors can test `badc data connect`/`disconnect` without touching the 60 TB production data.
 
 ## Dataset goals
-- Contain ≤10 MB of audio (downsampled versions of `data/audio/GNWT-290_...` and
-  `data/audio/XXXX-...`).
+- Contain ≤10 MB of audio (downsampled versions of `data/datalad/bogus/audio/GNWT-290_...` and
+  `data/datalad/bogus/audio/XXXX-...`).
 - Include a README describing provenance and usage (grouse vs. no-hit cases).
 - Serve as a submodule under `data/datalad/bogus`.
 - Support `datalad get`/`drop` flows and basic integrity checks (hashes).
@@ -19,7 +19,7 @@ contributors can test `badc data connect`/`disconnect` without touching the 60 T
    Submodule `data/datalad/bogus` now tracks `UBC-FRESH/badc-bogus-data`, so local clones land in the
    correct path by default.)*
 5. Document steps in README + docs.
-6. Provide `badc data connect bogus --path data/audio` example; `badc data disconnect bogus`
+6. Provide `badc data connect bogus --path data/datalad` example; `badc data disconnect bogus`
    drops annexed content.
 
 ## Open questions

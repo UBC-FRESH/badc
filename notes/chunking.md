@@ -4,10 +4,10 @@ Goal: determine the maximum audio duration HawkEars can process per GPU without 
 then design automation that splits ~60 TB of recordings accordingly.
 
 ## Inputs
-- Sample WAVs under `data/audio/` (1 min, 7 min, 60 min placeholders; more to follow).
-  - `data/audio/GNWT-290_20230331_235938.wav`: ~60-minute recording (likely no grouse activity;
+- Sample WAVs under `data/datalad/bogus/audio/` (1 min, 7 min, 60 min placeholders; more to follow).
+  - `data/datalad/bogus/audio/GNWT-290_20230331_235938.wav`: ~60-minute recording (likely no grouse activity;
     useful for “no hit” validation runs).
-  - `data/audio/XXXX-000_20251001_093000.wav`: ~7-minute clip with suspected ruffed grouse
+  - `data/datalad/bogus/audio/XXXX-000_20251001_093000.wav`: ~7-minute clip with suspected ruffed grouse
     drumming (need to verify HawkEars actually detects these calls).
 - HawkEars fork (`vendor/HawkEars`).
 - GPU inventory:
@@ -25,7 +25,7 @@ then design automation that splits ~60 TB of recordings accordingly.
    - Names temp files deterministically (e.g., `<recording>_chunk_<start_ms>_<end_ms>.wav`).
    - Supports streaming to avoid writing intermediate files where possible.
 3. CLI commands integrating the probe:
-   - `badc chunk probe --file data/audio/foo.wav --max-duration 900 --gpu 0`
+  - `badc chunk probe --file data/datalad/bogus/audio/foo.wav --max-duration 900 --gpu 0`
    - `badc chunk split --file ... --chunk-duration <sec>`
    - `badc chunk manifest` (future) to emit a manifest CSV ingestible by `badc infer run`.
 4. Documentation capturing the empirically determined safe durations per environment.

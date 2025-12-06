@@ -1,3 +1,3 @@
 recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes
-GNWT-290,GNWT-290_0_60000,data/audio/GNWT-290_20230331_235938.wav,0,60000,0,TODO_HASH,"placeholder chunk"
-GNWT-290,GNWT-290_60000_120000,data/audio/GNWT-290_20230331_235938.wav,60000,120000,2000,TODO_HASH,
+GNWT-290,GNWT-290_0_60000,data/datalad/bogus/audio/GNWT-290_20230331_235938.wav,0,60000,0,TODO_HASH,"placeholder chunk"
+GNWT-290,GNWT-290_60000_120000,data/datalad/bogus/audio/GNWT-290_20230331_235938.wav,60000,120000,2000,TODO_HASH,

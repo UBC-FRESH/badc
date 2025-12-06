@@ -32,8 +32,9 @@ regression.
   changelog entry so priorities stay aligned with the PhD deliverables.
 
 ## Data & infrastructure handling
-- Large raw audio lives in `data/audio/` and will eventually be governed by DataLad pointing at
-  Chinook object storage. Never commit large binaries outside the DataLad-managed paths once that
+- Large raw audio lives in the DataLad-managed paths under `data/datalad/` (e.g.,
+  `data/datalad/bogus/audio/`). The legacy `data/audio/` directory should remain empty and only
+  contain documentation. Never commit large binaries outside the DataLad-managed paths once that
   setup lands. Until then, keep audio fixtures lightweight (<10 MB) and document provenance.
 - When scripting HawkEars runs, provide switches for CPU/GPU selection and document the expected
   NVIDIA memory requirements. Capture crash logs that relate to CUDA OOMs in `notes/`.

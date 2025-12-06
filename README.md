@@ -12,9 +12,10 @@ PhD analyses.
    pip install -e .[dev]
    ```
 3. Initialise submodules (HawkEars fork + bogus DataLad dataset) so the wrapper utilities and sample
-   data are available:
+   data are available, then connect the bogus dataset so DataLad metadata is recorded locally:
    ```bash
    git submodule update --init --recursive
+   badc data connect bogus --pull
    ```
 4. Run `pre-commit install` so the Ruff hooks run automatically before each commit.
 5. Run the standard command cadence (per `AGENTS.md`): `ruff format`, `ruff check`, `pytest`, and
@@ -41,5 +42,17 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
 - `badc infer aggregate artifacts/infer` — reads detection JSON files and writes a summary CSV.
 - `badc telemetry --log data/telemetry/infer/log.jsonl` — tail recent telemetry entries.
 - `badc gpus` — lists detected GPUs via `nvidia-smi` so we can size the HawkEars worker pool.
+
+### Attaching the sample dataset
+
+The bogus DataLad dataset is now a git submodule at `data/datalad/bogus`. After cloning the repo:
+
+```bash
+git submodule update --init --recursive
+badc data connect bogus --pull
+```
+
+The `badc data connect` command prefers `datalad clone` (falls back to git) and records the dataset
+in `~/.config/badc/data.toml` so subsequent `badc data status` calls show where the audio lives.
 
 The CLI entry point is `badc`. Use `badc --help` to inspect the available commands.

@@ -13,7 +13,7 @@ def test_infer_run_placeholder(tmp_path: Path) -> None:
     manifest = tmp_path / "manifest.csv"
     manifest.write_text(
         "recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes\n"
-        "rec1,chunk_a,data/audio/foo.wav,0,1000,0,hash,\n"
+        "rec1,chunk_a,data/datalad/bogus/audio/foo.wav,0,1000,0,hash,\n"
     )
     result = runner.invoke(app, ["infer", "run", str(manifest), "--runner-cmd", "echo stub"])
     assert result.exit_code == 0

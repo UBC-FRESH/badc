@@ -30,7 +30,18 @@ cd "$DATASET_DIR"
 
 datalad create --force
 mkdir -p audio
-cp "$REPO_DIR/data/audio"/*.wav audio/ 2>/dev/null || true
+sample_dir="${BADC_SAMPLE_AUDIO_DIR:-$REPO_DIR/data/audio}"
+if ! compgen -G "$sample_dir"/*.wav >/dev/null 2>&1; then
+  fallback="$REPO_DIR/data/datalad/bogus/audio"
+  if [[ -d "$fallback" ]] && compgen -G "$fallback"/*.wav >/dev/null 2>&1; then
+    sample_dir="$fallback"
+  fi
+fi
+if compgen -G "$sample_dir"/*.wav >/dev/null 2>&1; then
+  cp "$sample_dir"/*.wav audio/
+else
+  echo "Warning: no sample audio found in $sample_dir; dataset will not include WAV files." >&2
+fi
 datalad save -m "Add sample audio"
 
 cat <<CFG > .gitmodules

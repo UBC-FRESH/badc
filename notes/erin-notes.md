@@ -18,7 +18,11 @@ HawkEars web site:
 
 https://wildlabs.net/article/hawkears-high-performance-bird-sound-classifier-canada
 
-We have included two long)ish) audio recordings in the `data/audio` directory (7 minutes, and 60 minutes). The shorter one might go through HawkEars without crashing on the dev server, but the longer one is confirmed to be too long. We ran some quick tests earlier, and 1 minutes is OK but 10 minutes is too long. The shorter audio file has ruffed grouse sounds (allegedly), but the longer file is maybe just a bunch of noises but no grouse (confirm). 
+We have included two long)ish) audio recordings in the `data/datalad/bogus/audio/` directory (7
+minutes, and 60 minutes) via the bogus DataLad dataset. The shorter one might go through HawkEars
+without crashing on the dev server, but the longer one is confirmed to be too long. We ran some quick
+tests earlier, and 1 minutes is OK but 10 minutes is too long. The shorter audio file has ruffed
+grouse sounds (allegedly), but the longer file is maybe just a bunch of noises but no grouse (confirm).
 
 ## Coding agent contract
 

@@ -74,8 +74,8 @@ required for connecting/disconnecting datasets at runtime.
 - Surface these commands in docs + README as part of environment bootstrap.
 - **Status (2025-12-06)**: CLI commands now exist and write to `~/.config/badc/data.toml`; they can
   clone/update datasets via `datalad` (preferred) or plain git. The default `bogus` dataset now
-  lives at `data/datalad/bogus` via a git submodule, so `badc data connect bogus` points at that
-  location without extra flags.
+  lives at `data/datalad/bogus` via a git submodule, so `badc data connect bogus --pull` is part of
+  the documented bootstrap steps (see README/docs usage snippets).
 
 ## Open questions / follow-ups
 1. How much bogus data do we need to exercise CUDA chunking without tripping GPU VRAM limits?
