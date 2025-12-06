@@ -10,10 +10,48 @@ from typing import Iterable, List
 
 @dataclass
 class DetectionRecord:
-    chunk_id: str
     recording_id: str
+    chunk_id: str
+    timestamp_ms: int | None
+    label: str
+    confidence: float | None
     status: str
-    raw: dict
+    source_path: Path
+
+
+def _parse_detection_entries(
+    data: dict, recording_id: str, chunk_id: str, source_path: Path
+) -> list[DetectionRecord]:
+    records: list[DetectionRecord] = []
+    detections = data.get("detections")
+    if isinstance(detections, list) and detections:
+        for det in detections:
+            records.append(
+                DetectionRecord(
+                    recording_id=recording_id,
+                    chunk_id=chunk_id,
+                    timestamp_ms=int(det.get("timestamp_ms", 0)),
+                    label=str(det.get("label", "unknown")),
+                    confidence=float(det.get("confidence", 0.0))
+                    if det.get("confidence") is not None
+                    else None,
+                    status="ok",
+                    source_path=source_path,
+                )
+            )
+    else:
+        records.append(
+            DetectionRecord(
+                recording_id=recording_id,
+                chunk_id=chunk_id,
+                timestamp_ms=None,
+                label="none",
+                confidence=None,
+                status=data.get("status", "unknown"),
+                source_path=source_path,
+            )
+        )
+    return records
 
 
 def load_detections(root: Path) -> List[DetectionRecord]:
@@ -25,21 +63,18 @@ def load_detections(root: Path) -> List[DetectionRecord]:
             continue
         chunk_id = data.get("chunk_id", path.stem)
         recording_id = path.parent.name
-        records.append(
-            DetectionRecord(
-                chunk_id=chunk_id,
-                recording_id=recording_id,
-                status=data.get("status", "unknown"),
-                raw=data,
-            )
-        )
+        records.extend(_parse_detection_entries(data, recording_id, chunk_id, path))
     return records
 
 
 def write_summary_csv(records: Iterable[DetectionRecord], out_path: Path) -> Path:
-    lines = ["recording_id,chunk_id,status"]
+    lines = ["recording_id,chunk_id,timestamp_ms,label,confidence,status,source_path"]
     for rec in records:
-        lines.append(f"{rec.recording_id},{rec.chunk_id},{rec.status}")
+        ts = "" if rec.timestamp_ms is None else rec.timestamp_ms
+        conf = "" if rec.confidence is None else rec.confidence
+        lines.append(
+            f"{rec.recording_id},{rec.chunk_id},{ts},{rec.label},{conf},{rec.status},{rec.source_path}"
+        )
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text("\n".join(lines) + "\n")
     return out_path

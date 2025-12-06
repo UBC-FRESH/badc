@@ -336,3 +336,10 @@
 # 2025-12-06 — Roadmap next steps
 - Added roadmap bullets for HawkEars JSON parsing + DuckDB work and the upcoming bogus DataLad connect wiring.
 - Commands executed: `apply_patch notes/roadmap.md`
+- # 2025-12-06 — Detection schema parsing
+- Aggregator now reads HawkEars JSON detections (`aggregate.py`) and emits canonical CSV rows
+  (recording/chunk/timestamp/label/confidence); tests updated.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`

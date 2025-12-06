@@ -24,7 +24,10 @@ def test_infer_aggregate_placeholder() -> None:
     detections_dir = Path("artifacts/infer_test")
     detections_dir.mkdir(parents=True, exist_ok=True)
     (detections_dir / "rec1").mkdir(exist_ok=True)
-    (detections_dir / "rec1" / "chunk_a.json").write_text('{"chunk_id": "chunk_a", "status": "ok"}')
+    (detections_dir / "rec1" / "chunk_a.json").write_text(
+        '{"chunk_id": "chunk_a", "status": "ok", "detections": '
+        '[{"timestamp_ms": 123, "label": "grouse", "confidence": 0.9}]}'
+    )
     result = runner.invoke(app, ["infer", "aggregate", str(detections_dir)])
     assert result.exit_code == 0
     assert "Wrote detection summary" in result.stdout
