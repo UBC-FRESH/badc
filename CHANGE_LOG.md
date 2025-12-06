@@ -1,5 +1,6 @@
 # 2025-12-06 — Notebook gallery scaffold
-- Documented the planned chunk probe / stub infer / aggregate analysis notebooks (repo layout, execution guidelines) and added starter `.ipynb` files under `notebooks/` so contributors can iterate inside a consistent structure.
+- Documented the planned chunk probe / stub infer / aggregate analysis notebooks (repo layout, execution guidelines) and added starter `.ipynb` files under `docs/notebooks/` so contributors can iterate inside a consistent structure.
+- Linked the gallery to the actual notebooks via nbsphinx and removed the placeholder `.rst` wrappers so the pages render on the published docs.
 - Commands executed:
   - `ruff format src tests`
   - `ruff check src tests`
