@@ -1,3 +1,8 @@
+# 2025-12-06 — Chunk manifest follow-ups noted
+- Documented in `notes/chunking.md` that `badc chunk manifest` currently writes placeholder hashes
+  and needs SHA256 + overlap metadata in the upcoming implementation.
+- Commands executed: `apply_patch notes/chunking.md`
+
 # 2025-12-06 — Chunk manifest CLI scaffold
 - Added `badc chunk manifest` command, WAV duration helper, sample tests/assets, and documentation
   so manifests can be generated ahead of the full HawkEars wiring.
