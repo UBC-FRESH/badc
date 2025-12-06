@@ -1,3 +1,11 @@
+# 2025-12-06 — Pipeline planning note
+- Added `notes/pipeline-plan.md` describing the chunk → infer → aggregate → report stages,
+  including manifests, telemetry expectations, and CLI hooks.
+- Updated the roadmap to reference the plan in the CLI orchestration task.
+- Commands executed:
+  - `cat > notes/pipeline-plan.md`
+  - `apply_patch notes/roadmap.md`
+
 # 2025-12-06 — Inference CLI scaffolding
 - Added `badc infer run|aggregate` placeholder commands plus utility helpers so the full
   chunk→infer→aggregate pipeline shape is represented in the CLI/tests/docs.
