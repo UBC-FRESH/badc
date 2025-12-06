@@ -12,6 +12,7 @@ from badc import __version__, chunking
 from badc.audio import get_wav_duration
 from badc.chunk_writer import ChunkMetadata, iter_chunk_metadata
 from badc.gpu import detect_gpus
+from badc.infer_scheduler import load_jobs, plan_workers
 
 console = Console()
 app = typer.Typer(help="Utilities for chunking and processing large bird audio corpora.")
@@ -234,19 +235,18 @@ def list_gpus() -> None:
 
 @infer_app.command("run")
 def infer_run(
-    chunk_ids: Annotated[
-        list[str],
-        typer.Argument(
-            help="Chunk identifiers to process (placeholder; eventually derived from chunk outputs)."
-        ),
-    ],
+    manifest: Annotated[Path, typer.Argument(help="Path to chunk manifest CSV.")],
+    max_gpus: Annotated[
+        int | None,
+        typer.Option("--max-gpus", help="Limit number of GPUs to use."),
+    ] = None,
 ) -> None:
-    """Placeholder inference command."""
+    """Placeholder inference command using manifest."""
 
-    detections = chunking.run_inference_on_chunks(chunk_ids)
-    console.print("Inference placeholder complete:")
-    for det in detections:
-        console.print(f" - {det}")
+    jobs = load_jobs(manifest)
+    workers = plan_workers(max_gpus=max_gpus)
+    console.print(f"Loaded {len(jobs)} jobs and {len(workers)} workers.")
+    console.print("Scheduling not yet implemented.")
 
 
 @infer_app.command("aggregate")

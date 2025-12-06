@@ -5,6 +5,15 @@
   - `cat > notes/inference-plan.md`
   - `apply_patch notes/roadmap.md`
 
+# 2025-12-06 — Inference scheduler scaffolding
+- Added `src/badc/infer_scheduler.py` + CLI hooks so `badc infer run --manifest ...` loads chunk jobs
+  and reports detected GPU workers; updated tests to reflect manifest-based invocation.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs docs/_build/html -W`
+
 # 2025-12-06 — Chunk manifest path integration
 - `badc chunk run` now passes real chunk metadata to the manifest writer so path/hash entries
   reference generated files; tests updated.
