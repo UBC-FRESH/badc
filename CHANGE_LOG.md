@@ -1,3 +1,14 @@
+# 2025-12-06 — HPC docs baseline
+- Filled in `docs/hpc/sockeye.rst`, `docs/hpc/chinook.rst`, and `docs/hpc/apptainer.rst` with the agreed UBC ARC workflows (resource requests, DataLad push/pull patterns, container build instructions).
+- Added the `docs/howto/infer-hpc.rst` cookbook so people can submit HawkEars runs on Sockeye without spelunking notes.
+- Updated `notes/documentation-plan.md` to reflect the completed HPC documentation slice and capture remaining follow-ups (credential screenshots, notebook gallery).
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `pre-commit run --all-files`
+
 # 2025-12-06 — Chunking docstrings
 - Ported `badc.chunking` to the same NumPy-style docstring format (module + public helpers) so the autosummary page finally renders real descriptions.
 - Commands executed:
