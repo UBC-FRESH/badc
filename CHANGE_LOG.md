@@ -1,3 +1,10 @@
+# 2025-12-06 — Docs publish via GitHub Pages
+- CI workflow now uploads `docs/_build/html` as a Pages artifact on `main` pushes and deploys it
+  via `actions/deploy-pages`, so Sphinx docs stay in sync at
+  https://ubc-fresh.github.io/bird-acoustic-data-cruncher/. README now links to the published docs.
+- Commands executed:
+  - `apply_patch .github/workflows/ci.yml README.md`
+
 # 2025-12-06 — Sample audio now lives in DataLad
 - Removed the raw WAVs from `data/audio/`, added a README pointing users to
   `data/datalad/bogus/audio/`, refreshed docs/notes/tests to reference the submodule paths, and

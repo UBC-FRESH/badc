@@ -66,3 +66,8 @@ The `badc data connect` command prefers `datalad clone` (falls back to git) and 
 in `~/.config/badc/data.toml` so subsequent `badc data status` calls show where the audio lives.
 
 The CLI entry point is `badc`. Use `badc --help` to inspect the available commands.
+
+## Documentation
+
+Rendered Sphinx docs are published automatically from `main` at  
+https://ubc-fresh.github.io/bird-acoustic-data-cruncher/
