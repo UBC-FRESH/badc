@@ -75,7 +75,7 @@ Goal: deliver complete documentation coverage across back-end modules, CLI surfa
 - HPC appendix includes at least one SLURM script and datalad run example.
 
 ## Next actions
-1. Enable `sphinx.ext.autosummary` + `nbsphinx` in `conf.py`.
-2. Create directories: `docs/cli`, `docs/api`, `docs/howto`, `docs/hpc`, `docs/notebooks` (with placeholder refs).
-3. Draft CLI reference for `badc data` namespace.
-4. Draft how-to: "Running inference with datalad run".
+- ✅ Baseline CLI docs (data + chunk + infer + misc) and the datalad run how-to landed on 2025-12-06.
+1. Begin the NumPy docstring sweep so `docs/api/generated/*` renders real content.
+2. Expand the CLI pages with option tables/screenshots as the commands stabilize (e.g., telemetry, future aggregate helpers).
+3. Flesh out the HPC/how-to sections with Sockeye/Chinook SLURM scripts, Apptainer tips, and notebook gallery links.

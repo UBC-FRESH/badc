@@ -1,3 +1,16 @@
+# 2025-12-06 — Chunk & infer CLI docs
+- Replaced the placeholder chunk/infer/misc CLI reference pages with full usage guides that cover
+  manifest schema, overlap behavior, concurrency knobs, telemetry, and the `--print-datalad-run`
+  helper.
+- Updated `notes/documentation-plan.md` to capture the completed CLI milestone and focus the next
+  actions on docstrings + HPC guides.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `pre-commit run --all-files`
+
 # 2025-12-06 — Data CLI + datalad run docs
 - Enabled `nbsphinx` plus Napoleon NumPy-only parsing in `docs/conf.py` so we can document notebook
   workflows and enforce the docstring contract from `AGENTS.md`.
