@@ -28,6 +28,14 @@ required for connecting/disconnecting datasets at runtime.
   runs `datalad create`, copies the tiny audio samples, configures the GitHub remote, and executes
   `git annex initremote arbutus-s3 ...` (which creates the bucket automatically).
   - Keep file sizes below GitHub’s 100 MB limit; rely on Datalad/Git LFS only if necessary.
+  - Script now understands two optional safeguards:
+    - `S3_EXISTING_REMOTE_UUID` for reusing an annex bucket that was provisioned previously.
+    - `S3_RESET_CONFLICTING_BUCKET=1` to instruct the script to delete/recreate buckets whose
+      `git-annex-uuid` object cannot be read (otherwise it aborts with guidance).
+  - **Status (2025-12-06)**: bootstrap completed successfully after clearing the conflicting
+    bucket; GitHub repo `UBC-FRESH/badc-bogus-data` now exists and the Arbutus bucket was created via
+    `git annex initremote`. Next step is wiring `badc data connect bogus` so contributors can clone
+    `tmp/badc-bogus-data` into `data/datalad/bogus`.
 
 ### 2. Production dataset (restricted)
 - **Purpose**: house the 60 TB archive and authoritative HawkEars outputs for Erin’s project.

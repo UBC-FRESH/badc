@@ -8,6 +8,7 @@ __pycache__/
 .DS_Store
 .docs_cache/
 docs/_build/
+_build/
 .eggs/
 *.egg-info/
 dist/
@@ -18,3 +19,4 @@ artifacts/
 data/telemetry/
 
 setup/datalad_config.sh
+tmp/

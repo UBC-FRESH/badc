@@ -1,3 +1,29 @@
+# 2025-12-06 — Bogus dataset bootstrap status
+- Documented in `notes/datalad-plan.md` that the bogus dataset bootstrap succeeded (new Arbutus
+  bucket + `UBC-FRESH/badc-bogus-data` GitHub repo) so we can focus on wiring `badc data connect`.
+- Commands executed:
+  - `apply_patch notes/datalad-plan.md`
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `pre-commit run --all-files`
+
+# 2025-12-06 — Bogus DataLad bucket guardrails
+- Hardened `scripts/setup_bogus_datalad.sh` to detect existing Arbutus buckets, reuse known
+  `git-annex-uuid` values, and optionally reset unreadable/conflicting buckets via
+  `S3_RESET_CONFLICTING_BUCKET`. Added `S3_EXISTING_REMOTE_UUID` hint + documented knobs in
+  `setup/datalad_config.template.sh` and `notes/datalad-plan.md`. Ignored `tmp/` so local datasets
+  don’t show up as untracked files.
+- Fixed the special-remote reuse call so we now pass `sameas=<uuid>` (per git-annex docs) instead of
+  the invalid `--sameas` flag.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `pre-commit run --all-files`
+
 # 2025-12-06 — Bogus DataLad scaffolding
 - Updated `data/datalad/bogus/README.md`, README/docs, and notest to document the upcoming `badc data connect` wiring to `UBC-FRESH/badc-bogus-audio`.
 - Commands executed:

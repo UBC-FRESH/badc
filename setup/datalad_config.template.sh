@@ -10,4 +10,8 @@ export GITHUB_ORG="UBC-FRESH"
 export GITHUB_REPO_NAME="badc-bogus-data"
 export DATALAD_GITHUB_TOKEN="CHANGE_ME"
 
+# Optional knobs:
+# export S3_EXISTING_REMOTE_UUID=""      # set if reusing an existing annex bucket UUID
+# export S3_RESET_CONFLICTING_BUCKET=0   # set to 1 to allow the script to delete/recreate buckets
+
 export AWS_EC2_METADATA_DISABLED=true
