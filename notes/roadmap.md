@@ -30,6 +30,8 @@ execution notes live alongside task-specific files under `notes/`.
 ## Phase 2 — Data Automation & Analysis Layer
 - [ ] Implement chunker orchestrator that walks large datasets, schedules HawkEars jobs, and tracks
       provenance for each output segment.
+- [ ] Implement HawkEars inference scheduler per `notes/inference-plan.md` (manifest loader, GPU
+      worker pool, telemetry, output persistence).
 - [ ] Build `badc chunk run` per `notes/chunk-files.md` (real chunk WAV writer + manifest linking).
 - [ ] Design the aggregated “bird call events” datastore (likely DuckDB/Parquet) and expose query
       helpers for down-stream stats/figures.

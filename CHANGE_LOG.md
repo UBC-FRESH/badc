@@ -1,3 +1,10 @@
+# 2025-12-06 — HawkEars inference plan
+- Added `notes/inference-plan.md` detailing the manifest loader, GPU scheduler, telemetry, and CLI
+  requirements for `badc infer run`; roadmap updated accordingly.
+- Commands executed:
+  - `cat > notes/inference-plan.md`
+  - `apply_patch notes/roadmap.md`
+
 # 2025-12-06 — Chunk manifest path integration
 - `badc chunk run` now passes real chunk metadata to the manifest writer so path/hash entries
   reference generated files; tests updated.
