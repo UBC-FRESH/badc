@@ -8,6 +8,8 @@ execution notes live alongside task-specific files under `notes/`.
 ## Phase 0 — Repository Foundations (in progress)
 - [x] Capture problem statement and constraints in `notes/erin-notes.md`.
 - [x] Add coding-agent contract (`AGENTS.md`, `CONTRIBUTING.md`) and changelog scaffolding.
+- [x] Document DataLad repo strategy (bogus vs. production datasets + CLI expectations) in
+      `notes/datalad-plan.md`.
 - [ ] Establish minimal Python package layout (`pyproject.toml`, `src/badc`, Typer CLI entry).
 - [ ] Stand up CI stubs (lint/test placeholders) and pre-commit config.
 - [ ] Mirror FHOPS doc stack: Sphinx skeleton + GitHub Pages deployment workflow.
@@ -30,6 +32,9 @@ execution notes live alongside task-specific files under `notes/`.
       helpers for down-stream stats/figures.
 - [ ] Wire Typer CLI commands for end-to-end runs (`badc chunk`, `badc infer`, `badc aggregate`,
       `badc report`).
+- [ ] Add CLI plumbing for DataLad attachments (`badc data connect`, `badc data disconnect`,
+      `badc data status`) so deployments can swap between bogus/test and production datasets at
+      runtime.
 - [ ] Author Python API wrappers so notebooks and downstream tooling can reuse the workflow.
 - [ ] Extend docs with pipeline diagrams, config examples, and troubleshooting sections.
 
@@ -38,6 +43,10 @@ execution notes live alongside task-specific files under `notes/`.
       nodes; script build/push to Sylabs or Chinook object storage.
 - [ ] Automate Datalad integration so large audio corpora sync against Chinook S3 while metadata
       stays in GitHub.
+- [ ] Stand up the public bogus DataLad dataset (GitHub-hosted) and add it as a subdataset for
+      smoke tests (`notes/datalad-plan.md`).
+- [ ] Stand up the restricted production DataLad dataset backed by Chinook object storage and
+      document credential/bootstrap steps.
 - [ ] Provide submission templates/scripts for Sockeye job arrays (per-chunk or per-batch) with
       telemetry collection.
 - [ ] Stress-test the workflow on multi-hour recordings; capture performance, GPU usage, and
@@ -60,8 +69,8 @@ execution notes live alongside task-specific files under `notes/`.
    the 1 min / 7 min / 60 min samples, and store telemetry in `notes/chunking.md`.
 4. **Data pipeline sketch** — outline the chunking → inference → aggregation temp-dir structure and
    define the canonical events schema before coding.
-5. **Data management plan** — start the Datalad + Chinook special-remote setup so we do not paint
-   ourselves into a corner when the 60 TB drop arrives.
+5. **Data management plan** — flesh out `notes/datalad-plan.md`, scaffold the bogus dataset, and
+   draft the Chinook special-remote workflow ahead of the 60 TB ingest.
 
 ## Backlog & Ideas
 - GPU-aware scheduling heuristics that prioritise short chunks when VRAM is scarce.
