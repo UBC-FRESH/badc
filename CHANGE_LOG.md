@@ -1,3 +1,11 @@
+# 2025-12-06 — Bogus DataLad planning note
+- Added `notes/bogus-datalad.md` outlining the lightweight audio dataset we will expose as a test
+  submodule for the `badc data connect` workflow.
+- Roadmap now references the new note under Phase 3.
+- Commands executed:
+  - `cat > notes/bogus-datalad.md`
+  - `apply_patch notes/roadmap.md`
+
 # 2025-12-06 — Chunk CLI scaffolding
 - Added `badc.chunk` subcommands (`probe`, `split`) plus `badc/chunking.py` utilities and tests to
   prepare for the real HawkEars/GPU integration.

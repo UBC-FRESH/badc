@@ -48,6 +48,7 @@ execution notes live alongside task-specific files under `notes/`.
       stays in GitHub.
 - [ ] Stand up the public bogus DataLad dataset (GitHub-hosted) and add it as a subdataset for
       smoke tests (`notes/datalad-plan.md`).
+- [ ] Plan bogus dataset contents and workflow (`notes/bogus-datalad.md`).
 - [ ] Stand up the restricted production DataLad dataset backed by Chinook object storage and
       document credential/bootstrap steps.
 - [ ] Provide submission templates/scripts for Sockeye job arrays (per-chunk or per-batch) with
