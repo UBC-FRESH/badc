@@ -36,6 +36,13 @@ required for connecting/disconnecting datasets at runtime.
     bucket; GitHub repo `UBC-FRESH/badc-bogus-data` now exists and the Arbutus bucket was created via
     `git annex initremote`. Next step is wiring `badc data connect bogus` so contributors can clone
     `tmp/badc-bogus-data` into `data/datalad/bogus`.
+  - **Submodule hook**: Added as `data/datalad/bogus` now that `UBC-FRESH/badc-bogus-data` has an
+    initial commit (pushed via `datalad push`). Contributors can run `git submodule update --init`
+    to fetch the bogus dataset skeleton.
+  - **Caveat**: the “reuse existing bucket” path still doesn’t work reliably when the script fails
+    midway (git-annex keeps seeing the orphaned `git-annex-uuid`). Until we fix the workflow, the
+    only workaround after a partial failure is to delete the bucket (or at least remove its
+    `git-annex-uuid` object) manually and rerun the script.
 
 ### 2. Production dataset (restricted)
 - **Purpose**: house the 60 TB archive and authoritative HawkEars outputs for Erin’s project.
@@ -65,6 +72,10 @@ required for connecting/disconnecting datasets at runtime.
 - Provide optional `--special-remote` argument so advanced users can point at alternate Chinook
   buckets.
 - Surface these commands in docs + README as part of environment bootstrap.
+- **Status (2025-12-06)**: CLI commands now exist and write to `~/.config/badc/data.toml`; they can
+  clone/update datasets via `datalad` (preferred) or plain git. The default `bogus` dataset now
+  lives at `data/datalad/bogus` via a git submodule, so `badc data connect bogus` points at that
+  location without extra flags.
 
 ## Open questions / follow-ups
 1. How much bogus data do we need to exercise CUDA chunking without tripping GPU VRAM limits?

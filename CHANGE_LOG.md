@@ -1,3 +1,49 @@
+# 2025-12-06 — Bogus dataset submodule
+- Pushed the generated dataset in `tmp/badc-bogus-data` to GitHub (`datalad push --to origin`)
+  and added `data/datalad/bogus` as a git submodule pointing at `UBC-FRESH/badc-bogus-data`.
+  Updated notes/roadmap to mark the wiring complete.
+- Commands executed:
+  - `source setup/datalad_config.sh && cd tmp/badc-bogus-data && datalad create-sibling-github --existing=reconfigure`
+  - `source setup/datalad_config.sh && cd tmp/badc-bogus-data && datalad push --to origin`
+  - `git submodule add https://github.com/UBC-FRESH/badc-bogus-data.git data/datalad/bogus`
+  - `apply_patch notes/datalad-plan.md notes/bogus-datalad.md notes/roadmap.md`
+
+# 2025-12-06 — Bogus submodule pending
+- Tried to add `UBC-FRESH/badc-bogus-data` as `data/datalad/bogus`, but the GitHub repo currently
+  has no commits so git refuses to create the submodule. Restored the placeholder README with
+  instructions and documented the blocker in `notes/datalad-plan.md`, `notes/bogus-datalad.md`, and
+  the roadmap.
+- Commands executed:
+  - `git rm data/datalad/bogus/README.md` (rolled back after failure)
+  - `apply_patch data/datalad/bogus/README.md notes/datalad-plan.md notes/bogus-datalad.md notes/roadmap.md`
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `pre-commit run --all-files`
+
+# 2025-12-06 — Data CLI connect/disconnect workflow
+- Added `src/badc/data.py` plus Typer wiring so `badc data connect/disconnect/status` now clone
+  datasets (preferring `datalad` with `git` fallback), record metadata in
+  `~/.config/badc/data.toml`, and optionally remove content. Updated README, docs, roadmap, and
+  bogus DataLad notes; added CLI regression tests.
+- Commands executed:
+  - `apply_patch src/badc/data.py src/badc/cli/main.py README.md docs/usage.rst notes/roadmap.md`
+  - `apply_patch notes/bogus-datalad.md notes/datalad-plan.md`
+  - `apply_patch tests/test_cli.py`
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `pre-commit run --all-files`
+
+# 2025-12-06 — Bogus dataset caveat
+- Updated `notes/datalad-plan.md` with the current limitation: if the bootstrap script fails after
+  creating the Arbutus bucket, the reuse logic still can’t recover, so manual bucket/UUID deletion
+  is required before rerunning.
+- Commands executed:
+  - `apply_patch notes/datalad-plan.md`
+
 # 2025-12-06 — Bogus dataset bootstrap status
 - Documented in `notes/datalad-plan.md` that the bogus dataset bootstrap succeeded (new Arbutus
   bucket + `UBC-FRESH/badc-bogus-data` GitHub repo) so we can focus on wiring `badc data connect`.

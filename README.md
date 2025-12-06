@@ -11,7 +11,8 @@ PhD analyses.
    ```bash
    pip install -e .[dev]
    ```
-3. Initialise submodules (HawkEars fork) so the wrapper utilities can find the inference engine:
+3. Initialise submodules (HawkEars fork + bogus DataLad dataset) so the wrapper utilities and sample
+   data are available:
    ```bash
    git submodule update --init --recursive
    ```
@@ -24,7 +25,12 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
 ## CLI preview
 
 - `badc version` — display current package version.
-- `badc data ...` — placeholder commands for future DataLad integration.
+- `badc data connect bogus --path data/datalad` — clones/updates the bogus DataLad dataset (uses
+  `datalad clone` when installed, otherwise `git clone`) and records it in
+  `~/.config/badc/data.toml`.
+- `badc data disconnect bogus --drop-content` — marks the dataset as disconnected and optionally
+  removes the files (useful for freeing disk space).
+- `badc data status` — prints all recorded datasets and their local paths/status.
 - `badc chunk probe|split` — scaffold commands for chunk-size experiments (currently stubs until
   HawkEars + GPU telemetry wiring lands).
 - `badc chunk manifest` — generates a chunk manifest CSV, optionally writing chunk files + hashes
@@ -32,11 +38,8 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
 - `badc chunk run` — splits audio into chunk WAVs and produces a manifest for inference.
 - `badc infer run --manifest manifest.csv` — loads chunk jobs, detects GPUs, and runs the HawkEars
   runner (stubbed until the real CLI is wired).
-- `badc data connect bogus` — placeholder for cloning the upcoming bogus DataLad dataset (smoke tests).
 - `badc infer aggregate artifacts/infer` — reads detection JSON files and writes a summary CSV.
 - `badc telemetry --log data/telemetry/infer/log.jsonl` — tail recent telemetry entries.
-- `badc data connect bogus --path data/datalad` — will eventually clone `UBC-FRESH/badc-bogus-audio`
-  (DataLad repo) and wire it as a submodule for smoke tests.
 - `badc gpus` — lists detected GPUs via `nvidia-smi` so we can size the HawkEars worker pool.
 
 The CLI entry point is `badc`. Use `badc --help` to inspect the available commands.

@@ -40,9 +40,10 @@ execution notes live alongside task-specific files under `notes/`.
 - [ ] Wire Typer CLI commands for end-to-end runs (`badc chunk`, `badc infer`, `badc aggregate`,
       `badc report`). *(Scaffolded chunk/infer commands exist; `notes/pipeline-plan.md` now captures
       the full flow.)*
-- [ ] Add CLI plumbing for DataLad attachments (`badc data connect`, `badc data disconnect`,
+- [x] Add CLI plumbing for DataLad attachments (`badc data connect`, `badc data disconnect`,
       `badc data status`) so deployments can swap between bogus/test and production datasets at
-      runtime.
+      runtime. *(Implemented via `badc data connect/disconnect/status`, writing to
+      `~/.config/badc/data.toml`; still need to wire real datasets/submodules.)*
 - [ ] Author Python API wrappers so notebooks and downstream tooling can reuse the workflow.
 - [ ] Extend docs with pipeline diagrams, config examples, and troubleshooting sections.
 
@@ -53,8 +54,9 @@ execution notes live alongside task-specific files under `notes/`.
       stays in GitHub.
 - [ ] Stand up the public bogus DataLad dataset (GitHub-hosted) and add it as a subdataset for
       smoke tests (`notes/datalad-plan.md`).
-- [ ] Implement `badc data connect/disconnect` wiring for the bogus dataset once the submodule
-      exists (`notes/bogus-datalad.md`).
+- [x] Implement `badc data connect/disconnect` wiring for the bogus dataset once the submodule
+      exists (`notes/bogus-datalad.md`). *(Git submodule added at `data/datalad/bogus`; CLI now
+      targets this path by default.)*
 - [ ] Plan bogus dataset contents and workflow (`notes/bogus-datalad.md`).
 - [ ] Stand up the restricted production DataLad dataset backed by Chinook object storage and
       document credential/bootstrap steps.

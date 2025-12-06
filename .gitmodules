@@ -1,3 +1,6 @@
 [submodule "vendor/HawkEars"]
 	path = vendor/HawkEars
 	url = https://github.com/UBC-FRESH/HawkEars
+[submodule "data/datalad/bogus"]
+	path = data/datalad/bogus
+	url = https://github.com/UBC-FRESH/badc-bogus-data.git

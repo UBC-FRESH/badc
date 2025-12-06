@@ -15,6 +15,9 @@ contributors can test `badc data connect`/`disconnect` without touching the 60 T
 2. Initialise DataLad dataset there; commit short audio files + metadata.
 3. Add as git submodule here (`data/datalad/bogus`).
 4. Update `badc data connect bogus` to clone/pull the dataset if missing and record status in config.
+   *(Done: CLI now clones via `datalad`/`git` and stores metadata in `~/.config/badc/data.toml`.
+   Submodule `data/datalad/bogus` now tracks `UBC-FRESH/badc-bogus-data`, so local clones land in the
+   correct path by default.)*
 5. Document steps in README + docs.
 6. Provide `badc data connect bogus --path data/audio` example; `badc data disconnect bogus`
    drops annexed content.

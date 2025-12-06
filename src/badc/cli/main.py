@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Optional
 
 import typer
 from rich.console import Console
 
 from badc import __version__, chunking
+from badc import data as data_utils
 from badc.audio import get_wav_duration
 from badc.chunk_writer import ChunkMetadata, iter_chunk_metadata
 from badc.gpu import detect_gpus
@@ -46,12 +48,69 @@ def data_connect(
         Path,
         typer.Option("--path", help="Target path for the dataset.", dir_okay=True, file_okay=False),
     ] = Path("data/datalad"),
+    url: Annotated[
+        Optional[str],
+        typer.Option("--url", help="Override dataset URL (required for unknown names)."),
+    ] = None,
+    method: Annotated[
+        Optional[str],
+        typer.Option("--method", help="Preferred clone method: git or datalad."),
+    ] = None,
+    pull_existing: Annotated[
+        bool,
+        typer.Option(
+            "--pull/--no-pull",
+            help="Update the dataset when it already exists locally.",
+        ),
+    ] = True,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run/--apply", help="Preview actions without running commands."),
+    ] = False,
 ) -> None:
-    """Stub for future DataLad dataset attach workflow."""
+    """Clone (or update) a DataLad-backed dataset and record it in the config."""
 
-    target_path = path / name
-    console.print("[yellow]TODO:[/] implement DataLad clone/register logic.", style="bold")
-    console.print(f"Dataset: [cyan]{name}[/] -> {target_path}")
+    method_normalized = method.lower() if method else None
+    if method_normalized and method_normalized not in {"git", "datalad"}:
+        raise typer.BadParameter("Method must be either 'git' or 'datalad'.", param_hint="--method")
+
+    try:
+        spec = data_utils.get_dataset_spec(name)
+    except KeyError:
+        if not url:
+            raise typer.BadParameter(
+                f"Unknown dataset '{name}'. Provide --url to supply a clone target.",
+                param_hint="name",
+            ) from None
+        spec = data_utils.DatasetSpec(name=name, url=url, description="custom dataset")
+    else:
+        spec = data_utils.override_spec_url(spec, url)
+
+    target_path = (path / name).expanduser()
+    try:
+        status = data_utils.connect_dataset(
+            spec,
+            target_path,
+            method=method_normalized,
+            pull_existing=pull_existing,
+            dry_run=dry_run,
+        )
+    except subprocess.CalledProcessError as exc:
+        console.print(f"[red]Failed to connect dataset:[/] {exc}", style="bold red")
+        raise typer.Exit(code=exc.returncode) from exc
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    verb = {
+        "cloned": "Cloned",
+        "updated": "Updated",
+        "exists": "Already present",
+    }.get(status, status)
+    dry_note = " (dry-run)" if dry_run else ""
+    console.print(
+        f"{verb} dataset [cyan]{name}[/] at [green]{target_path}[/]{dry_note}.",
+        style="bold",
+    )
 
 
 @data_app.command("disconnect")
@@ -64,22 +123,52 @@ def data_disconnect(
             help="When true, drop annexed files after disconnecting.",
         ),
     ] = False,
+    path: Annotated[
+        Path,
+        typer.Option(
+            "--path",
+            help="Base directory that holds dataset folders (fallback when config is missing).",
+            dir_okay=True,
+            file_okay=False,
+        ),
+    ] = Path("data/datalad"),
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run/--apply", help="Preview actions without modifying files."),
+    ] = False,
 ) -> None:
-    """Stub for future DataLad dataset detach workflow."""
+    """Record a dataset as disconnected and optionally remove its files."""
 
-    status = "drop content" if drop_content else "keep content"
+    dataset_path = data_utils.resolve_dataset_path(name, path)
+    action = data_utils.disconnect_dataset(
+        name,
+        dataset_path,
+        drop_content=drop_content,
+        dry_run=dry_run,
+    )
+    drop_note = "removed" if action == "removed" else "retained"
+    dry_note = " (dry-run)" if dry_run else ""
     console.print(
-        "[yellow]TODO:[/] implement DataLad drop/unregister logic.",
+        f"Dataset [cyan]{name}[/] marked as disconnected; data {drop_note}{dry_note}.",
         style="bold",
     )
-    console.print(f"Requested dataset: [cyan]{name}[/] ({status}).")
 
 
 @data_app.command("status")
 def data_status() -> None:
-    """Placeholder for reporting attached DataLad datasets."""
+    """Report tracked datasets and their recorded paths/status."""
 
-    console.print("[yellow]TODO:[/] list connected datasets and their availability.")
+    datasets = data_utils.list_tracked_datasets()
+    if not datasets:
+        console.print("No datasets recorded. Run `badc data connect ...` first.")
+        return
+
+    console.print("Tracked datasets:", style="bold")
+    for dataset_name in sorted(datasets):
+        entry = datasets[dataset_name]
+        status = entry.get("status", "unknown")
+        path_display = entry.get("path", "?")
+        console.print(f" - [cyan]{dataset_name}[/]: {status} ({path_display})")
 
 
 @chunk_app.command("probe")
