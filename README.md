@@ -1,6 +1,6 @@
-# Bird Acoustic Data Cruncher (BADC)
+# Bird Acoustic Data Compiler (BADC)
 
-Early scaffold for the Bird Acoustic Data Cruncher project. The goal is to wrap the HawkEars audio
+Early scaffold for the Bird Acoustic Data Compiler project. The goal is to wrap the HawkEars audio
 classifier with a Typer-based CLI + Python toolkit capable of chunking ~60 TB of bird audio,
 running inference locally or on UBC ARC resources, and aggregating detections for Erin Tattersall's
 PhD analyses.

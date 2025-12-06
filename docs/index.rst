@@ -1,4 +1,4 @@
-Bird Acoustic Data Cruncher
+Bird Acoustic Data Compiler
 ===========================
 
 Welcome to the BADC documentation scaffold. This is a placeholder that will grow alongside the

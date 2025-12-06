@@ -1,6 +1,6 @@
-# Bird Acoustic Data Cruncher Roadmap
+# Bird Acoustic Data Compiler Roadmap
 
-This roadmap coordinates the build-out of the Bird Acoustic Data Cruncher (BADC) platform so it can
+This roadmap coordinates the build-out of the Bird Acoustic Data Compiler (BADC) platform so it can
 process ~60 TB of bird audio via a forked HawkEars pipeline, scale onto UBC ARC resources, and stay
 aligned with Erin Tattersall’s PhD deliverables. Treat this document as the top-level plan; detailed
 execution notes live alongside task-specific files under `notes/`.

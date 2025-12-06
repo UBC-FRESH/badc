@@ -21,7 +21,7 @@ Typical output:
 
 .. code-block:: console
 
-   ─────────────────── Bird Acoustic Data Cruncher ───────────────────
+   ─────────────────── Bird Acoustic Data Compiler ───────────────────
    BADC version: 0.1.0
 
 ``badc gpus``

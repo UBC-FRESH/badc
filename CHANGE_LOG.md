@@ -1,3 +1,13 @@
+# 2025-12-07 — Rebrand to Compiler
+- Renamed all public references from Bird Acoustic Data Cruncher to Bird Acoustic Data Compiler (README, docs, CLI banner, AGENTS, roadmap, API docstrings) so messaging and acronym stay consistent.
+- Marked the scratch note complete to reflect the rename decision.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `pre-commit run --all-files`
+
 # 2025-12-06 — Notebook gallery scaffold
 - Documented the planned chunk probe / stub infer / aggregate analysis notebooks (repo layout, execution guidelines) and added starter `.ipynb` files under `docs/notebooks/` so contributors can iterate inside a consistent structure.
 - Linked the gallery to the actual notebooks via nbsphinx and removed the placeholder `.rst` wrappers so the pages render on the published docs.

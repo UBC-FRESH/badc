@@ -1,4 +1,4 @@
-"""Bird Acoustic Data Cruncher (BADC) package."""
+"""Bird Acoustic Data Compiler (BADC) package."""
 
 from __future__ import annotations
 

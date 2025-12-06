@@ -1,7 +1,7 @@
 # Coding Agent Operating Notes
 
 These notes govern day-to-day execution for Codex (and collaborators) working on Bird Acoustic
-Data Cruncher (BADC). Follow them for every milestone, feature branch, or pull request. Treat
+Data Compiler (BADC). Follow them for every milestone, feature branch, or pull request. Treat
 this file as the root contract: its guidance applies everywhere unless a subdirectory ships a
 more specific `AGENTS.md`.
 

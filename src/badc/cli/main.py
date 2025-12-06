@@ -1,4 +1,4 @@
-"""Primary Typer CLI for the Bird Acoustic Data Cruncher project."""
+"""Primary Typer CLI for the Bird Acoustic Data Compiler project."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ app.add_typer(infer_app, name="infer")
 
 
 def _print_header() -> None:
-    console.rule("Bird Acoustic Data Cruncher")
+    console.rule("Bird Acoustic Data Compiler")
 
 
 @app.command()

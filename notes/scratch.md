@@ -1,4 +1,5 @@
 # General scratch notes
 
-- Are sphinx docs wired to publish online via github pages CI actions yet? If yes, at what URL?
-
+[x] change name to bird acoustic data COMPILER (not CRUNCHER). more accurate and descriptive (albeit more boring, but that is OK)
+[ ] fix sphinx docs url at the bottom of readme
+[ ] 
