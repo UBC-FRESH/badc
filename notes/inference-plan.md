@@ -13,7 +13,8 @@
    - Allow CLI overrides (`--max-gpus`, `--workers`).
    - For each GPU, run a worker process that pops chunk jobs and invokes HawkEars.
 3. **HawkEars runner**:
-   - Shell out to `vendor/HawkEars` CLI (initially) with arguments for input WAV and config.
+   - Shell out to `vendor/HawkEars` CLI (initially) with arguments for input WAV, config, and
+     optional GPU index (via env var or CLI flag).
    - Capture stdout/stderr, parse output to JSONL (chunk-level detections).
    - Return status + path to raw output.
    - Retry policy: up to 2 automatic retries per chunk with exponential backoff; mark failures in

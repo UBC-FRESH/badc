@@ -7,6 +7,11 @@
   - `pytest`
   - `sphinx-build -b html docs docs/_build/html -W`
 
+# 2025-12-06 — HawkEars CLI integration plan
+- Noted in `notes/inference-plan.md` that the runner passes GPU index info to the HawkEars CLI
+  along with input/config args.
+- Commands executed: `apply_patch notes/inference-plan.md`
+
 # 2025-12-06 — HawkEars inference plan
 - Added `notes/inference-plan.md` detailing the manifest loader, GPU scheduler, telemetry, and CLI
   requirements for `badc infer run`; roadmap updated accordingly.
