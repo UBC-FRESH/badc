@@ -15,6 +15,15 @@
   - `ruff check src tests`
   - `pytest`
 
+# 2025-12-06 — HawkEars runner subprocess wiring
+- `badc infer run` now shells out to the HawkEars CLI (when `--runner-cmd` is provided), sets
+  `CUDA_VISIBLE_DEVICES`, captures stdout/stderr, and logs telemetry per attempt; stub mode remains
+  for local testing.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+
 # 2025-12-06 — HawkEars CLI integration plan
 - Noted in `notes/inference-plan.md` that the runner passes GPU index info to the HawkEars CLI
   along with input/config args.
