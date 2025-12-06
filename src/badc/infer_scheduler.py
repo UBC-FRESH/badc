@@ -61,8 +61,7 @@ def log_scheduler_event(
         gpu_index=worker.index if worker else None,
         gpu_name=worker.name if worker else None,
         status=status,
-        started_at=now_iso(),
-        finished_at=None,
+        timestamp=now_iso(),
         runtime_s=runtime_s,
         details=details,
     )

@@ -7,6 +7,14 @@
   - `pytest`
   - `sphinx-build -b html docs docs/_build/html -W`
 
+# 2025-12-06 — Telemetry record timestamp fix
+- Simplified telemetry records to log a single timestamp + runtime (no deprecated UTC warning) and
+  updated scheduler logging accordingly.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+
 # 2025-12-06 — HawkEars CLI integration plan
 - Noted in `notes/inference-plan.md` that the runner passes GPU index info to the HawkEars CLI
   along with input/config args.
