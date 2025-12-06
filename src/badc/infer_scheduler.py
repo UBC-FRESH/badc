@@ -55,6 +55,7 @@ def log_scheduler_event(
     status: str,
     details: dict,
     runtime_s: float | None = None,
+    finished_at: str | None = None,
 ) -> None:
     record = TelemetryRecord(
         chunk_id=chunk_id,
@@ -62,6 +63,7 @@ def log_scheduler_event(
         gpu_name=worker.name if worker else None,
         status=status,
         timestamp=now_iso(),
+        finished_at=finished_at,
         runtime_s=runtime_s,
         details=details,
     )

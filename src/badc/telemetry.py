@@ -16,6 +16,7 @@ class TelemetryRecord:
     gpu_name: str | None
     status: str
     timestamp: str
+    finished_at: str | None
     runtime_s: float | None
     details: dict[str, Any]
 

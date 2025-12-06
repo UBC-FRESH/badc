@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 from badc.infer_scheduler import GPUWorker, InferenceJob, log_scheduler_event
+from badc.telemetry import now_iso
 
 
 def _build_command(runner_cmd: str, job: InferenceJob, output_path: Path) -> list[str]:
@@ -37,8 +38,13 @@ def run_job(
     attempts = 0
     while attempts <= max_retries:
         attempts += 1
-        log_scheduler_event(job.chunk_id, worker, "start", {"attempt": attempts})
         start = time.time()
+        log_scheduler_event(
+            job.chunk_id,
+            worker,
+            "start",
+            {"attempt": attempts},
+        )
         try:
             if runner_cmd:
                 cmd = _build_command(runner_cmd, job, output_path)
@@ -71,6 +77,7 @@ def run_job(
                 "success",
                 details,
                 runtime_s=runtime,
+                finished_at=now_iso(),
             )
             return output_path
         except subprocess.CalledProcessError as exc:
@@ -85,6 +92,7 @@ def run_job(
                     "stderr": (exc.stderr or "")[-500:],
                 },
                 runtime_s=runtime,
+                finished_at=now_iso(),
             )
             if attempts > max_retries:
                 raise RuntimeError(f"HawkEars failed for {job.chunk_id}") from exc

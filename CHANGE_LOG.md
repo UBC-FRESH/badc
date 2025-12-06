@@ -320,3 +320,10 @@
   - `ruff format src tests`
   - `ruff check src tests`
   - `pytest`
+
+# 2025-12-06 — Telemetry finish timestamps
+- Telemetry records now capture a single timestamp plus `finished_at`, and the HawkEars runner populates success/failure entries (with stdout/stderr snippets).
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
