@@ -21,7 +21,10 @@ fi
 export GITHUBTOKEN="$DATALAD_GITHUB_TOKEN"
 
 DATASET_DIR="$REPO_DIR/tmp/badc-bogus-data"
-rm -rf "$DATASET_DIR"
+if [[ -d "$DATASET_DIR" ]]; then
+  chmod -R u+w "$DATASET_DIR" || true
+  rm -rf "$DATASET_DIR"
+fi
 mkdir -p "$DATASET_DIR"
 cd "$DATASET_DIR"
 
