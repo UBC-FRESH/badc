@@ -34,6 +34,7 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
   runner (stubbed until the real CLI is wired).
 - `badc data connect bogus` — placeholder for cloning the upcoming bogus DataLad dataset (smoke tests).
 - `badc infer aggregate artifacts/infer` — reads detection JSON files and writes a summary CSV.
+- `badc telemetry --log data/telemetry/infer/log.jsonl` — tail recent telemetry entries.
 - `badc gpus` — lists detected GPUs via `nvidia-smi` so we can size the HawkEars worker pool.
 
 The CLI entry point is `badc`. Use `badc --help` to inspect the available commands.

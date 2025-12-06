@@ -34,4 +34,8 @@ also available::
     $ badc infer aggregate artifacts/infer --output artifacts/aggregate/summary.csv
     Wrote detection summary to artifacts/aggregate/summary.csv
 
+    $ badc telemetry --log data/telemetry/infer/log.jsonl
+    Telemetry records (10):
+     [success] chunk_a (GPU 0) 2025-12-06T08:00:00+00:00 runtime=1.23
+
 The commands run locally without GPU dependencies so we can test the scaffolding in CI.

@@ -327,3 +327,9 @@
   - `ruff format src tests`
   - `ruff check src tests`
   - `pytest`
+# 2025-12-06 — Telemetry monitor command
+- Added `badc telemetry --log ...` to read the JSONL log and show the latest entries; documented in README/docs.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`

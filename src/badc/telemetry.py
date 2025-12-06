@@ -29,3 +29,26 @@ def log_telemetry(record: TelemetryRecord, out_path: Path) -> None:
 
 def now_iso() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def load_telemetry(path: Path) -> list[TelemetryRecord]:
+    if not path.exists():
+        return []
+    records: list[TelemetryRecord] = []
+    for line in path.read_text().splitlines():
+        if not line:
+            continue
+        data = json.loads(line)
+        records.append(
+            TelemetryRecord(
+                chunk_id=data["chunk_id"],
+                gpu_index=data.get("gpu_index"),
+                gpu_name=data.get("gpu_name"),
+                status=data.get("status", "unknown"),
+                timestamp=data.get("timestamp", ""),
+                finished_at=data.get("finished_at"),
+                runtime_s=data.get("runtime_s"),
+                details=data.get("details", {}),
+            )
+        )
+    return records

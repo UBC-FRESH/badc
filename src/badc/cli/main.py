@@ -13,6 +13,7 @@ from badc.audio import get_wav_duration
 from badc.chunk_writer import ChunkMetadata, iter_chunk_metadata
 from badc.gpu import detect_gpus
 from badc.infer_scheduler import GPUWorker, load_jobs, plan_workers
+from badc.telemetry import load_telemetry
 
 console = Console()
 app = typer.Typer(help="Utilities for chunking and processing large bird audio corpora.")
@@ -304,3 +305,24 @@ def main() -> None:
     """Entrypoint used by the console script."""
 
     app()
+
+
+@app.command("telemetry")
+def telemetry_monitor(
+    log_path: Annotated[
+        Path,
+        typer.Option("--log", help="Telemetry log path."),
+    ] = Path("data/telemetry/infer/log.jsonl"),
+) -> None:
+    """Display recent telemetry entries."""
+
+    records = load_telemetry(log_path)
+    if not records:
+        console.print("No telemetry entries found.", style="yellow")
+        return
+    console.print(f"Telemetry records ({len(records)}):")
+    for rec in records[-10:]:
+        console.print(
+            f"[{rec.status}] {rec.chunk_id} (GPU {rec.gpu_index}) "
+            f"{rec.timestamp} runtime={rec.runtime_s}"
+        )
