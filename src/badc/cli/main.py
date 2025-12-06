@@ -10,6 +10,7 @@ from rich.console import Console
 
 from badc import __version__, chunking
 from badc.audio import get_wav_duration
+from badc.chunk_writer import ChunkMetadata, iter_chunk_metadata
 from badc.gpu import detect_gpus
 
 console = Console()
@@ -151,6 +152,69 @@ def chunk_manifest(
     console.print(
         f"Wrote manifest with chunk duration {chunk_duration}s to {manifest_path}"
         + (" (with hashes)" if hash_chunks else ""),
+    )
+
+
+@chunk_app.command("run")
+def chunk_run(
+    file: Annotated[Path, typer.Argument(help="Audio file to chunk.")],
+    chunk_duration: Annotated[
+        float,
+        typer.Option("--chunk-duration", help="Chunk duration in seconds."),
+    ],
+    overlap: Annotated[
+        float,
+        typer.Option("--overlap", help="Overlap between chunks in seconds."),
+    ] = 0.0,
+    output_dir: Annotated[
+        Path,
+        typer.Option("--output-dir", help="Directory for chunk files."),
+    ] = Path("artifacts/chunks"),
+    manifest: Annotated[
+        Path,
+        typer.Option("--manifest", help="Manifest CSV path."),
+    ] = Path("chunk_manifest.csv"),
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run/--write-chunks", help="Skip writing chunk files."),
+    ] = False,
+) -> None:
+    """Generate chunk files (optional) and manifest."""
+
+    duration = get_wav_duration(file)
+    if dry_run:
+        chunk_rows = [
+            ChunkMetadata(
+                chunk_id=f"{file.stem}_chunk_{i}",
+                path=file,
+                start_ms=0,
+                end_ms=0,
+                overlap_ms=int(overlap * 1000),
+                sha256="TODO_HASH",
+            )
+            for i in range(1)
+        ]
+    else:
+        chunk_rows = list(
+            iter_chunk_metadata(
+                audio_path=file,
+                chunk_duration_s=chunk_duration,
+                overlap_s=overlap,
+                output_dir=output_dir,
+            )
+        )
+    if not chunk_rows:
+        console.print("No chunks generated.", style="yellow")
+        return
+    manifest_path = chunking.write_manifest(
+        file,
+        chunk_duration,
+        manifest,
+        duration,
+        compute_hashes=not dry_run,
+    )
+    console.print(
+        f"Chunks {'skipped' if dry_run else f'written to {output_dir}'}; manifest at {manifest_path}"
     )
 
 

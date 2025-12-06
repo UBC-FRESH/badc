@@ -41,15 +41,17 @@ def iter_chunk_metadata(
         sample_width = src.getsampwidth()
         channels = src.getnchannels()
         total_frames = src.getnframes()
-        chunk_frames = int(chunk_duration_s * sample_rate)
-        overlap_frames = int(overlap_s * sample_rate)
+        chunk_frames = max(int(chunk_duration_s * sample_rate), 1)
+        overlap_frames = max(int(overlap_s * sample_rate), 0)
         start_frame = 0
-        chunk_index = 0
+        overlap_ms = int(overlap_frames / sample_rate * 1000)
         while start_frame < total_frames:
             end_frame = min(start_frame + chunk_frames, total_frames)
             src.setpos(start_frame)
             frames = src.readframes(end_frame - start_frame)
-            chunk_id = f"{audio_path.stem}_chunk_{int(start_frame / sample_rate * 1000)}_{int(end_frame / sample_rate * 1000)}"
+            start_ms = int(start_frame / sample_rate * 1000)
+            end_ms = int(end_frame / sample_rate * 1000)
+            chunk_id = f"{audio_path.stem}_chunk_{start_ms}_{end_ms}"
             chunk_path = output_dir / f"{chunk_id}.wav"
             with wave.open(str(chunk_path), "wb") as dst:
                 dst.setnchannels(channels)
@@ -60,10 +62,13 @@ def iter_chunk_metadata(
             yield ChunkMetadata(
                 chunk_id=chunk_id,
                 path=chunk_path,
-                start_ms=int(start_frame / sample_rate * 1000),
-                end_ms=int(end_frame / sample_rate * 1000),
-                overlap_ms=int(overlap_frames / sample_rate * 1000),
+                start_ms=start_ms,
+                end_ms=end_ms,
+                overlap_ms=overlap_ms,
                 sha256=sha256,
             )
-            start_frame = max(start_frame + chunk_frames - overlap_frames, end_frame)
-            chunk_index += 1
+            start_frame = (
+                end_frame
+                if chunk_frames <= overlap_frames
+                else start_frame + chunk_frames - overlap_frames
+            )

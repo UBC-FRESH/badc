@@ -1,3 +1,11 @@
+# 2025-12-06 — Chunk run CLI scaffold
+- Added `badc chunk run` command (dry-run + chunk writing), chunk writer overlap handling, and docs.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs docs/_build/html -W`
+
 # 2025-12-06 — Chunk writer scaffolding
 - Introduced `chunk_writer.py` plus updated `badc chunk manifest --hash-chunks` to generate chunk
   files with hashes (still stubbed for real overlap handling and temp layout).
