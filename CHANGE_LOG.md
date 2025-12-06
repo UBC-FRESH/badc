@@ -1,3 +1,12 @@
+# 2025-12-06 — Chunk manifest CLI scaffold
+- Added `badc chunk manifest` command, WAV duration helper, sample tests/assets, and documentation
+  so manifests can be generated ahead of the full HawkEars wiring.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs docs/_build/html -W`
+
 # 2025-12-06 — Chunk manifest sample
 - Added a sample chunk manifest CSV (`data/chunk_manifest_sample.csv`) and noted the future
   `badc chunk manifest` command in `notes/chunking.md` to clarify the metadata contract.

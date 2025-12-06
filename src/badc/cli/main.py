@@ -9,6 +9,7 @@ import typer
 from rich.console import Console
 
 from badc import __version__, chunking
+from badc.audio import get_wav_duration
 
 console = Console()
 app = typer.Typer(help="Utilities for chunking and processing large bird audio corpora.")
@@ -115,6 +116,25 @@ def chunk_split(
     console.print(f"Planned {len(placeholders)} placeholder chunks for {file}:")
     for chunk_id in placeholders:
         console.print(f" - {chunk_id}")
+
+
+@chunk_app.command("manifest")
+def chunk_manifest(
+    file: Annotated[Path, typer.Argument(help="Audio file to manifest.")],
+    chunk_duration: Annotated[
+        float,
+        typer.Option("--chunk-duration", help="Chunk duration in seconds."),
+    ] = 60.0,
+    output: Annotated[
+        Path,
+        typer.Option("--output", help="Output CSV path.", file_okay=True, dir_okay=False),
+    ] = Path("chunk_manifest.csv"),
+) -> None:
+    """Generate a chunk manifest CSV (placeholder hashing)."""
+
+    duration = get_wav_duration(file)
+    manifest_path = chunking.write_manifest(file, chunk_duration, output, duration)
+    console.print(f"Wrote manifest with chunk duration {chunk_duration}s to {manifest_path}")
 
 
 @infer_app.command("run")

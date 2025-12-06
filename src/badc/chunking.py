@@ -84,3 +84,34 @@ def aggregate_detections(detections: Sequence[str]) -> dict[str, int]:
         chunk_name = det.split("_detected")[0]
         summary[chunk_name] = summary.get(chunk_name, 0) + 1
     return summary
+
+
+def write_manifest(
+    audio_path: Path,
+    chunk_duration_s: float,
+    output_csv: Path,
+    duration_s: float,
+) -> Path:
+    """Write a chunk manifest CSV (placeholder hashing)."""
+
+    ranges = plan_chunk_ranges(duration_s, chunk_duration_s)
+    lines = ["recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes"]
+    recording_id = audio_path.stem
+    for start, end in ranges:
+        chunk_id = f"{recording_id}_{int(start * 1000)}_{int(end * 1000)}"
+        lines.append(
+            ",".join(
+                [
+                    recording_id,
+                    chunk_id,
+                    str(audio_path),
+                    str(int(start * 1000)),
+                    str(int(end * 1000)),
+                    "0",
+                    "TODO_HASH",
+                    "",
+                ]
+            )
+        )
+    output_csv.write_text("\n".join(lines) + "\n")
+    return output_csv
