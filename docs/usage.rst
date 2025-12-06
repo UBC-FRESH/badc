@@ -21,4 +21,8 @@ also available::
     $ badc chunk manifest data/audio/XXXX-000_20251001_093000.wav --chunk-duration 60 --hash-chunks
     Wrote manifest with chunk duration 60s to chunk_manifest.csv (with hashes)
 
+    $ badc gpus
+    Detected GPUs:
+     - #0: NVIDIA Quadro RTX 4000 (8129 MiB)
+
 The commands run locally without GPU dependencies so we can test the scaffolding in CI.

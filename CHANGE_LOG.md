@@ -1,3 +1,12 @@
+# 2025-12-06 — GPU detection CLI
+- Added `badc gpus` command and `src/badc/gpu.py` helper to enumerate GPUs via `nvidia-smi` so we
+  can size the HawkEars worker pool per environment.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs docs/_build/html -W`
+
 # 2025-12-06 — GPU parallelism planning
 - Updated `notes/gpu-monitoring.md` and `notes/pipeline-plan.md` to capture automatic GPU
   detection and multi-process HawkEars scheduling (one worker per GPU with NVML telemetry).

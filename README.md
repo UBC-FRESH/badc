@@ -29,5 +29,6 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
   HawkEars + GPU telemetry wiring lands).
 - `badc chunk manifest` — generates a chunk manifest CSV for inference orchestration (use
   `--hash-chunks` once chunk files exist to embed SHA256 values).
+- `badc gpus` — lists detected GPUs via `nvidia-smi` so we can size the HawkEars worker pool.
 
 The CLI entry point is `badc`. Use `badc --help` to inspect the available commands.

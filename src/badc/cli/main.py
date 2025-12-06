@@ -10,6 +10,7 @@ from rich.console import Console
 
 from badc import __version__, chunking
 from badc.audio import get_wav_duration
+from badc.gpu import detect_gpus
 
 console = Console()
 app = typer.Typer(help="Utilities for chunking and processing large bird audio corpora.")
@@ -151,6 +152,19 @@ def chunk_manifest(
         f"Wrote manifest with chunk duration {chunk_duration}s to {manifest_path}"
         + (" (with hashes)" if hash_chunks else ""),
     )
+
+
+@app.command("gpus")
+def list_gpus() -> None:
+    """Display detected GPUs (index, name, VRAM)."""
+
+    infos = detect_gpus()
+    if not infos:
+        console.print("No GPUs detected via nvidia-smi.", style="yellow")
+        return
+    console.print("Detected GPUs:")
+    for info in infos:
+        console.print(f" - #{info.index}: {info.name} ({info.memory_total_mb} MiB)")
 
 
 @infer_app.command("run")
