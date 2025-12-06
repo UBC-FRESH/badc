@@ -1,3 +1,10 @@
+# 2025-12-06 — Chunk file plan
+- Added `notes/chunk-files.md` outlining the implementation strategy for `badc chunk run`
+  (chunk writer + manifest integration) and updated the roadmap accordingly.
+- Commands executed:
+  - `cat > notes/chunk-files.md`
+  - `apply_patch notes/roadmap.md`
+
 # 2025-12-06 — Manifest hashing improvement
 - `badc chunk manifest --hash-chunks` now hashes the source file per chunk row (still placeholder
   until actual chunk files exist).
