@@ -200,6 +200,16 @@ def resolve_dataset_path(
     return base_path.expanduser() / name
 
 
+def find_dataset_root(path: Path) -> Path | None:
+    candidate = path.expanduser()
+    if candidate.is_file():
+        candidate = candidate.parent
+    for current in [candidate, *candidate.parents]:
+        if (current / ".datalad").exists():
+            return current
+    return None
+
+
 def override_spec_url(spec: DatasetSpec, url: str | None) -> DatasetSpec:
     if not url:
         return spec

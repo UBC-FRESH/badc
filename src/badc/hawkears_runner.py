@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Sequence
 
 from badc import hawkears
+from badc.data import find_dataset_root
 from badc.infer_scheduler import GPUWorker, InferenceJob, log_scheduler_event
 from badc.telemetry import now_iso
 
@@ -52,7 +53,9 @@ def _build_hawkears_command(
     return cmd, root
 
 
-def _write_stub_output(job: InferenceJob, output_path: Path, attempt: int) -> None:
+def _write_stub_output(
+    job: InferenceJob, output_path: Path, attempt: int, dataset_root: Path | None
+) -> None:
     payload = {
         "chunk_id": job.chunk_id,
         "recording_id": job.recording_id,
@@ -61,6 +64,8 @@ def _write_stub_output(job: InferenceJob, output_path: Path, attempt: int) -> No
         "detections": [],
         "meta": {"attempt": attempt},
     }
+    if dataset_root:
+        payload["dataset_root"] = str(dataset_root)
     output_path.write_text(json.dumps(payload))
 
 
@@ -109,11 +114,13 @@ def run_job(
     max_retries: int = 2,
     use_hawkears: bool = False,
     hawkears_args: Sequence[str] | None = None,
+    dataset_root: Path | None = None,
 ) -> Path:
     recording_dir = output_dir / job.recording_id
     recording_dir.mkdir(parents=True, exist_ok=True)
     output_path = recording_dir / f"{job.chunk_id}.json"
     hawkears_output_dir = recording_dir / f"{job.chunk_id}{RAW_OUTPUT_SUFFIX}"
+    dataset_root = dataset_root or find_dataset_root(job.chunk_path)
 
     attempts = 0
     while attempts <= max_retries:
@@ -140,7 +147,7 @@ def run_job(
                 hawkears_output_dir.mkdir(parents=True, exist_ok=True)
                 cmd, cwd = _build_hawkears_command(job, hawkears_output_dir, hawkears_args)
             else:
-                _write_stub_output(job, output_path, attempts)
+                _write_stub_output(job, output_path, attempts, dataset_root)
                 runtime = time.time() - start
                 log_scheduler_event(
                     job.chunk_id,
@@ -169,6 +176,8 @@ def run_job(
                 labels_path = hawkears_output_dir / LABELS_FILENAME
                 payload = _parse_hawkears_labels(labels_path, job)
                 payload["hawkears_output"] = str(hawkears_output_dir)
+                if dataset_root:
+                    payload["dataset_root"] = str(dataset_root)
                 output_path.write_text(json.dumps(payload))
             details = {
                 "attempt": attempts,

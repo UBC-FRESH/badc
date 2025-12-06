@@ -17,7 +17,9 @@
 3. **HawkEars runner**:
    - Shell out to `vendor/HawkEars` CLI (initially) with arguments for input WAV, config, and
      optional GPU index (via env var or CLI flag).
-   - Capture stdout/stderr, parse output to JSONL (chunk-level detections).
+   - Capture stdout/stderr, parse output to JSONL (chunk-level detections) and stash outputs back
+     into the originating DataLad dataset (`<dataset>/artifacts/infer/...`) so `datalad save` can run
+     immediately.
    - Return status + path to raw output.
    - Retry policy: up to 2 automatic retries per chunk with exponential backoff; mark failures in
      telemetry and manifest.
@@ -28,6 +30,7 @@
 5. **Output storage**:
    - Store raw HawkEars CSV/JSON outputs in `artifacts/infer/<recording>/chunk_id.*`.
    - Convert to canonical detection schema (Parquet) for aggregation.
+   - Surface `--print-datalad-run` helper so the entire transform can be wrapped in `datalad run`.
 
 ## CLI plan
 - `badc infer run --manifest chunk_manifest.csv --output artifacts/infer --max-gpus 2 --worker-per-gpu 1`.

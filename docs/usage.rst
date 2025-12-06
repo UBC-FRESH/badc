@@ -54,4 +54,15 @@ scaffolding::
     Telemetry records (10):
      [success] chunk_a (GPU 0) 2025-12-06T08:00:00+00:00 runtime=1.23
 
+When the chunk files live inside a DataLad dataset (e.g. ``data/datalad/bogus``), inference outputs
+are written to ``<dataset>/artifacts/infer`` by default so you can immediately ``datalad save`` the
+results. Use ``--print-datalad-run`` to preview a ready-made ``datalad run`` command that wraps the
+same invocation (no jobs are executed when this flag is set).
+
+::
+
+    $ badc infer run chunk_manifest.csv --print-datalad-run
+    Run the following from the dataset root (...):
+      datalad run ...
+
 The commands run locally without GPU dependencies so we can test the scaffolding in CI.

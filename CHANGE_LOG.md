@@ -19,8 +19,11 @@
   (per-chunk `vendor/HawkEars/analyze.py` invocation) with telemetry logging, parsing of
   `HawkEars_labels.csv` into the JSON payload consumed by `badc infer aggregate`, and added a
   thread-per-worker scheduler so each GPU (or `--cpu-workers` fallback) processes jobs concurrently.
-  Stub mode remains the default for CI/tests. Added unit tests for the CSV parser plus CLI coverage
-  for the new scheduler knobs, and documented how to pass through HawkEars args.
+  Outputs now default to `<dataset>/artifacts/infer` when the chunk lives inside a DataLad dataset,
+  and `--print-datalad-run` emits a ready-to-use `datalad run ... badc infer run ...` command so
+  transforms can be captured with provenance. Stub mode remains the default for CI/tests. Added unit
+  tests for the CSV parser plus CLI coverage for the new scheduler + dataset-aware behavior, and
+  documented how to pass through HawkEars args.
 - Commands executed:
   - `apply_patch src/badc/hawkears_runner.py src/badc/cli/main.py README.md docs/usage.rst`
   - `apply_patch notes/inference-plan.md notes/roadmap.md`

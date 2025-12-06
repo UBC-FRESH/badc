@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import queue
+import shlex
 import subprocess
 import threading
 from pathlib import Path
@@ -23,6 +24,7 @@ from badc.telemetry import load_telemetry
 console = Console()
 app = typer.Typer(help="Utilities for chunking and processing large bird audio corpora.")
 DEFAULT_DATALAD_PATH = Path("data") / "datalad"
+DEFAULT_INFER_OUTPUT = Path("artifacts") / "infer"
 
 data_app = typer.Typer(help="Manage DataLad-backed audio repositories (stub commands).")
 chunk_app = typer.Typer(help="Chunking utilities and HawkEars probe helpers.")
@@ -360,6 +362,13 @@ def infer_run(
             help="Number of concurrent workers when running without GPUs.",
         ),
     ] = 1,
+    print_datalad_run: Annotated[
+        bool,
+        typer.Option(
+            "--print-datalad-run",
+            help="Show a ready-to-run `datalad run` command (no inference executed).",
+        ),
+    ] = False,
 ) -> None:
     """Run HawkEars inference for each chunk listed in the manifest."""
 
@@ -379,22 +388,46 @@ def infer_run(
         worker_pool: list[GPUWorker | None] = [None] * max(cpu_workers, 1)
     else:
         worker_pool = workers
+    default_output = output_dir.expanduser()
+    use_dataset_outputs = default_output == DEFAULT_INFER_OUTPUT
+    job_contexts = _prepare_job_contexts(jobs, default_output, use_dataset_outputs)
+
+    if print_datalad_run:
+        _print_datalad_run_instructions(
+            manifest=manifest,
+            job_contexts=job_contexts,
+            max_gpus=max_gpus,
+            output_dir=default_output,
+            runner_cmd=runner_cmd,
+            max_retries=max_retries,
+            use_hawkears=use_hawkears,
+            hawkears_args=extra_args,
+            cpu_workers=cpu_workers,
+        )
+        return
+
     _run_scheduler(
-        jobs=jobs,
+        job_contexts=job_contexts,
         worker_pool=worker_pool,
-        output_dir=output_dir,
         runner_cmd=runner_cmd,
         max_retries=max_retries,
         use_hawkears=use_hawkears,
         hawkears_args=extra_args,
     )
-    console.print(f"Processed {len(jobs)} jobs; outputs stored in {output_dir}")
+    output_locations = sorted({ctx[1] for ctx in job_contexts})
+    if len(output_locations) == 1:
+        location_msg = str(output_locations[0])
+    else:
+        display = ", ".join(str(p) for p in output_locations[:3])
+        if len(output_locations) > 3:
+            display += ", ..."
+        location_msg = display
+    console.print(f"Processed {len(jobs)} jobs; outputs stored in {location_msg}")
 
 
 def _run_scheduler(
-    jobs: Sequence[InferenceJob],
+    job_contexts: Sequence[tuple[InferenceJob, Path, Path | None]],
     worker_pool: list[GPUWorker | None],
-    output_dir: Path,
     runner_cmd: str | None,
     max_retries: int,
     use_hawkears: bool,
@@ -404,8 +437,8 @@ def _run_scheduler(
         worker_pool = [None]
     job_queue: queue.Queue = queue.Queue()
     sentinel = object()
-    for job in jobs:
-        job_queue.put(job)
+    for context in job_contexts:
+        job_queue.put(context)
     for _ in worker_pool:
         job_queue.put(sentinel)
 
@@ -415,20 +448,22 @@ def _run_scheduler(
 
     def worker_loop(worker: GPUWorker | None) -> None:
         while True:
-            job = job_queue.get()
+            item = job_queue.get()
             try:
-                if job is sentinel:
+                if item is sentinel:
                     return
                 if stop_event.is_set():
                     continue
+                job, job_output, dataset_root = item
                 run_job(
                     job=job,
                     worker=worker,  # type: ignore[arg-type]
-                    output_dir=output_dir,
+                    output_dir=job_output,
                     runner_cmd=runner_cmd,
                     max_retries=max_retries,
                     use_hawkears=use_hawkears,
                     hawkears_args=runner_args,
+                    dataset_root=dataset_root,
                 )
             except Exception as exc:  # pragma: no cover - propagated to main thread
                 errors.append(exc)
@@ -446,6 +481,97 @@ def _run_scheduler(
         thread.join()
     if errors:
         raise errors[0]
+
+
+def _prepare_job_contexts(
+    jobs: Sequence[InferenceJob],
+    default_output: Path,
+    allow_dataset_outputs: bool,
+) -> list[tuple[InferenceJob, Path, Path | None]]:
+    contexts: list[tuple[InferenceJob, Path, Path | None]] = []
+    for job in jobs:
+        dataset_root = data_utils.find_dataset_root(job.chunk_path)
+        output_base = default_output
+        if allow_dataset_outputs and dataset_root:
+            output_base = dataset_root / DEFAULT_INFER_OUTPUT
+        contexts.append((job, output_base, dataset_root))
+    return contexts
+
+
+def _relativize(path: Path, root: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(root.resolve()))
+    except ValueError:
+        return str(path)
+
+
+def _print_datalad_run_instructions(
+    *,
+    manifest: Path,
+    job_contexts: Sequence[tuple[InferenceJob, Path, Path | None]],
+    max_gpus: int | None,
+    output_dir: Path,
+    runner_cmd: str | None,
+    max_retries: int,
+    use_hawkears: bool,
+    hawkears_args: Sequence[str],
+    cpu_workers: int,
+) -> None:
+    dataset_roots = {ctx[2] for ctx in job_contexts if ctx[2] is not None}
+    dataset_roots.discard(None)
+    if not dataset_roots:
+        console.print(
+            "Chunks are not located inside a DataLad dataset; cannot emit datalad run command.",
+            style="red",
+        )
+        raise typer.Exit(code=1) from None
+    if len(dataset_roots) > 1:
+        console.print(
+            "Chunks span multiple DataLad datasets; run them per-dataset or specify --output-dir.",
+            style="red",
+        )
+        raise typer.Exit(code=1) from None
+    dataset_root = dataset_roots.pop()
+    try:
+        manifest_rel = manifest.resolve().relative_to(dataset_root.resolve())
+    except ValueError:
+        console.print(
+            f"Manifest {manifest} is outside dataset root {dataset_root}; move it inside before using datalad run.",
+            style="red",
+        )
+        raise typer.Exit(code=1) from None
+    output_rel = _relativize(job_contexts[0][1], dataset_root)
+    cmd: list[str] = ["badc", "infer", "run", str(manifest_rel)]
+    if max_gpus is not None:
+        cmd += ["--max-gpus", str(max_gpus)]
+    if output_dir != DEFAULT_INFER_OUTPUT:
+        cmd += ["--output-dir", _relativize(output_dir, dataset_root)]
+    if runner_cmd:
+        cmd += ["--runner-cmd", runner_cmd]
+    if max_retries != 2:
+        cmd += ["--max-retries", str(max_retries)]
+    if use_hawkears:
+        cmd.append("--use-hawkears")
+    for arg in hawkears_args:
+        cmd += ["--hawkears-arg", arg]
+    if cpu_workers != 1:
+        cmd += ["--cpu-workers", str(cpu_workers)]
+    datalad_cmd = [
+        "datalad",
+        "run",
+        "-m",
+        f"badc infer {manifest.name}",
+        "--input",
+        str(manifest_rel),
+        "--output",
+        output_rel,
+        "--",
+    ] + cmd
+    console.print(
+        f"Run the following from the dataset root ({dataset_root}) to capture provenance:",
+        style="bold",
+    )
+    console.print(f"  {shlex.join(datalad_cmd)}")
 
 
 @infer_app.command("aggregate")

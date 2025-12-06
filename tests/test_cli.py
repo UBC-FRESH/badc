@@ -106,3 +106,36 @@ def test_infer_run_stub_cpu_workers(tmp_path) -> None:
     assert (out_dir / "chunk_a.json").exists()
     assert (out_dir / "chunk_b.json").exists()
     assert (out_dir / "chunk_c.json").exists()
+
+
+def test_infer_run_defaults_to_dataset_output(tmp_path) -> None:
+    dataset = tmp_path / "dataset"
+    (dataset / ".datalad").mkdir(parents=True)
+    chunk_path = dataset / "chunk.wav"
+    chunk_path.write_text("audio", encoding="utf-8")
+    manifest = dataset / "manifest.csv"
+    manifest.write_text(
+        "recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes\n"
+        f"rec1,chunk_a,{chunk_path},0,1000,0,hash,\n",
+        encoding="utf-8",
+    )
+    result = runner.invoke(app, ["infer", "run", str(manifest)])
+    assert result.exit_code == 0, result.stdout
+    expected = dataset / "artifacts" / "infer" / "rec1" / "chunk_a.json"
+    assert expected.exists()
+
+
+def test_infer_print_datalad_run(tmp_path) -> None:
+    dataset = tmp_path / "dataset"
+    (dataset / ".datalad").mkdir(parents=True)
+    chunk_path = dataset / "chunk.wav"
+    chunk_path.write_text("audio", encoding="utf-8")
+    manifest = dataset / "manifest.csv"
+    manifest.write_text(
+        "recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes\n"
+        f"rec1,chunk_a,{chunk_path},0,1000,0,hash,\n",
+        encoding="utf-8",
+    )
+    result = runner.invoke(app, ["infer", "run", str(manifest), "--print-datalad-run"])
+    assert result.exit_code == 0
+    assert "datalad run" in result.stdout
