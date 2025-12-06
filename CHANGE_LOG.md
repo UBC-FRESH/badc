@@ -1,3 +1,14 @@
+# 2025-12-06 — HawkEars submodule onboarding
+- Added the HawkEars fork as a git submodule under `vendor/HawkEars` and exposed
+  `badc.hawkears.get_hawkears_root()` so CLI/tools can locate it.
+- Updated README instructions to remind contributors to run `git submodule update --init --recursive`
+  and marked the roadmap task complete.
+- Commands executed:
+  - `git submodule add https://github.com/UBC-FRESH/HawkEars vendor/HawkEars`
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+
 # 2025-12-06 — GPU monitoring plan note
 - Added `notes/gpu-monitoring.md` outlining tooling (nvidia-smi, NVML, Nsight) and documenting the
   2-GPU dev vs. 4-GPU Sockeye environments so we can verify HawkEars utilizes available CUDA

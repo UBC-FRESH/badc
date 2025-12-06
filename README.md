@@ -11,8 +11,12 @@ PhD analyses.
    ```bash
    pip install -e .[dev]
    ```
-3. Run `pre-commit install` so the Ruff hooks run automatically before each commit.
-4. Run the standard command cadence (per `AGENTS.md`): `ruff format`, `ruff check`, `pytest`, and
+3. Initialise submodules (HawkEars fork) so the wrapper utilities can find the inference engine:
+   ```bash
+   git submodule update --init --recursive
+   ```
+4. Run `pre-commit install` so the Ruff hooks run automatically before each commit.
+5. Run the standard command cadence (per `AGENTS.md`): `ruff format`, `ruff check`, `pytest`, and
    `sphinx-build` once docs grow.
 
 GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push/PR.

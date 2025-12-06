@@ -15,7 +15,7 @@ execution notes live alongside task-specific files under `notes/`.
 - [ ] Mirror FHOPS doc stack: Sphinx skeleton + GitHub Pages deployment workflow.
 
 ## Phase 1 — HawkEars Integration & Local Workflow
-- [ ] Embed the forked HawkEars repo as a git submodule plus wrapper package providing Typer CLI
+- [x] Embed the forked HawkEars repo as a git submodule plus wrapper package providing Typer CLI
       + Python API bindings.
 - [ ] Define configuration schema for HawkEars runs (GPU/CPU toggles, batch/chunk settings,
       telemetry output locations) and document defaults.
