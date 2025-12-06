@@ -29,6 +29,8 @@ Goal: deliver complete documentation coverage across back-end modules, CLI surfa
 - `badc.data`: dataset registry, config file format, helper functions.
 - `badc.telemetry`: record structure, JSONL format, loading utilities.
 - Additional modules (`gpu`, `hawkears`, `aggregate`, `chunking`, etc.).
+- **Docstring sweep**: ensure every public module/function/class uses detailed NumPy-style docstrings per `AGENTS.md` (summary, Parameters/Returns/Raises/Notes, units/ranges/defaults).
+  Documentation effort includes writing any missing docstrings before hooking them into autodoc.
 
 ### User guides / how-tos
 1. **Connecting data**: clone repo, `git submodule update`, `badc data connect bogus`, handling custom DataLad siblings.

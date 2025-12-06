@@ -19,9 +19,12 @@ release = __version__
 
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
 ]
+
+autosummary_generate = True
 
 templates_path = ["_templates"]
 exclude_patterns: list[str] = []

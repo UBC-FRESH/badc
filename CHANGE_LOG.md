@@ -1,3 +1,11 @@
+# 2025-12-06 — Documentation scaffolding kickoff
+- Enabled `sphinx.ext.autosummary` (with generation) in `docs/conf.py` and expanded
+  `notes/documentation-plan.md` with the docstring sweep requirement so every module/function/class
+  gets NumPy-style docstrings before autodoc exposure.
+- Commands executed:
+  - `python - <<'PY' ...` (update docs/conf.py)
+  - `python - <<'PY' ...` (update documentation plan note)
+
 # 2025-12-06 — Docs publish via GitHub Pages
 - CI workflow now uploads `docs/_build/html` as a Pages artifact on `main` pushes and deploys it
   via `actions/deploy-pages`, so Sphinx docs stay in sync at
