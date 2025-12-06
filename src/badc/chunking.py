@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Sequence
 
 
 @dataclass(frozen=True)
@@ -68,3 +68,19 @@ def iter_chunk_placeholders(audio_path: Path, chunk_duration_s: float) -> Iterab
     fake_duration = chunk_duration_s * 3
     for start, end in plan_chunk_ranges(fake_duration, chunk_duration_s):
         yield f"{audio_path.stem}_{int(start)}_{int(end)}"
+
+
+def run_inference_on_chunks(chunk_ids: Sequence[str]) -> list[str]:
+    """Placeholder inference runner; returns mocked detection IDs."""
+
+    return [f"{chunk_id}_detected" for chunk_id in chunk_ids]
+
+
+def aggregate_detections(detections: Sequence[str]) -> dict[str, int]:
+    """Aggregate placeholder detections by chunk prefix."""
+
+    summary: dict[str, int] = {}
+    for det in detections:
+        chunk_name = det.split("_detected")[0]
+        summary[chunk_name] = summary.get(chunk_name, 0) + 1
+    return summary

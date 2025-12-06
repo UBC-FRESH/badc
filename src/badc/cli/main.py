@@ -16,8 +16,10 @@ DEFAULT_DATALAD_PATH = Path("data") / "datalad"
 
 data_app = typer.Typer(help="Manage DataLad-backed audio repositories (stub commands).")
 chunk_app = typer.Typer(help="Chunking utilities and HawkEars probe helpers.")
+infer_app = typer.Typer(help="Inference + aggregation helpers (placeholder).")
 app.add_typer(data_app, name="data")
 app.add_typer(chunk_app, name="chunk")
+app.add_typer(infer_app, name="infer")
 
 
 def _print_header() -> None:
@@ -113,6 +115,38 @@ def chunk_split(
     console.print(f"Planned {len(placeholders)} placeholder chunks for {file}:")
     for chunk_id in placeholders:
         console.print(f" - {chunk_id}")
+
+
+@infer_app.command("run")
+def infer_run(
+    chunk_ids: Annotated[
+        list[str],
+        typer.Argument(
+            help="Chunk identifiers to process (placeholder; eventually derived from chunk outputs)."
+        ),
+    ],
+) -> None:
+    """Placeholder inference command."""
+
+    detections = chunking.run_inference_on_chunks(chunk_ids)
+    console.print("Inference placeholder complete:")
+    for det in detections:
+        console.print(f" - {det}")
+
+
+@infer_app.command("aggregate")
+def infer_aggregate(
+    detection_ids: Annotated[
+        list[str],
+        typer.Argument(help="Detection IDs to aggregate (placeholder)."),
+    ],
+) -> None:
+    """Placeholder aggregation command."""
+
+    summary = chunking.aggregate_detections(detection_ids)
+    console.print("Aggregation placeholder summary:")
+    for chunk_name, count in summary.items():
+        console.print(f" - {chunk_name}: {count} detections")
 
 
 def main() -> None:

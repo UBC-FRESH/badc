@@ -14,4 +14,8 @@ also available::
     $ badc chunk probe data/audio/XXXX-000_20251001_093000.wav --initial-duration 120
     Probe placeholder: max chunk 120.00s for ...
 
+    $ badc infer run chunk_a chunk_b
+    Inference placeholder complete:
+     - chunk_a_detected
+
 The commands run locally without GPU dependencies so we can test the scaffolding in CI.

@@ -1,3 +1,12 @@
+# 2025-12-06 — Inference CLI scaffolding
+- Added `badc infer run|aggregate` placeholder commands plus utility helpers so the full
+  chunk→infer→aggregate pipeline shape is represented in the CLI/tests/docs.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs docs/_build/html -W`
+
 # 2025-12-06 — Bogus DataLad planning note
 - Added `notes/bogus-datalad.md` outlining the lightweight audio dataset we will expose as a test
   submodule for the `badc data connect` workflow.
