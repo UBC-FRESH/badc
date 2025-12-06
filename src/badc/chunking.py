@@ -94,13 +94,16 @@ def write_manifest(
     output_csv: Path,
     duration_s: float,
     compute_hashes: bool = False,
+    chunk_rows: Iterable[ChunkMetadata] | None = None,
 ) -> Path:
     """Write a chunk manifest CSV (placeholder hashing)."""
 
     lines = ["recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes"]
     recording_id = audio_path.stem
     metadata_iter: Iterable[ChunkMetadata]
-    if compute_hashes:
+    if chunk_rows is not None:
+        metadata_iter = chunk_rows
+    elif compute_hashes:
         metadata_iter = iter_chunk_metadata(audio_path, chunk_duration_s)
     else:
         metadata_iter = [

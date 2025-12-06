@@ -212,6 +212,7 @@ def chunk_run(
         manifest,
         duration,
         compute_hashes=not dry_run,
+        chunk_rows=chunk_rows,
     )
     console.print(
         f"Chunks {'skipped' if dry_run else f'written to {output_dir}'}; manifest at {manifest_path}"
