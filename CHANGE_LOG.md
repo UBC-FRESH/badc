@@ -314,3 +314,9 @@
   - `cat > CONTRIBUTING.md`
   - `cat > CHANGE_LOG.md`
   - `cat > notes/roadmap.md`
+# 2025-12-06 — Detection aggregation CLI
+- Implemented `badc infer aggregate` to scan detection JSON outputs, added `aggregate.py`, README/docs updates, and regression tests.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`

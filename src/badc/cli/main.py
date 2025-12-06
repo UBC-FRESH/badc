@@ -279,17 +279,25 @@ def infer_run(
 
 @infer_app.command("aggregate")
 def infer_aggregate(
-    detection_ids: Annotated[
-        list[str],
-        typer.Argument(help="Detection IDs to aggregate (placeholder)."),
+    detections_dir: Annotated[
+        Path,
+        typer.Argument(help="Directory containing inference outputs (JSON)."),
     ],
+    output: Annotated[
+        Path,
+        typer.Option("--output", help="Summary CSV path."),
+    ] = Path("artifacts/aggregate/summary.csv"),
 ) -> None:
-    """Placeholder aggregation command."""
+    """Aggregate detection JSON files into a summary CSV."""
 
-    summary = chunking.aggregate_detections(detection_ids)
-    console.print("Aggregation placeholder summary:")
-    for chunk_name, count in summary.items():
-        console.print(f" - {chunk_name}: {count} detections")
+    from badc.aggregate import load_detections, write_summary_csv
+
+    records = load_detections(detections_dir)
+    if not records:
+        console.print("No detections found.", style="yellow")
+        return
+    summary_path = write_summary_csv(records, output)
+    console.print(f"Wrote detection summary to {summary_path}")
 
 
 def main() -> None:

@@ -31,4 +31,7 @@ also available::
     $ badc data connect bogus --path data/datalad
     TODO: implement DataLad clone/register logic.
 
+    $ badc infer aggregate artifacts/infer --output artifacts/aggregate/summary.csv
+    Wrote detection summary to artifacts/aggregate/summary.csv
+
 The commands run locally without GPU dependencies so we can test the scaffolding in CI.

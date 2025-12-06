@@ -33,6 +33,7 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
 - `badc infer run --manifest manifest.csv` — loads chunk jobs, detects GPUs, and runs the HawkEars
   runner (stubbed until the real CLI is wired).
 - `badc data connect bogus` — placeholder for cloning the upcoming bogus DataLad dataset (smoke tests).
+- `badc infer aggregate artifacts/infer` — reads detection JSON files and writes a summary CSV.
 - `badc gpus` — lists detected GPUs via `nvidia-smi` so we can size the HawkEars worker pool.
 
 The CLI entry point is `badc`. Use `badc --help` to inspect the available commands.
