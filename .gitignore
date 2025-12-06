@@ -14,3 +14,5 @@ dist/
 build/
 .coverage
 htmlcov/
+artifacts/
+data/telemetry/

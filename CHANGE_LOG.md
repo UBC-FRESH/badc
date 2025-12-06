@@ -1,3 +1,12 @@
+# 2025-12-06 — HawkEars runner + telemetry hooks
+- Added `hawkears_runner.py`, wired `badc infer run --manifest` to process chunk jobs (with retries,
+  telemetry, and output dir handling), and documented README/docs/tests updates.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs docs/_build/html -W`
+
 # 2025-12-06 — HawkEars inference plan
 - Added `notes/inference-plan.md` detailing the manifest loader, GPU scheduler, telemetry, and CLI
   requirements for `badc infer run`; roadmap updated accordingly.

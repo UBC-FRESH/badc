@@ -50,7 +50,11 @@ def plan_workers(max_gpus: int | None = None) -> List[GPUWorker]:
 
 
 def log_scheduler_event(
-    chunk_id: str, worker: GPUWorker | None, status: str, details: dict
+    chunk_id: str,
+    worker: GPUWorker | None,
+    status: str,
+    details: dict,
+    runtime_s: float | None = None,
 ) -> None:
     record = TelemetryRecord(
         chunk_id=chunk_id,
@@ -59,7 +63,7 @@ def log_scheduler_event(
         status=status,
         started_at=now_iso(),
         finished_at=None,
-        runtime_s=None,
+        runtime_s=runtime_s,
         details=details,
     )
     log_telemetry(record, Path("data/telemetry/infer/log.jsonl"))

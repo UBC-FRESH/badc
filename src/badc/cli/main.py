@@ -12,7 +12,7 @@ from badc import __version__, chunking
 from badc.audio import get_wav_duration
 from badc.chunk_writer import ChunkMetadata, iter_chunk_metadata
 from badc.gpu import detect_gpus
-from badc.infer_scheduler import load_jobs, plan_workers
+from badc.infer_scheduler import GPUWorker, load_jobs, plan_workers
 
 console = Console()
 app = typer.Typer(help="Utilities for chunking and processing large bird audio corpora.")
@@ -240,13 +240,47 @@ def infer_run(
         int | None,
         typer.Option("--max-gpus", help="Limit number of GPUs to use."),
     ] = None,
+    output_dir: Annotated[
+        Path,
+        typer.Option("--output-dir", help="Directory for inference outputs."),
+    ] = Path("artifacts/infer"),
+    runner_cmd: Annotated[
+        str | None,
+        typer.Option("--runner-cmd", help="Command used to invoke HawkEars (default stub)."),
+    ] = None,
+    max_retries: Annotated[
+        int,
+        typer.Option("--max-retries", help="Maximum retries per chunk."),
+    ] = 2,
 ) -> None:
     """Placeholder inference command using manifest."""
 
     jobs = load_jobs(manifest)
     workers = plan_workers(max_gpus=max_gpus)
-    console.print(f"Loaded {len(jobs)} jobs and {len(workers)} workers.")
-    console.print("Scheduling not yet implemented.")
+    from badc.hawkears_runner import run_job
+
+    if not jobs:
+        console.print("No jobs found in manifest.", style="yellow")
+        return
+    worker_pool: list[GPUWorker | None]
+    if not workers:
+        console.print("No GPUs detected; running without GPU affinity.", style="yellow")
+        worker_pool = [None]
+    else:
+        worker_pool = workers
+
+    processed = 0
+    for idx, job in enumerate(jobs):
+        worker = worker_pool[idx % len(worker_pool)]
+        run_job(
+            job=job,
+            worker=worker,  # type: ignore[arg-type]
+            output_dir=output_dir,
+            runner_cmd=runner_cmd,
+            max_retries=max_retries,
+        )
+        processed += 1
+    console.print(f"Processed {processed} jobs; outputs stored in {output_dir}")
 
 
 @infer_app.command("aggregate")

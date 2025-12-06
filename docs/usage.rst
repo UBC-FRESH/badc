@@ -21,6 +21,9 @@ also available::
     $ badc chunk manifest data/audio/XXXX-000_20251001_093000.wav --chunk-duration 60 --hash-chunks
     Wrote manifest with chunk duration 60s to chunk_manifest.csv (with hashes)
 
+    $ badc infer run chunk_manifest.csv --runner-cmd "echo hawkears-stub"
+    Processed 1 jobs; outputs stored in artifacts/infer
+
     $ badc gpus
     Detected GPUs:
      - #0: NVIDIA Quadro RTX 4000 (8129 MiB)
