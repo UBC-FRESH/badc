@@ -16,3 +16,5 @@ build/
 htmlcov/
 artifacts/
 data/telemetry/
+
+setup/datalad_config.sh

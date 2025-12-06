@@ -9,6 +9,11 @@ if [[ ! -f "$CONFIG_PATH" ]]; then
 fi
 source "$CONFIG_PATH"
 
+if [[ -z "${GITHUB_REPO_URL:-}" ]]; then
+  echo "GITHUB_REPO_URL is not set in $CONFIG_PATH" >&2
+  exit 1
+fi
+
 DATASET_DIR="$REPO_DIR/tmp/badc-bogus-data"
 rm -rf "$DATASET_DIR"
 mkdir -p "$DATASET_DIR"
@@ -19,7 +24,12 @@ mkdir -p audio
 cp "$REPO_DIR/data/audio"/*.wav audio/ 2>/dev/null || true
 datalad save -m "Add sample audio"
 
-git remote add origin "git@github.com:UBC-FRESH/$GITHUB_REPO_NAME_REMOTE.git" || true
+if ! git ls-remote "$GITHUB_REPO_URL" >/dev/null 2>&1; then
+  echo "Remote $GITHUB_REPO_URL not reachable. Create the GitHub repo and rerun." >&2
+  exit 1
+fi
+git remote remove origin >/dev/null 2>&1 || true
+git remote add origin "$GITHUB_REPO_URL"
 
 cat <<CFG > .gitmodules
 [submodule "vendor/HawkEars"]
