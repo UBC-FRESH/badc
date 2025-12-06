@@ -1,3 +1,10 @@
+# 2025-12-06 — DataLad installation guidance
+- Expanded `notes/datalad-plan.md` with git-annex + DataLad install instructions (pip extras,
+  NeuroDebian/Homebrew, and the `datalad-installer` shortcut) so future setup scripts have a
+  canonical reference.
+- Commands executed:
+  - `apply_patch notes/datalad-plan.md`
+
 # 2025-12-06 — Python/CLI/docs scaffolding
 - Added initial project scaffold: `pyproject.toml`, `src/badc` package with Typer CLI stubs,
   editable install via Hatch, and README instructions.

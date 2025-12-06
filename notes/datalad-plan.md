@@ -63,3 +63,11 @@ required for connecting/disconnecting datasets at runtime.
    environment module)?
 4. Do we need per-user quotas/logging when `badc data connect` pulls tens of GB onto dev servers?
 5. Can we automate dataset integrity checks (e.g., `datalad fsck`) inside CI for the bogus repo?
+
+## Installation notes
+- **git-annex** is mandatory. Install via NeuroDebian/apt on Ubuntu, Homebrew on macOS, or the
+  cross-platform `datalad-installer git-annex` tool (recommended when system packages lag).
+- After `git-annex` is on `PATH`, install DataLad plus extras: `python -m pip install
+  "datalad[full]"`. Use `--user` or `pip3` variants as needed.
+- The `datalad-installer` Python package can bootstrap both `git-annex` and DataLad in a portable
+  fashion, which may be easier on HPC nodes where we lack root.
