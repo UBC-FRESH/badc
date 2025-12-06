@@ -1,3 +1,8 @@
+# 2025-12-06 — GPU CLI knobs planned
+- Noted in `notes/pipeline-plan.md` that `badc infer run` should expose `--max-gpus` and worker
+  pool overrides, defaulting to auto-detected GPU counts.
+- Commands executed: `apply_patch notes/pipeline-plan.md`
+
 # 2025-12-06 — GPU detection CLI
 - Added `badc gpus` command and `src/badc/gpu.py` helper to enumerate GPUs via `nvidia-smi` so we
   can size the HawkEars worker pool per environment.

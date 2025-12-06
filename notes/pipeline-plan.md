@@ -26,6 +26,7 @@ Stages:
 - Execution: schedule HawkEars jobs; capture stdout/stderr, GPU telemetry, and exit codes.
 - Parallelism: auto-detect GPU count/type (NVML or `nvidia-smi`) and spin up one worker per GPU,
   respecting `CUDA_VISIBLE_DEVICES` on Sockeye; allow CLI overrides.
+- CLI should expose `--max-gpus` and `--worker-pool` options, defaulting to detected values.
 - Output schema: JSONL/Parquet with fields (chunk_id, species_label, confidence, timestamp, model_version).
 - Detection schema (Parquet):
   - `recording_id`
