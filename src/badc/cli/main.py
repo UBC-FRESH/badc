@@ -129,12 +129,28 @@ def chunk_manifest(
         Path,
         typer.Option("--output", help="Output CSV path.", file_okay=True, dir_okay=False),
     ] = Path("chunk_manifest.csv"),
+    hash_chunks: Annotated[
+        bool,
+        typer.Option(
+            "--hash-chunks/--no-hash-chunks",
+            help="Compute SHA256 hashes for chunk entries (currently hashes entire file).",
+        ),
+    ] = False,
 ) -> None:
     """Generate a chunk manifest CSV (placeholder hashing)."""
 
     duration = get_wav_duration(file)
-    manifest_path = chunking.write_manifest(file, chunk_duration, output, duration)
-    console.print(f"Wrote manifest with chunk duration {chunk_duration}s to {manifest_path}")
+    manifest_path = chunking.write_manifest(
+        file,
+        chunk_duration,
+        output,
+        duration,
+        compute_hashes=hash_chunks,
+    )
+    console.print(
+        f"Wrote manifest with chunk duration {chunk_duration}s to {manifest_path}"
+        + (" (with hashes)" if hash_chunks else ""),
+    )
 
 
 @infer_app.command("run")

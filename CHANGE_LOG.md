@@ -1,3 +1,12 @@
+# 2025-12-06 — Chunk manifest hashing option
+- Added SHA256 utility + `--hash-chunks` option so `badc chunk manifest` can embed real hashes (per
+  file for now) and documented the behavior in README/docs + tests.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs docs/_build/html -W`
+
 # 2025-12-06 — Manifest hashing note
 - Clarified in `notes/chunking.md` that SHA256 hashes must cover the chunk file bytes (not just
   placeholders) when the chunking engine lands.

@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
 
+from badc.audio import compute_sha256
+
 
 @dataclass(frozen=True)
 class ChunkProbeResult:
@@ -91,14 +93,17 @@ def write_manifest(
     chunk_duration_s: float,
     output_csv: Path,
     duration_s: float,
+    compute_hashes: bool = False,
 ) -> Path:
     """Write a chunk manifest CSV (placeholder hashing)."""
 
     ranges = plan_chunk_ranges(duration_s, chunk_duration_s)
     lines = ["recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes"]
     recording_id = audio_path.stem
+    base_hash = compute_sha256(audio_path) if compute_hashes else "TODO_HASH"
     for start, end in ranges:
         chunk_id = f"{recording_id}_{int(start * 1000)}_{int(end * 1000)}"
+        sha256 = base_hash if compute_hashes else "TODO_HASH"
         lines.append(
             ",".join(
                 [
@@ -108,7 +113,7 @@ def write_manifest(
                     str(int(start * 1000)),
                     str(int(end * 1000)),
                     "0",
-                    "TODO_HASH",
+                    sha256,
                     "",
                 ]
             )

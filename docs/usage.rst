@@ -18,7 +18,7 @@ also available::
     Inference placeholder complete:
      - chunk_a_detected
 
-    $ badc chunk manifest data/audio/XXXX-000_20251001_093000.wav --chunk-duration 60
-    Wrote manifest with chunk duration 60s to chunk_manifest.csv
+    $ badc chunk manifest data/audio/XXXX-000_20251001_093000.wav --chunk-duration 60 --hash-chunks
+    Wrote manifest with chunk duration 60s to chunk_manifest.csv (with hashes)
 
 The commands run locally without GPU dependencies so we can test the scaffolding in CI.
