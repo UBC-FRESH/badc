@@ -1,68 +1,119 @@
 Usage Overview
 ==============
 
-The CLI entry point is ``badc``. To bootstrap a new checkout, run::
+The snippets below show the canonical BADC workflow end to end. Each section links back to the
+corresponding CLI reference page so you can dive deeper when needed.
 
-    $ git submodule update --init --recursive
-    $ badc data connect bogus --pull
+.. contents::
+   :local:
+   :depth: 1
 
-That clones the HawkEars fork and the bogus DataLad dataset (if `datalad` is installed) and records
-the dataset path in ``~/.config/badc/data.toml``.
+.. _usage-bootstrap:
 
-After bootstrapping, the CLI exposes dataset management helpers plus the initial chunking/inference
-scaffolding::
+Bootstrap a checkout
+--------------------
+The CLI entry point is ``badc``. After cloning the repo, initialise submodules and connect the bogus
+DataLad dataset so sample audio is available locally::
 
-    $ badc version
-    BADC version: 0.1.0
+   $ git submodule update --init --recursive
+   $ badc data connect bogus --pull
 
-    $ badc data connect bogus --path data/datalad --pull
-    Updated dataset bogus at data/datalad/bogus.
+``badc data connect`` records the dataset path in ``~/.config/badc/data.toml`` (see
+:doc:`cli/data`). You can confirm the registry at any time::
 
-    $ badc data status
-    Tracked datasets:
-     - bogus: connected (data/datalad/bogus)
+   $ badc data status
+   Tracked datasets:
+    - bogus: connected (/home/gep/projects/badc/data/datalad/bogus)
 
-    $ badc data disconnect bogus --drop-content
-    Dataset bogus marked as disconnected; data removed.
+To detach the dataset (and optionally drop annexed content)::
 
-    $ badc chunk probe data/datalad/bogus/audio/XXXX-000_20251001_093000.wav --initial-duration 120
-    Probe placeholder: max chunk 120.00s for ...
+   $ badc data disconnect bogus --drop-content
+   Dataset bogus marked as disconnected; data removed.
 
-    $ badc chunk manifest data/datalad/bogus/audio/XXXX-000_20251001_093000.wav --chunk-duration 60 --hash-chunks
-    Wrote manifest with chunk duration 60s to chunk_manifest.csv (with hashes)
+.. _usage-chunk-examples:
 
-    $ badc chunk run data/datalad/bogus/audio/XXXX-000_20251001_093000.wav --chunk-duration 60 --manifest chunks.csv
-    Wrote chunk files and manifest entries...
+Chunk audio and build manifests
+-------------------------------
+Refer to :doc:`cli/chunk` for option details. A typical sequence:
 
-    $ badc infer run chunk_manifest.csv --runner-cmd "echo hawkears-stub"
-    Processed 1 jobs; outputs stored in artifacts/infer
+1. Probe a file to estimate viable chunk durations::
 
-    $ badc infer run chunk_manifest.csv --use-hawkears --hawkears-arg --fast
-    Processed 1 jobs; outputs stored in artifacts/infer
+      $ badc chunk probe data/datalad/bogus/audio/XXXX-000_20251001_093000.wav           --initial-duration 120
+      Probe placeholder: max chunk 120.00s for ...
 
-    $ badc infer run chunk_manifest.csv --cpu-workers 4
-    Processed 3 jobs; outputs stored in artifacts/infer
+2. Generate a manifest without writing audio (hashes optional)::
 
-    $ badc gpus
-    Detected GPUs:
-     - #0: NVIDIA Quadro RTX 4000 (8129 MiB)
+      $ badc chunk manifest data/datalad/bogus/audio/XXXX-000_20251001_093000.wav           --chunk-duration 60 --hash-chunks           --output manifests/XXXX-000_20251001_093000.csv
+      Wrote manifest with chunk duration 60s to manifests/XXXX-000_20251001_093000.csv (with hashes)
 
-    $ badc infer aggregate artifacts/infer --output artifacts/aggregate/summary.csv
-    Wrote detection summary to artifacts/aggregate/summary.csv
+3. Split chunks to disk and emit a manifest in one pass::
 
-    $ badc telemetry --log data/telemetry/infer/log.jsonl
-    Telemetry records (10):
-     [success] chunk_a (GPU 0) 2025-12-06T08:00:00+00:00 runtime=1.23
+      $ badc chunk run data/datalad/bogus/audio/XXXX-000_20251001_093000.wav           --chunk-duration 60           --overlap 5           --output-dir artifacts/chunks           --manifest manifests/XXXX-000_20251001_093000.csv
+      Chunks written to artifacts/chunks; manifest at manifests/XXXX-000_20251001_093000.csv
 
-When the chunk files live inside a DataLad dataset (e.g. ``data/datalad/bogus``), inference outputs
-are written to ``<dataset>/artifacts/infer`` by default so you can immediately ``datalad save`` the
-results. Use ``--print-datalad-run`` to preview a ready-made ``datalad run`` command that wraps the
-same invocation (no jobs are executed when this flag is set).
+When planning large batch jobs, pair ``badc chunk run`` with ``datalad run`` (see
+:doc:`howto/chunk-audio`) so provenance is captured alongside the generated WAVs.
 
-::
+.. _usage-infer-examples:
 
-    $ badc infer run chunk_manifest.csv --print-datalad-run
-    Run the following from the dataset root (...):
-      datalad run ...
+Run inference
+-------------
+The :doc:`cli/infer` page covers every option; the quick hits below show common patterns.
 
-The commands run locally without GPU dependencies so we can test the scaffolding in CI.
+Stub/local runs (no HawkEars, great for CI)::
+
+   $ badc infer run manifests/XXXX-000_20251001_093000.csv        --runner-cmd "echo hawkears-stub"
+   Processed 3 jobs; outputs stored in artifacts/infer
+
+Leverage HawkEars directly (requires CUDA + vendor checkout)::
+
+   $ badc infer run manifests/XXXX-000_20251001_093000.csv        --use-hawkears        --hawkears-arg --confidence        --hawkears-arg 0.7
+   Processed 3 jobs; outputs stored in artifacts/infer
+
+CPU-only fallback (e.g., developers without GPUs)::
+
+   $ badc infer run manifests/XXXX-000_20251001_093000.csv --cpu-workers 4
+   Processed 3 jobs; outputs stored in artifacts/infer
+
+Preview a ``datalad run`` command without executing jobs::
+
+   $ badc infer run manifests/XXXX-000_20251001_093000.csv --print-datalad-run
+   Run the following from the dataset root (/home/gep/projects/badc/data/datalad/bogus):
+     datalad run -m "badc infer ..." --input manifests/... --output artifacts/infer -- badc infer run ...
+
+When chunk inputs live inside a DataLad dataset (for example ``data/datalad/bogus``), inference
+outputs default to ``<dataset>/artifacts/infer`` so you can immediately ``datalad save`` and push.
+
+GPU planning helpers::
+
+   $ badc gpus
+   Detected GPUs:
+    - #0: NVIDIA Quadro RTX 4000 (8129 MiB)
+
+Use ``--max-gpus`` to cap the worker pool or ``--cpu-workers`` to bypass GPU detection entirely.
+
+.. _usage-aggregate-telemetry:
+
+Aggregate detections and monitor telemetry
+------------------------------------------
+Summarise JSON detections into a CSV via :doc:`cli/infer`::
+
+   $ badc infer aggregate artifacts/infer        --output artifacts/aggregate/summary.csv
+   Wrote detection summary to artifacts/aggregate/summary.csv
+
+Tail recent telemetry entries (see :doc:`cli/misc`) to monitor long-running jobs::
+
+   $ badc telemetry --log data/telemetry/infer/log.jsonl
+   Telemetry records (4):
+   [success] GNWT-290_chunk_1 (GPU 0) 2025-12-06T18:22:11 runtime=12.4
+
+Telemetries are JSONL files, so you can also ingest them into notebooks or log shippers for
+dashboards.
+
+See also
+--------
+
+* :doc:`cli/data` – dataset helpers.
+* :doc:`cli/chunk` – chunk probe/split/manifest/run parameters.
+* :doc:`cli/infer` – inference, aggregation, and telemetry options.
+* :doc:`howto/infer-hpc` – SLURM-ready instructions for Sockeye/Chinook deployments.

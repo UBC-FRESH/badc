@@ -97,4 +97,4 @@ Each line prints status, chunk id, GPU index, timestamp, and runtime seconds. Ex
 
 Use this command when monitoring SLURM jobs or local batches to confirm progress without opening the
 JSONL file manually. Point ``--log`` at alternate telemetry files (e.g., chunking or aggregation
-pipelines) as those land.
+pipelines) as those land. See :ref:`usage-aggregate-telemetry` for a telemetry + aggregation walkthrough.

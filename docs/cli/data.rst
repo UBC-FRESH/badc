@@ -133,6 +133,8 @@ Examples::
    # Register a private repository
    badc data connect sockeye-prod --url git@github.com:UBC-FRESH/badc-prod-data.git
 
+See :ref:`usage-bootstrap` for a complete checkout walkthrough.
+
 ``badc data disconnect``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -1,3 +1,13 @@
+# 2025-12-07 — Usage walkthroughs
+- Rewrote `docs/usage.rst` with anchored CLI walkthroughs (bootstrap, chunking, inference, telemetry) and linked each CLI reference page back to those examples.
+- Added roadmap notes capturing the completed worked-example milestone.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `pre-commit run --all-files`
+
 # 2025-12-07 — CLI help excerpts + HPC doc expansion
 - Embedded Typer help excerpts in the chunk/data/infer/misc CLI pages so users can read argument syntax without invoking the commands.
 - Expanded the Sockeye/Chinook/Apptainer HPC docs and the Sockeye how-to with GPU planning, job-array patterns, and notebook hand-off guidance to satisfy roadmap item 3.
