@@ -104,6 +104,24 @@ Option reference
      - Print planned actions without touching disk or the registry.
      - Disabled
 
+Help excerpt
+^^^^^^^^^^^^
+
+.. code-block:: console
+
+   $ badc data connect --help
+   Usage: badc data connect [OPTIONS] NAME
+     Clone or update a DataLad dataset and record its metadata.
+   Arguments:
+     NAME  Dataset name, e.g., 'bogus'.  [required]
+   Options:
+     --path DIRECTORY        Target path for the dataset.  [default: data/datalad]
+     --url TEXT              Override dataset URL (required for unknown names).
+     --method TEXT           Preferred clone method: git or datalad.
+     --pull / --no-pull      Update the dataset when it already exists locally.
+     --dry-run / --apply     Preview actions without running commands.
+     --help                  Show this message and exit.
+
 Examples::
 
    # Clone the public bogus dataset using DataLad (auto-detected)
@@ -156,6 +174,22 @@ Option reference
    * - ``--dry-run``
      - Emit the pending actions without deleting or editing files.
      - Disabled
+
+Help excerpt
+^^^^^^^^^^^^
+
+.. code-block:: console
+
+   $ badc data disconnect --help
+   Usage: badc data disconnect [OPTIONS] NAME
+     Mark a dataset as disconnected and optionally drop its contents.
+   Arguments:
+     NAME  Dataset name to detach.  [required]
+   Options:
+     --drop-content / --keep-content  Drop annexed files after disconnecting.
+     --path DIRECTORY                Base directory that holds dataset folders.
+     --dry-run / --apply             Preview actions without modifying files.
+     --help                          Show this message and exit.
 
 The registry retains the last known path and timestamp so future ``connect``
 operations can reconcile state when pointed at the same location.

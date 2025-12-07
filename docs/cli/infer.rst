@@ -89,6 +89,27 @@ Option reference
      - Emit provenance-friendly command instead of executing jobs.
      - Disabled
 
+Help excerpt
+^^^^^^^^^^^^
+
+.. code-block:: console
+
+   $ badc infer run --help
+   Usage: badc infer run [OPTIONS] MANIFEST
+     Run HawkEars (or a custom runner) for every chunk in a manifest.
+   Arguments:
+     MANIFEST  Path to chunk manifest CSV.  [required]
+   Options:
+     --max-gpus INTEGER       Limit number of GPUs to use.
+     --cpu-workers INTEGER    Number of concurrent workers when no GPUs exist.
+     --output-dir PATH        Directory for inference outputs.
+     --runner-cmd TEXT        Command used to invoke HawkEars (default stub).
+     --use-hawkears / --stub-runner  Invoke the embedded HawkEars analyzer.
+     --hawkears-arg TEXT      Extra argument to pass to HawkEars (repeatable).
+     --max-retries INTEGER    Maximum retries per chunk.
+     --print-datalad-run      Show a ready-to-run `datalad run` command.
+     --help                   Show this message and exit.
+
 Workflow notes:
 
 * Worker pool: BADC pairs each chunk with a ``GPUWorker`` (index + UUID) derived from ``nvidia-smi``.
@@ -134,6 +155,20 @@ Option reference
    * - ``--output PATH``
      - Summary CSV destination.
      - ``artifacts/aggregate/summary.csv``
+
+Help excerpt
+^^^^^^^^^^^^
+
+.. code-block:: console
+
+   $ badc infer aggregate --help
+   Usage: badc infer aggregate [OPTIONS] DETECTIONS_DIR
+     Aggregate per-chunk detection JSON files into a summary CSV.
+   Arguments:
+     DETECTIONS_DIR  Directory containing inference outputs (JSON).  [required]
+   Options:
+     --output PATH  Summary CSV path.
+     --help         Show this message and exit.
 
 Common pattern::
 

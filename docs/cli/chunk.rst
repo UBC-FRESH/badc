@@ -50,6 +50,20 @@ Option reference
      - Starting chunk duration (seconds) passed to ``probe_chunk_duration``.
      - ``60``
 
+Help excerpt
+^^^^^^^^^^^^
+
+.. code-block:: console
+
+   $ badc chunk probe --help
+   Usage: badc chunk probe [OPTIONS] FILE
+     Estimate chunk duration feasibility for a single audio file.
+   Arguments:
+     FILE  Path to audio file to probe.  [required]
+   Options:
+     --initial-duration FLOAT  Starting chunk duration in seconds.  [default: 60]
+     --help                    Show this message and exit.
+
 ``badc chunk split``
 --------------------
 
@@ -88,6 +102,20 @@ Option reference
      - Manifest path (written even though the command only emits IDs).
      - ``chunk_manifest.csv``
 
+Help excerpt
+^^^^^^^^^^^^
+
+.. code-block:: console
+
+   $ badc chunk split --help
+   Usage: badc chunk split [OPTIONS] FILE
+     List placeholder chunk identifiers for an audio file.
+   Arguments:
+     FILE  Path to audio file to plan splits for.  [required]
+   Options:
+     --chunk-duration FLOAT  Desired chunk duration in seconds.  [default: 60]
+     --help                  Show this message and exit.
+
 ``badc chunk manifest``
 -----------------------
 
@@ -123,6 +151,23 @@ Option reference
    * - ``--hash-chunks`` / ``--no-hash-chunks``
      - Toggle SHA256 hashing for each manifest row.
      - ``--no-hash-chunks``
+
+Help excerpt
+^^^^^^^^^^^^
+
+.. code-block:: console
+
+   $ badc chunk manifest --help
+   Usage: badc chunk manifest [OPTIONS] FILE
+     Create a manifest CSV describing fixed-duration chunks.
+   Arguments:
+     FILE  Audio file to manifest.  [required]
+   Options:
+     --chunk-duration FLOAT  Chunk duration in seconds.  [default: 60]
+     --output FILE           Output CSV path.  [default: chunk_manifest.csv]
+     --hash-chunks / --no-hash-chunks
+                             Toggle SHA256 hashing for each manifest row.
+     --help                  Show this message and exit.
 
 ``badc chunk run``
 ------------------
@@ -171,6 +216,25 @@ Option reference
    * - ``--dry-run`` / ``--write-chunks``
      - Skip writing WAVs and emit mock metadata when ``--dry-run`` is set.
      - ``--write-chunks``
+
+Help excerpt
+^^^^^^^^^^^^
+
+.. code-block:: console
+
+   $ badc chunk run --help
+   Usage: badc chunk run [OPTIONS] FILE
+     Write chunk WAVs (optional) and a manifest for downstream inference.
+   Arguments:
+     FILE  Audio file to chunk.  [required]
+   Options:
+     --chunk-duration FLOAT  Chunk duration in seconds.  [required]
+     --overlap FLOAT         Overlap between chunks in seconds.  [default: 0]
+     --output-dir PATH       Directory for chunk files.  [default: artifacts/chunks]
+     --manifest PATH         Manifest CSV path.  [default: chunk_manifest.csv]
+     --dry-run / --write-chunks
+                             Skip writing chunk files.  [default: write-chunks]
+     --help                  Show this message and exit.
 
 Automation tips
 ---------------
