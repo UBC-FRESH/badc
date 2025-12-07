@@ -6,6 +6,8 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
+import badc.cli.main as cli_main
+from badc import data as data_utils
 from badc.cli.main import app
 
 runner = CliRunner()
@@ -139,3 +141,81 @@ def test_infer_print_datalad_run(tmp_path) -> None:
     result = runner.invoke(app, ["infer", "run", str(manifest), "--print-datalad-run"])
     assert result.exit_code == 0
     assert "datalad run" in result.stdout
+
+
+def test_data_status_summary(tmp_path, monkeypatch) -> None:
+    config_path = tmp_path / "data.toml"
+    monkeypatch.setenv("BADC_DATA_CONFIG", str(config_path))
+    dataset_dir = tmp_path / "datasets" / "bogus"
+    (dataset_dir / ".git").mkdir(parents=True)
+    data_utils.save_data_config(
+        {
+            "datasets": {
+                "bogus": {
+                    "path": str(dataset_dir),
+                    "url": "https://example.com/bogus.git",
+                    "method": "git",
+                    "status": "connected",
+                }
+            }
+        },
+        config_path=config_path,
+    )
+    result = runner.invoke(app, ["data", "status"])
+    assert result.exit_code == 0
+    assert "bogus" in result.stdout
+    assert "[present]" in result.stdout
+
+
+def test_data_status_details_with_siblings(tmp_path, monkeypatch) -> None:
+    config_path = tmp_path / "data.toml"
+    monkeypatch.setenv("BADC_DATA_CONFIG", str(config_path))
+    dataset_dir = tmp_path / "datasets" / "bogus"
+    (dataset_dir / ".datalad").mkdir(parents=True)
+    data_utils.save_data_config(
+        {
+            "datasets": {
+                "bogus": {
+                    "path": str(dataset_dir),
+                    "url": "https://example.com/bogus.git",
+                    "method": "datalad",
+                    "status": "connected",
+                }
+            }
+        },
+        config_path=config_path,
+    )
+
+    sibling = data_utils.SiblingInfo(
+        name="origin",
+        url="https://example.com/bogus.git",
+        push_url=None,
+        here=True,
+        description=None,
+        status="present",
+    )
+    monkeypatch.setattr(
+        cli_main.data_utils,
+        "_siblings_via_datalad",
+        lambda path: ([sibling], None),
+    )
+
+    result = runner.invoke(app, ["data", "status", "--details", "--show-siblings"])
+    assert result.exit_code == 0
+    assert "origin" in result.stdout
+    assert "Siblings" in result.stdout
+
+
+def test_gpus_reports_permission_error(monkeypatch) -> None:
+    def fake_run(*args, **kwargs):
+        raise subprocess.CalledProcessError(
+            returncode=1,
+            cmd=args[0],
+            stderr="Failed to initialize NVML: Insufficient Permissions\n",
+        )
+
+    monkeypatch.setattr("badc.gpu.subprocess.run", fake_run)
+    result = runner.invoke(app, ["gpus"])
+    assert result.exit_code == 0
+    assert "Insufficient Permissions" in result.stdout
+    assert "No GPUs detected via nvidia-smi." in result.stdout

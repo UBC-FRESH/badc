@@ -199,17 +199,38 @@ operations can reconcile state when pointed at the same location.
 ``badc data status``
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Display the tracked datasets, their status (connected or disconnected), and the
-recorded filesystem paths.  Example output::
+Display the tracked datasets, their status (connected or disconnected), filesystem paths, and—when
+requested—DataLad sibling information.  Example summary output::
 
    $ badc data status
    Tracked datasets:
-    - bogus: connected (/home/gep/projects/badc/data/datalad/bogus)
+    - bogus: connected (/home/gep/projects/badc/data/datalad/bogus) [present]
+
+Request extended metadata and siblings when debugging dataset plumbing::
+
+   $ badc data status --details --show-siblings
+   bogus — connected (method: datalad)
+     Path: /home/gep/projects/badc/data/datalad/bogus
+     Exists: yes; type: datalad
+     Siblings:
+       - origin state=present https://github.com/UBC-FRESH/badc-bogus-data.git
+       - arbutus-s3 state=present s3://ubc-fresh-badc-bogus-data
 
 Option reference
 ^^^^^^^^^^^^^^^^
 
-This command currently has no flags—just pass ``badc data status`` to inspect the registry.
+.. list-table::
+   :header-rows: 1
+
+   * - Option / Argument
+     - Description
+     - Default
+   * - ``--details`` / ``--summary``
+     - Toggle extended output (method, filesystem checks, notes).
+     - ``--summary``
+   * - ``--show-siblings`` / ``--hide-siblings``
+     - Include ``datalad siblings`` output (requires DataLad and a dataset with ``.datalad`` metadata).
+     - ``--hide-siblings``
 
 Help excerpt
 ^^^^^^^^^^^^
@@ -220,7 +241,10 @@ Help excerpt
    Usage: badc data status [OPTIONS]
      Report all datasets tracked in ~/.config/badc/data.toml.
    Options:
-     --help  Show this message and exit.
+     --details / --summary            Show extended metadata for each dataset.
+     --show-siblings / --hide-siblings
+                                     Include `datalad siblings` output (requires DataLad).
+     --help                          Show this message and exit.
 
 Use this command while debugging ``datalad run`` pipelines or before chaining a
 chunk/infer workflow to confirm that the referenced repositories exist locally.

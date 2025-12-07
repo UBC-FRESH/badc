@@ -11,6 +11,7 @@ from typing import Annotated, Optional, Sequence
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 
 from badc import __version__, chunking
 from badc import data as data_utils
@@ -206,7 +207,19 @@ def data_disconnect(
 
 
 @data_app.command("status")
-def data_status() -> None:
+def data_status(
+    details: Annotated[
+        bool,
+        typer.Option("--details/--summary", help="Show extended metadata for each dataset."),
+    ] = False,
+    show_siblings: Annotated[
+        bool,
+        typer.Option(
+            "--show-siblings/--hide-siblings",
+            help="Include `datalad siblings` output (requires DataLad).",
+        ),
+    ] = False,
+) -> None:
     """Report all datasets tracked in ``~/.config/badc/data.toml``.
 
     Notes
@@ -215,17 +228,54 @@ def data_status() -> None:
     chunking or inference commands that rely on shared audio storage.
     """
 
-    datasets = data_utils.list_tracked_datasets()
-    if not datasets:
+    statuses = data_utils.collect_dataset_statuses(show_siblings=show_siblings)
+    if not statuses:
         console.print("No datasets recorded. Run `badc data connect ...` first.")
         return
 
-    console.print("Tracked datasets:", style="bold")
-    for dataset_name in sorted(datasets):
-        entry = datasets[dataset_name]
-        status = entry.get("status", "unknown")
-        path_display = entry.get("path", "?")
-        console.print(f" - [cyan]{dataset_name}[/]: {status} ({path_display})")
+    if not details and not show_siblings:
+        console.print("Tracked datasets:", style="bold")
+        for entry in statuses:
+            path_display = str(entry.path) if entry.path else "?"
+            presence = "present" if entry.exists else "missing"
+            presence_tag = escape(f"[{presence}]")
+            console.print(
+                f" - [cyan]{entry.name}[/]: {entry.registry_status} ({path_display}) {presence_tag}"
+            )
+        return
+
+    for entry in statuses:
+        path_display = str(entry.path) if entry.path else "?"
+        presence = "yes" if entry.exists else "no"
+        console.print(
+            f"[cyan]{entry.name}[/] — {entry.registry_status} (method: {entry.method})",
+            style="bold",
+        )
+        console.print(f"  Path: {path_display}")
+        console.print(f"  Exists: {presence}; type: {entry.dataset_type}")
+        for note in entry.notes:
+            console.print(f"  Note: {escape(note)}", style="yellow")
+        if show_siblings:
+            if entry.siblings:
+                console.print("  Siblings:")
+                for sibling in entry.siblings:
+                    parts = [sibling.name]
+                    if sibling.here:
+                        parts.append("[here]")
+                    if sibling.status:
+                        parts.append(f"state={sibling.status}")
+                    if sibling.url:
+                        parts.append(sibling.url)
+                    elif sibling.push_url:
+                        parts.append(sibling.push_url)
+                    console.print("    - " + escape(" ".join(parts)))
+            else:
+                suffix = (
+                    " (not a DataLad dataset)"
+                    if entry.dataset_type != "datalad"
+                    else " (no siblings reported)"
+                )
+                console.print(f"  Siblings: none{suffix}")
 
 
 @chunk_app.command("probe")
@@ -431,7 +481,10 @@ def list_gpus() -> None:
     worker threads to request via ``--max-gpus`` or ``--cpu-workers``.
     """
 
-    infos = detect_gpus()
+    detection = detect_gpus()
+    if detection.diagnostic:
+        console.print(detection.diagnostic, style="yellow")
+    infos = detection.gpus
     if not infos:
         console.print("No GPUs detected via nvidia-smi.", style="yellow")
         return
@@ -526,7 +579,9 @@ def infer_run(
 
     jobs = load_jobs(manifest)
     extra_args = hawkears_arg or []
-    workers = plan_workers(max_gpus=max_gpus)
+    workers, detection_note = plan_workers(max_gpus=max_gpus)
+    if detection_note:
+        console.print(detection_note, style="yellow")
     if not jobs:
         console.print("No jobs found in manifest.", style="yellow")
         return

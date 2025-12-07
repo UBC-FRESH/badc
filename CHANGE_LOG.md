@@ -1,3 +1,37 @@
+# 2025-12-07 — Data CLI status details
+- Enriched `badc data status` with `--details` and `--show-siblings`, including filesystem checks,
+  detection of DataLad datasets, and sibling listings pulled from `datalad siblings` when available.
+- Added registry helpers and tests so git submodules and plain git clones are reported accurately
+  alongside DataLad datasets.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+
+# 2025-12-07 — Data connect handles git submodules
+- Taught `badc data connect` to detect datasets that are already present as git submodules (e.g.,
+  `data/datalad/bogus`) so it records them without trying to `datalad update`, which previously
+  failed with “Could not determine update target”.
+- Recorded these submodule-backed datasets with a `git-submodule` method flag and added regression
+  tests covering the new behavior.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+
+# 2025-12-07 — GPU detection diagnostics
+- Updated `badc gpus`/`badc infer run` to surface `nvidia-smi` failures (e.g. NVML permission errors),
+  ensuring operators see why GPU detection fell back to CPUs.
+- Documented the troubleshooting workflow in `README.md` and `docs/usage.rst`, plus added a CLI test
+  that exercises the new warning path.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+
 # 2025-12-07 — Usage walkthroughs
 - Rewrote `docs/usage.rst` with anchored CLI walkthroughs (bootstrap, chunking, inference, telemetry) and linked each CLI reference page back to those examples.
 - Added roadmap notes capturing the completed worked-example milestone.

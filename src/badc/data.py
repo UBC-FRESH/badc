@@ -10,7 +10,7 @@ import tomllib
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, Tuple
 
 BADC_DATA_CONFIG = "BADC_DATA_CONFIG"
 
@@ -27,6 +27,32 @@ class DatasetSpec:
 
     description: str = ""
     """Free-form description shown in docs/tests."""
+
+
+@dataclass(frozen=True)
+class SiblingInfo:
+    """Description of a DataLad sibling reported by ``datalad siblings``."""
+
+    name: str
+    url: str | None
+    push_url: str | None
+    here: bool
+    description: str | None = None
+    status: str | None = None
+
+
+@dataclass(frozen=True)
+class DatasetStatus:
+    """Filesystem + registry view for a tracked dataset."""
+
+    name: str
+    registry_status: str
+    method: str
+    path: Path | None
+    exists: bool
+    dataset_type: str
+    notes: Tuple[str, ...]
+    siblings: Tuple[SiblingInfo, ...]
 
 
 DEFAULT_DATASETS: dict[str, DatasetSpec] = {
@@ -153,6 +179,128 @@ def _run(cmd: list[str], cwd: Path | None = None) -> None:
     subprocess.run(cmd, cwd=cwd, check=True)
 
 
+def _is_git_submodule(path: Path) -> bool:
+    """Return ``True`` when ``path`` is managed as a git submodule."""
+
+    git_path = path / ".git"
+    if not git_path.exists() or git_path.is_dir():
+        return False
+    try:
+        content = git_path.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return False
+    first_line = content.strip().splitlines()[0] if content else ""
+    if not first_line.startswith("gitdir:"):
+        return False
+    gitdir = first_line.split(":", 1)[1].strip()
+    normalized = Path(gitdir).as_posix()
+    return "/.git/modules/" in normalized or normalized.endswith("/.git/modules")
+
+
+def _is_datalad_dataset(path: Path) -> bool:
+    return (path / ".datalad").exists()
+
+
+def _dataset_type(path: Path) -> str:
+    if _is_datalad_dataset(path):
+        return "datalad"
+    if (path / ".git").exists() or _is_git_submodule(path):
+        return "git"
+    return "unknown"
+
+
+def _siblings_via_datalad(path: Path) -> tuple[list[SiblingInfo], str | None]:
+    if not shutil.which("datalad"):
+        return [], "datalad binary not available; skipping sibling inspection."
+    try:
+        result = subprocess.run(
+            ["datalad", "-f", "json", "siblings", "-d", str(path)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        stderr = exc.stderr.strip() if exc.stderr else ""
+        note = stderr or f"datalad siblings failed: {exc}"
+        return [], note
+    siblings: list[SiblingInfo] = []
+    for line in result.stdout.splitlines():
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        name = payload.get("name") or "unknown"
+        siblings.append(
+            SiblingInfo(
+                name=name,
+                url=payload.get("url"),
+                push_url=payload.get("pushurl"),
+                here=payload.get("type") == "here" or bool(payload.get("here")),
+                description=payload.get("description"),
+                status=payload.get("state") or payload.get("status"),
+            )
+        )
+    return siblings, None
+
+
+def collect_dataset_statuses(
+    show_siblings: bool = False,
+    config_path: Path | None = None,
+) -> List[DatasetStatus]:
+    """Return registry entries annotated with filesystem information.
+
+    Parameters
+    ----------
+    show_siblings
+        When ``True`` and DataLad metadata is available, include sibling details.
+    config_path
+        Optional override for the registry location.
+    """
+
+    config = load_data_config(config_path)
+    datasets: Dict[str, Dict[str, Any]] = config.get("datasets", {})
+    statuses: List[DatasetStatus] = []
+    for name in sorted(datasets):
+        entry = datasets[name]
+        path_value = entry.get("path")
+        path = Path(path_value).expanduser() if path_value else None
+        notes: List[str] = []
+        siblings: List[SiblingInfo] = []
+        exists = bool(path and path.exists())
+        dataset_type = "unknown"
+        if not path:
+            notes.append("No path recorded; reconnect the dataset to capture its location.")
+        else:
+            if path.exists():
+                dataset_type = _dataset_type(path)
+                if show_siblings and dataset_type == "datalad":
+                    sibling_list, sibling_note = _siblings_via_datalad(path)
+                    siblings = sibling_list
+                    if sibling_note:
+                        notes.append(sibling_note)
+                elif show_siblings and dataset_type != "datalad":
+                    notes.append("Sibling inspection is only available for DataLad datasets.")
+            else:
+                notes.append(
+                    f"Path {path} is missing; rerun `badc data connect {name}` to restore local files."
+                )
+        statuses.append(
+            DatasetStatus(
+                name=name,
+                registry_status=entry.get("status", "unknown"),
+                method=entry.get("method", "unknown"),
+                path=path,
+                exists=exists,
+                dataset_type=dataset_type,
+                notes=tuple(notes),
+                siblings=tuple(siblings),
+            )
+        )
+    return statuses
+
+
 def connect_dataset(
     spec: DatasetSpec,
     target_dir: Path,
@@ -189,10 +337,15 @@ def connect_dataset(
     target_dir.parent.mkdir(parents=True, exist_ok=True)
 
     method_name = available_method(method)
+    record_method = method_name
+    target_exists = target_dir.exists()
+    submodule_managed = target_exists and _is_git_submodule(target_dir)
+    if submodule_managed:
+        record_method = "git-submodule"
     status = ""
 
-    if target_dir.exists():
-        if pull_existing:
+    if target_exists:
+        if pull_existing and not submodule_managed:
             status = "updated"
             if not dry_run:
                 _update_dataset(target_dir, method_name)
@@ -207,7 +360,7 @@ def connect_dataset(
         _record_dataset_entry(
             spec,
             target_dir,
-            method_name,
+            record_method,
             status="connected",
             config_path=config_path,
         )
