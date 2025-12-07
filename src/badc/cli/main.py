@@ -40,7 +40,13 @@ def _print_header() -> None:
 
 @app.command()
 def version() -> None:
-    """Show the current BADC version."""
+    """Display the current BADC version banner.
+
+    Notes
+    -----
+    Uses ``rich`` styling to print the version header; primarily a smoke-test
+    that the CLI installed correctly.
+    """
 
     _print_header()
     console.print(f"BADC version: [bold]{__version__}[/]")
@@ -73,7 +79,34 @@ def data_connect(
         typer.Option("--dry-run/--apply", help="Preview actions without running commands."),
     ] = False,
 ) -> None:
-    """Clone (or update) a DataLad-backed dataset and record it in the config."""
+    """Clone or update a DataLad dataset and record its metadata.
+
+    Parameters
+    ----------
+    name : str
+        Registered dataset identifier (e.g., ``"bogus"``).
+    path : Path
+        Base directory where dataset folders are stored/created.
+    url : str, optional
+        Explicit clone URL for custom datasets; overrides the registry entry when
+        provided.
+    method : str, optional
+        Preferred clone backend (``"git"`` or ``"datalad"``). ``None`` auto-detects
+        based on tool availability.
+    pull_existing : bool
+        When ``True``, fetches updates if the dataset already exists locally.
+    dry_run : bool
+        If ``True``, prints the actions without cloning/updating or editing the config.
+
+    Raises
+    ------
+    typer.BadParameter
+        If the dataset is unknown and no URL is provided, or when an invalid method is
+        supplied.
+    typer.Exit
+        Propagates ``subprocess.CalledProcessError`` return codes so Typer can exit
+        cleanly.
+    """
 
     method_normalized = method.lower() if method else None
     if method_normalized and method_normalized not in {"git", "datalad"}:
@@ -142,7 +175,20 @@ def data_disconnect(
         typer.Option("--dry-run/--apply", help="Preview actions without modifying files."),
     ] = False,
 ) -> None:
-    """Record a dataset as disconnected and optionally remove its files."""
+    """Mark a dataset as disconnected and optionally drop its contents.
+
+    Parameters
+    ----------
+    name : str
+        Dataset identifier to detach.
+    drop_content : bool
+        When ``True``, removes annexed content after marking the dataset disconnected.
+    path : Path
+        Base directory used to resolve the dataset path when it is missing from the
+        config file.
+    dry_run : bool
+        If ``True``, prints the planned actions without touching files or configs.
+    """
 
     dataset_path = data_utils.resolve_dataset_path(name, path)
     action = data_utils.disconnect_dataset(
@@ -161,7 +207,13 @@ def data_disconnect(
 
 @data_app.command("status")
 def data_status() -> None:
-    """Report tracked datasets and their recorded paths/status."""
+    """Report all datasets tracked in ``~/.config/badc/data.toml``.
+
+    Notes
+    -----
+    Useful for confirming which DataLad datasets are currently connected before running
+    chunking or inference commands that rely on shared audio storage.
+    """
 
     datasets = data_utils.list_tracked_datasets()
     if not datasets:
@@ -184,7 +236,20 @@ def chunk_probe(
         typer.Option("--initial-duration", help="Starting chunk duration in seconds."),
     ] = 60.0,
 ) -> None:
-    """Run the placeholder chunk-size probe."""
+    """Estimate chunk duration feasibility for a single audio file.
+
+    Parameters
+    ----------
+    file : Path
+        Path to the WAV file being analyzed.
+    initial_duration : float
+        Starting chunk size in seconds fed to the placeholder probe logic.
+
+    Notes
+    -----
+    The current implementation delegates to :func:`badc.chunking.probe_chunk_duration`,
+    which returns mocked values until the HawkEars-driven calibration lands.
+    """
 
     result = chunking.probe_chunk_duration(file, initial_duration)
     console.print(
@@ -202,7 +267,20 @@ def chunk_split(
         typer.Option("--chunk-duration", help="Desired chunk duration in seconds."),
     ] = 60.0,
 ) -> None:
-    """Emit placeholder chunk IDs for the given audio file."""
+    """List placeholder chunk identifiers for an audio file.
+
+    Parameters
+    ----------
+    file : Path
+        WAV file to inspect.
+    chunk_duration : float
+        Duration of each chunk in seconds.
+
+    Notes
+    -----
+    This command does not write chunk files; it only previews identifiers so users can
+    calibrate downstream expectations.
+    """
 
     placeholders = list(chunking.iter_chunk_placeholders(file, chunk_duration))
     console.print(f"Planned {len(placeholders)} placeholder chunks for {file}:")
@@ -229,7 +307,20 @@ def chunk_manifest(
         ),
     ] = False,
 ) -> None:
-    """Generate a chunk manifest CSV (placeholder hashing)."""
+    """Create a manifest CSV describing fixed-duration chunks.
+
+    Parameters
+    ----------
+    file : Path
+        Source audio file to split.
+    chunk_duration : float
+        Desired chunk length in seconds.
+    output : Path
+        Destination CSV path for the manifest.
+    hash_chunks : bool
+        When ``True``, computes content hashes for each entry (currently the entire file)
+        to support reproducibility checks.
+    """
 
     duration = get_wav_duration(file)
     manifest_path = chunking.write_manifest(
@@ -269,7 +360,28 @@ def chunk_run(
         typer.Option("--dry-run/--write-chunks", help="Skip writing chunk files."),
     ] = False,
 ) -> None:
-    """Generate chunk files (optional) and manifest."""
+    """Write chunk WAVs (optional) and a manifest for downstream inference.
+
+    Parameters
+    ----------
+    file : Path
+        Source audio file to chunk.
+    chunk_duration : float
+        Desired duration of each chunk in seconds.
+    overlap : float
+        Overlap between consecutive chunks in seconds.
+    output_dir : Path
+        Directory where generated chunk WAVs should be stored.
+    manifest : Path
+        Output manifest CSV path.
+    dry_run : bool
+        When ``True``, skips writing chunk files and emits mock metadata for planning.
+
+    Notes
+    -----
+    Hashes are only computed when chunk files are actually written. Dry runs help plan
+    output layouts without touching disk.
+    """
 
     duration = get_wav_duration(file)
     if dry_run:
@@ -311,7 +423,13 @@ def chunk_run(
 
 @app.command("gpus")
 def list_gpus() -> None:
-    """Display detected GPUs (index, name, VRAM)."""
+    """Display GPU inventory as reported by ``nvidia-smi``.
+
+    Notes
+    -----
+    Provides a quick sanity check before running inference so operators know how many
+    worker threads to request via ``--max-gpus`` or ``--cpu-workers``.
+    """
 
     infos = detect_gpus()
     if not infos:
@@ -370,7 +488,36 @@ def infer_run(
         ),
     ] = False,
 ) -> None:
-    """Run HawkEars inference for each chunk listed in the manifest."""
+    """Run HawkEars (or a custom runner) for every chunk in a manifest.
+
+    Parameters
+    ----------
+    manifest : Path
+        CSV describing chunk jobs (generated by ``badc chunk manifest`` or ``chunk run``).
+    max_gpus : int, optional
+        Optional cap on GPUs to assign; defaults to auto-detecting all available GPUs.
+    output_dir : Path
+        Directory (or dataset-relative folder) where inference outputs should be stored.
+    runner_cmd : str, optional
+        Custom command that processes a chunk. Mutually exclusive with ``--use-hawkears``.
+    max_retries : int
+        Maximum number of attempts per chunk before marking it failed.
+    use_hawkears : bool
+        Toggle to invoke ``vendor/HawkEars/analyze.py`` directly instead of the stub
+        runner.
+    hawkears_arg : list[str], optional
+        Extra CLI flags forwarded verbatim to HawkEars.
+    cpu_workers : int
+        Number of concurrent workers to use when no GPUs are detected.
+    print_datalad_run : bool
+        Emits a ``datalad run`` command instead of executing inference.
+
+    Raises
+    ------
+    typer.BadParameter
+        If mutually exclusive options are supplied or chunk roots span multiple
+        DataLad datasets when ``--print-datalad-run`` is used.
+    """
 
     if runner_cmd and use_hawkears:
         raise typer.BadParameter(
@@ -433,6 +580,30 @@ def _run_scheduler(
     use_hawkears: bool,
     hawkears_args: Sequence[str],
 ) -> None:
+    """Dispatch inference jobs to worker threads.
+
+    Parameters
+    ----------
+    job_contexts : Sequence[tuple[InferenceJob, Path, Path | None]]
+        Each tuple contains the job metadata, the output directory, and the optional
+        dataset root used for provenance tracking.
+    worker_pool : list[GPUWorker | None]
+        GPU-bound workers (``None`` entries represent CPU-only workers).
+    runner_cmd : str, optional
+        Custom command to execute per chunk when ``use_hawkears`` is ``False``.
+    max_retries : int
+        Number of times to retry a failing job before surfacing the exception.
+    use_hawkears : bool
+        When ``True``, invokes the vendored HawkEars analyzer instead of the stub.
+    hawkears_args : Sequence[str]
+        Additional CLI arguments forwarded to HawkEars.
+
+    Raises
+    ------
+    Exception
+        Re-raises the first worker failure after shutting down the pool.
+    """
+
     if not worker_pool:
         worker_pool = [None]
     job_queue: queue.Queue = queue.Queue()
@@ -488,6 +659,25 @@ def _prepare_job_contexts(
     default_output: Path,
     allow_dataset_outputs: bool,
 ) -> list[tuple[InferenceJob, Path, Path | None]]:
+    """Build output/dataset context tuples for each inference job.
+
+    Parameters
+    ----------
+    jobs : Sequence[InferenceJob]
+        Jobs parsed from the manifest CSV.
+    default_output : Path
+        Fallback directory for inference outputs when no dataset root is detected.
+    allow_dataset_outputs : bool
+        When ``True``, redirects outputs into the DataLad dataset that provided the
+        chunk so provenance is preserved.
+
+    Returns
+    -------
+    list of tuple
+        Each tuple contains the job, the resolved output directory, and the dataset
+        root (``None`` when no dataset owns the chunk).
+    """
+
     contexts: list[tuple[InferenceJob, Path, Path | None]] = []
     for job in jobs:
         dataset_root = data_utils.find_dataset_root(job.chunk_path)
@@ -499,6 +689,21 @@ def _prepare_job_contexts(
 
 
 def _relativize(path: Path, root: Path) -> str:
+    """Return ``path`` relative to ``root`` when possible.
+
+    Parameters
+    ----------
+    path : Path
+        Absolute or relative path to convert.
+    root : Path
+        Candidate base directory.
+
+    Returns
+    -------
+    str
+        Relative string when ``path`` is inside ``root``; otherwise the absolute path.
+    """
+
     try:
         return str(path.resolve().relative_to(root.resolve()))
     except ValueError:
@@ -517,6 +722,37 @@ def _print_datalad_run_instructions(
     hawkears_args: Sequence[str],
     cpu_workers: int,
 ) -> None:
+    """Render a ``datalad run`` command for the provided jobs.
+
+    Parameters
+    ----------
+    manifest : Path
+        Manifest CSV driving the inference job list. Must live inside the dataset root.
+    job_contexts : Sequence[tuple[InferenceJob, Path, Path | None]]
+        Job details plus the target output path and dataset root (when available).
+    max_gpus : int, optional
+        Maximum GPUs to encode in the generated command. ``None`` preserves
+        auto-detect behavior.
+    output_dir : Path
+        Requested output directory from the CLI invocation.
+    runner_cmd : str, optional
+        Custom runner command to include in the generated invocation.
+    max_retries : int
+        Retry budget to embed in the printed command.
+    use_hawkears : bool
+        Indicates whether ``--use-hawkears`` should be appended.
+    hawkears_args : Sequence[str]
+        Additional HawkEars CLI flags.
+    cpu_workers : int
+        Number of CPU workers to encode; relevant when no GPUs are present.
+
+    Raises
+    ------
+    typer.Exit
+        When the manifest is outside the dataset root, when multiple datasets are
+        involved, or when no dataset context exists (since ``datalad run`` would fail).
+    """
+
     dataset_roots = {ctx[2] for ctx in job_contexts if ctx[2] is not None}
     dataset_roots.discard(None)
     if not dataset_roots:
@@ -585,7 +821,15 @@ def infer_aggregate(
         typer.Option("--output", help="Summary CSV path."),
     ] = Path("artifacts/aggregate/summary.csv"),
 ) -> None:
-    """Aggregate detection JSON files into a summary CSV."""
+    """Aggregate per-chunk detection JSON files into a summary CSV.
+
+    Parameters
+    ----------
+    detections_dir : Path
+        Directory holding JSON outputs from ``badc infer run``.
+    output : Path
+        Destination CSV path for the aggregated summary.
+    """
 
     from badc.aggregate import load_detections, write_summary_csv
 
@@ -598,7 +842,13 @@ def infer_aggregate(
 
 
 def main() -> None:
-    """Entrypoint used by the console script."""
+    """Entrypoint invoked by the ``badc`` console script.
+
+    Notes
+    -----
+    This thin wrapper allows ``python -m badc.cli.main`` to behave the same as the
+    installed ``badc`` command, which simplifies debugging in editable installs.
+    """
 
     app()
 
@@ -610,7 +860,13 @@ def telemetry_monitor(
         typer.Option("--log", help="Telemetry log path."),
     ] = Path("data/telemetry/infer/log.jsonl"),
 ) -> None:
-    """Display recent telemetry entries."""
+    """Print the most recent telemetry records for quick inspection.
+
+    Parameters
+    ----------
+    log_path : Path
+        JSONL file produced by :mod:`badc.telemetry` recording HawkEars runs.
+    """
 
     records = load_telemetry(log_path)
     if not records:

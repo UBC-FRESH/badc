@@ -70,4 +70,4 @@ The CLI entry point is `badc`. Use `badc --help` to inspect the available comman
 ## Documentation
 
 Rendered Sphinx docs are published automatically from `main` at  
-https://ubc-fresh.github.io/bird-acoustic-data-cruncher/
+https://ubc-fresh.github.io/badc/

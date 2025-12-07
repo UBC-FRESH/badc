@@ -1,3 +1,22 @@
+# 2025-12-07 — CLI docstrings for API reference
+- Upgraded every Typer command/helper in `badc.cli.main` to NumPy-style docstrings so the Sphinx API reference now exposes parameter/return semantics instead of one-line placeholders.
+- This satisfies the documentation-plan milestone for seeding the CLI module with rich docstrings before expanding the API reference.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `pre-commit run --all-files`
+
+# 2025-12-07 — README docs link fix
+- Updated the README docs link to the new GitHub Pages URL (https://ubc-fresh.github.io/badc/) and checked off the scratch task.
+- Commands executed:
+  - `ruff format src tests` (not needed; no code changes)
+  - `ruff check src tests` (not needed)
+  - `pytest` (not needed)
+  - `sphinx-build -b html docs _build/html -W` (not needed)
+  - `pre-commit run --all-files` (not needed)
+
 # 2025-12-07 — Rebrand to Compiler
 - Renamed all public references from Bird Acoustic Data Cruncher to Bird Acoustic Data Compiler (README, docs, CLI banner, AGENTS, roadmap, API docstrings) so messaging and acronym stay consistent.
 - Marked the scratch note complete to reflect the rename decision.

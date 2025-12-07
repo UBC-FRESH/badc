@@ -81,5 +81,5 @@ Goal: deliver complete documentation coverage across back-end modules, CLI surfa
 3. Flesh out the HPC/how-to sections with Sockeye/Chinook SLURM scripts, Apptainer tips, and notebook gallery links.
    - Sockeye/Chinook/Apptainer docs + the "Run inference on Sockeye" how-to are now seeded (2025-12-06); follow-up work: add Chinook credential screenshots + real container definition once it exists.
 
-Docstring sweep progress: ``badc.chunk_writer``, ``badc.data``, ``badc.audio``, ``badc.aggregate``, ``badc.gpu``, ``badc.hawkears``, ``badc.hawkears_runner``, ``badc.infer_scheduler``, ``badc.telemetry``, and ``badc.chunking`` now ship full NumPy-style docstrings; remaining CLI commands still need coverage.
+Docstring sweep progress: ``badc.chunk_writer``, ``badc.data``, ``badc.audio``, ``badc.aggregate``, ``badc.gpu``, ``badc.hawkears``, ``badc.hawkears_runner``, ``badc.infer_scheduler``, ``badc.telemetry``, ``badc.chunking``, and ``badc.cli.main`` now ship full NumPy-style docstrings. Next additions will focus on any new modules introduced by the HawkEars runner/telemetry milestones.
 - Notebook gallery scaffolding landed (chunk probe, local infer, aggregate analysis) and the `.ipynb` files now live under `docs/notebooks/` so nbsphinx can publish them. Next phase is fleshing out narrative/outputs and enabling execution once GPU CI exists.
