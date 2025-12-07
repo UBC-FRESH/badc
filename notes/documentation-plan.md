@@ -76,10 +76,11 @@ Goal: deliver complete documentation coverage across back-end modules, CLI surfa
 
 ## Next actions
 - ✅ Baseline CLI docs (data + chunk + infer + misc) and the datalad run how-to landed on 2025-12-06.
+- ✅ CLI option tables + help excerpts added on 2025-12-07 so readers can skim arguments without running the commands.
 1. Continue the NumPy docstring sweep whenever new modules land so `docs/api/generated/*` stays accurate.
-2. Expand the CLI pages with richer assets—option tables now exist for chunk/data/infer/misc; next step is to embed `--help` snapshots or diagrams per command group.
+2. Add worked CLI examples (end-to-end commands + sample output) to `docs/usage.rst` and cross-link them from the CLI reference for faster discovery.
 3. Flesh out the HPC/how-to sections with Sockeye/Chinook SLURM scripts, Apptainer tips, and notebook gallery links.
-   - Sockeye/Chinook/Apptainer docs + the "Run inference on Sockeye" how-to are now seeded (2025-12-06); follow-up work: add Chinook credential screenshots + real container definition once it exists.
+   - Sockeye/Chinook/Apptainer docs + the "Run inference on Sockeye" how-to now include GPU planning/job-array guidance (2025-12-07); follow-up work: add Chinook credential screenshots + production Apptainer definition once it exists.
 
 Docstring sweep progress: ``badc.chunk_writer``, ``badc.data``, ``badc.audio``, ``badc.aggregate``, ``badc.gpu``, ``badc.hawkears``, ``badc.hawkears_runner``, ``badc.infer_scheduler``, ``badc.telemetry``, ``badc.chunking``, and ``badc.cli.main`` now ship full NumPy-style docstrings. Next additions will focus on any new modules introduced by the HawkEars runner/telemetry milestones.
 - Notebook gallery scaffolding landed (chunk probe, local infer, aggregate analysis) and the `.ipynb` files now live under `docs/notebooks/` so nbsphinx can publish them. Next phase is fleshing out narrative/outputs and enabling execution once GPU CI exists.

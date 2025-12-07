@@ -66,6 +66,24 @@ Example SLURM script
      apptainer exec --nv "$IMG" badc infer run "$MANIFEST" \
        --use-hawkears --max-gpus 4 --hawkears-arg --confidence --hawkears-arg 0.7
 
+Automatic GPU detection
+--------------------------
+* Run ``badc gpus`` inside the allocation after loading modules to confirm the devices exposed via ``CUDA_VISIBLE_DEVICES`` match the ``--gres`` request.
+* Limit utilization with ``--max-gpus`` when you intentionally reserve more GPUs than needed (e.g., staging pipelines or throttling HawkEars concurrency).
+* CPU-only dry runs: supply ``--cpu-workers`` (>=1) and omit ``--max-gpus`` so the scheduler spins up threads even if no GPUs are detected.
+
+Job arrays & manifests
+----------------------
+* Batch many manifests by storing their relative paths in a text file and launching a SLURM array::
+
+     #SBATCH --array=1-10
+     MANIFEST=$(sed -n "${SLURM_ARRAY_TASK_ID}p" manifests.txt)
+     datalad run -m "hawkears $(basename "$MANIFEST")" \
+       --input "$MANIFEST" --output artifacts/infer \
+       -- apptainer exec --nv "$IMG" badc infer run "$MANIFEST" --use-hawkears
+
+* Keep array jobs idempotent by writing outputs under ``artifacts/infer/<recording>/`` inside the dataset so failed tasks can be retried with ``datalad rerun``.
+
 Telemetry & monitoring
 ----------------------
 * Use ``badc telemetry --log data/telemetry/infer/log.jsonl`` to inspect the last few chunks.

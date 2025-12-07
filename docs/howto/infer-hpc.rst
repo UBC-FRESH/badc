@@ -8,6 +8,24 @@ you can blast through manifest-sized HawkEars runs on the cluster.
    :local:
    :depth: 1
 
+Pre-flight checklist
+--------------------
+* Review the Sockeye HPC page for the latest partition, module, and job-array guidelines.
+* Ensure the DataLad dataset is clean on Chinook before copying manifests to Sockeye (``datalad status`` should report "nothing to save").
+* Run ``badc data status`` on both Chinook and Sockeye to confirm the bogus/production datasets point at the same commit.
+* Capture the commands you will run (``datalad run`` invocation, ``sbatch`` submission) in ``CHANGE_LOG.md`` as soon as the batch finishes.
+
+GPU planning
+------------
+* Use ``badc gpus`` inside an interactive ``srun --gres=gpu:1 --pty bash`` shell to confirm which devices will be available to the job.
+* If a manifest requires fewer workers than GPUs requested, pass ``--max-gpus`` to keep HawkEars from spawning unnecessary processes while still holding the reservation for future chunks.
+* Sockeye arrays: pair each array index with ``--print-datalad-run`` to log the exact ``datalad run`` command before launching the batch. Store the command string in the job log for provenance.
+
+Notebook hand-off
+-----------------
+* After collecting results (step 5), launch the notebook gallery (the notebook gallery (``docs/notebooks/index``)) locally or on Chinook to visualize detection counts (``notebooks/aggregate_analysis.ipynb``) before pushing to collaborators.
+* The same datasets used for inference can host derived tables—run ``badc infer aggregate`` inside the dataset, ``datalad save``, then open the notebook with ``datalad run jupyter lab`` if you need provenance for figure generation.
+
 1. Prepare the dataset on Chinook
 ---------------------------------
 * Clone or create the DataLad dataset in ``/project/<pi>/badc/data/datalad/<name>``.

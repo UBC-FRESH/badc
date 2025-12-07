@@ -47,3 +47,15 @@ Using the container
   ``apptainer exec --nv --bind /project/pi-mygroup/badc/data:/data ...``.
 * Keep the container under version control (definition file + notes) so we can rebuild whenever
   dependencies change.
+
+GPU passthrough checklist
+-------------------------
+* Confirm the container exposes CUDA by running ``apptainer exec --nv badc-hawkears.sif nvidia-smi``.
+* When binding datasets outside the default search path, add ``--bind /project/<pi>/badc/data:/data`` so HawkEars can find chunk WAVs.
+* Embed ``badc gpus`` at the top of your SLURM scripts to log which devices were visible inside the container.
+
+Integrating with DataLad
+--------------------------
+* Always call ``datalad run`` from the dataset root before ``apptainer exec`` so provenance records both the manifest input and ``artifacts/infer`` output.
+* To keep the container immutable, mount ``/tmp`` or scratch areas as writable overlays (``--writable-tmpfs``) when HawkEars needs temporary space.
+

@@ -1,3 +1,14 @@
+# 2025-12-07 — CLI help excerpts + HPC doc expansion
+- Embedded Typer help excerpts in the chunk/data/infer/misc CLI pages so users can read argument syntax without invoking the commands.
+- Expanded the Sockeye/Chinook/Apptainer HPC docs and the Sockeye how-to with GPU planning, job-array patterns, and notebook hand-off guidance to satisfy roadmap item 3.
+- Updated `notes/documentation-plan.md` to log the finished option-table/help work and restate the remaining documentation milestones.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `pre-commit run --all-files`
+
 # 2025-12-07 — CLI option references
 - Added list-table option summaries to `docs/cli/chunk.rst`, `docs/cli/data.rst`, `docs/cli/infer.rst`, and `docs/cli/misc.rst` so every command page now satisfies the documentation-plan requirement for option tables.
 - Updated `notes/documentation-plan.md` to record the completed option-table pass and capture the next deliverables (help snapshots, HPC guides).

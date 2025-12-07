@@ -175,6 +175,17 @@ Option reference
 
 This command currently has no flags—just pass ``badc data status`` to inspect the registry.
 
+Help excerpt
+^^^^^^^^^^^^
+
+.. code-block:: console
+
+   $ badc data status --help
+   Usage: badc data status [OPTIONS]
+     Report all datasets tracked in ~/.config/badc/data.toml.
+   Options:
+     --help  Show this message and exit.
+
 Use this command while debugging ``datalad run`` pipelines or before chaining a
 chunk/infer workflow to confirm that the referenced repositories exist locally.
 

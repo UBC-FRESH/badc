@@ -30,12 +30,26 @@ POSIX workspace layout
 * Store large artifacts (e.g., aggregated CSVs) under ``/data/<pi>/badc`` if you need higher
   quotas; symlink them back into the DataLad dataset when saving commits.
 
+Dataset lifecycle example
+---------------------------
+1. On your workstation, prepare manifests and telemetry folders under ``data/datalad/<name>``.
+2. ``datalad save`` to capture the changes locally, then ``datalad push --to origin`` (GitHub metadata).
+3. From Chinook, run ``datalad update --how=merge`` followed by ``datalad get`` for any new audio/manifest paths.
+4. After Sockeye jobs finish and push artifacts back (see the "Run Inference on Sockeye" how-to), execute ``datalad push --to arbutus-s3`` on Chinook to ensure annexed WAVs land in the bucket.
+5. Record the sync in ``CHANGE_LOG.md`` so collaborators understand which dataset revision reached Chinook.
+
 Publishing changes
 ------------------
 1. Stage work in the dataset: ``datalad save -m "Add GNWT-290 chunks"``.
 2. Push metadata to GitHub: ``datalad push --to origin``.
 3. Push annexed content to Chinook: ``datalad push --to arbutus-s3``.
 4. Record the commands in ``CHANGE_LOG.md`` per ``AGENTS.md``.
+
+Credential rotation
+--------------------
+* Store AWS/GitHub tokens in ``setup/datalad_config.sh`` and source it before running the helper scripts.
+* When rotating credentials, issue ``datalad siblings configure --name arbutus-s3 ...`` to update stored access keys without recreating the dataset.
+* Validate connectivity with ``git annex testremote arbutus-s3`` before launching large transfers.
 
 Credential hygiene
 ------------------

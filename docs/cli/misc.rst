@@ -45,6 +45,17 @@ Troubleshooting:
 * If the list is empty, confirm ``nvidia-smi`` exists on ``PATH`` and the container/VM exposes GPUs.
 * On CPU-only nodes, use ``badc infer run --cpu-workers`` to bypass GPU detection entirely.
 
+Help excerpt
+^^^^^^^^^^^^
+
+.. code-block:: console
+
+   $ badc gpus --help
+   Usage: badc gpus [OPTIONS]
+     Display GPU inventory as reported by `nvidia-smi`.
+   Options:
+     --help  Show this message and exit.
+
 ``badc telemetry``
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -66,6 +77,18 @@ Option reference
    * - ``--log PATH``
      - Telemetry JSONL to read (supports arbitrary pipelines).
      - ``data/telemetry/infer/log.jsonl``
+
+Help excerpt
+^^^^^^^^^^^^
+
+.. code-block:: console
+
+   $ badc telemetry --help
+   Usage: badc telemetry [OPTIONS]
+     Print the most recent telemetry records for quick inspection.
+   Options:
+     --log PATH  Telemetry log path.  [default: data/telemetry/infer/log.jsonl]
+     --help      Show this message and exit.
 
 Each line prints status, chunk id, GPU index, timestamp, and runtime seconds. Example::
 
