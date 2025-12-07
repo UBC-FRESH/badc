@@ -1,3 +1,13 @@
+# 2025-12-07 — CLI option references
+- Added list-table option summaries to `docs/cli/chunk.rst`, `docs/cli/data.rst`, `docs/cli/infer.rst`, and `docs/cli/misc.rst` so every command page now satisfies the documentation-plan requirement for option tables.
+- Updated `notes/documentation-plan.md` to record the completed option-table pass and capture the next deliverables (help snapshots, HPC guides).
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `pre-commit run --all-files`
+
 # 2025-12-07 — CLI docstrings for API reference
 - Upgraded every Typer command/helper in `badc.cli.main` to NumPy-style docstrings so the Sphinx API reference now exposes parameter/return semantics instead of one-line placeholders.
 - This satisfies the documentation-plan milestone for seeding the CLI module with rich docstrings before expanding the API reference.

@@ -76,8 +76,8 @@ Goal: deliver complete documentation coverage across back-end modules, CLI surfa
 
 ## Next actions
 - ✅ Baseline CLI docs (data + chunk + infer + misc) and the datalad run how-to landed on 2025-12-06.
-1. Begin the NumPy docstring sweep so `docs/api/generated/*` renders real content.
-2. Expand the CLI pages with option tables/screenshots as the commands stabilize (e.g., telemetry, future aggregate helpers).
+1. Continue the NumPy docstring sweep whenever new modules land so `docs/api/generated/*` stays accurate.
+2. Expand the CLI pages with richer assets—option tables now exist for chunk/data/infer/misc; next step is to embed `--help` snapshots or diagrams per command group.
 3. Flesh out the HPC/how-to sections with Sockeye/Chinook SLURM scripts, Apptainer tips, and notebook gallery links.
    - Sockeye/Chinook/Apptainer docs + the "Run inference on Sockeye" how-to are now seeded (2025-12-06); follow-up work: add Chinook credential screenshots + real container definition once it exists.
 

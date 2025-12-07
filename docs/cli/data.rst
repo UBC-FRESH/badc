@@ -76,6 +76,34 @@ Key options:
 ``--dry-run``
    Print what would happen without touching the filesystem.
 
+Option reference
+^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+
+   * - Option / Argument
+     - Description
+     - Default
+   * - ``NAME``
+     - Dataset registry key (``bogus`` built-in).
+     - Required
+   * - ``--path PATH``
+     - Base directory where datasets are created/updated.
+     - ``data/datalad``
+   * - ``--url URL``
+     - Override clone URL for custom/private datasets.
+     - Registry value or required for unknown names
+   * - ``--method git|datalad``
+     - Force clone implementation. Auto-detected when omitted.
+     - Auto
+   * - ``--pull`` / ``--no-pull``
+     - Update an existing dataset after verifying it exists.
+     - ``--pull``
+   * - ``--dry-run``
+     - Print planned actions without touching disk or the registry.
+     - Disabled
+
 Examples::
 
    # Clone the public bogus dataset using DataLad (auto-detected)
@@ -107,6 +135,28 @@ Usage::
 ``--dry-run``
    Preview the deletion/recording steps without touching the filesystem.
 
+Option reference
+^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+
+   * - Option / Argument
+     - Description
+     - Default
+   * - ``NAME``
+     - Dataset identifier to mark as disconnected.
+     - Required
+   * - ``--drop-content`` / ``--keep-content``
+     - Remove dataset files after recording the disconnection.
+     - ``--keep-content``
+   * - ``--path PATH``
+     - Base directory to search when the registry entry is missing.
+     - ``data/datalad``
+   * - ``--dry-run``
+     - Emit the pending actions without deleting or editing files.
+     - Disabled
+
 The registry retains the last known path and timestamp so future ``connect``
 operations can reconcile state when pointed at the same location.
 
@@ -119,6 +169,11 @@ recorded filesystem paths.  Example output::
    $ badc data status
    Tracked datasets:
     - bogus: connected (/home/gep/projects/badc/data/datalad/bogus)
+
+Option reference
+^^^^^^^^^^^^^^^^
+
+This command currently has no flags—just pass ``badc data status`` to inspect the registry.
 
 Use this command while debugging ``datalad run`` pipelines or before chaining a
 chunk/infer workflow to confirm that the referenced repositories exist locally.

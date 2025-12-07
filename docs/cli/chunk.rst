@@ -34,6 +34,22 @@ Usage::
 * Returns the maximum supported duration and notes (placeholder implementation today).
 * Use this before launching a large split to avoid creating millions of tiny files.
 
+Option reference
+^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+
+   * - Option / Argument
+     - Description
+     - Default
+   * - ``AUDIO.wav``
+     - Path to the source WAV file to probe.
+     - Required
+   * - ``--initial-duration SECONDS``
+     - Starting chunk duration (seconds) passed to ``probe_chunk_duration``.
+     - ``60``
+
 ``badc chunk split``
 --------------------
 
@@ -53,6 +69,25 @@ Options:
 The command prints each placeholder ``chunk_id`` so you can inspect numbering or feed the IDs into a
 separate pipeline. Because this mode does not write WAV files, it is safe to run on laptops.
 
+Option reference
+^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+
+   * - Option / Argument
+     - Description
+     - Default
+   * - ``AUDIO.wav``
+     - Source WAV file to inspect.
+     - Required
+   * - ``--chunk-duration SECONDS``
+     - Length of each planned chunk.
+     - Required
+   * - ``--manifest PATH``
+     - Manifest path (written even though the command only emits IDs).
+     - ``chunk_manifest.csv``
+
 ``badc chunk manifest``
 -----------------------
 
@@ -66,6 +101,28 @@ Usage::
 
 ``--hash-chunks`` recomputes SHA256 values; leave it disabled for quick iterations. The manifest CSV
 is compatible with ``badc infer run`` and downstream aggregation.
+
+Option reference
+^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+
+   * - Option / Argument
+     - Description
+     - Default
+   * - ``AUDIO.wav``
+     - Source WAV used to derive duration metadata.
+     - Required
+   * - ``--chunk-duration SECONDS``
+     - Target chunk length.
+     - ``60``
+   * - ``--output PATH``
+     - Destination manifest CSV.
+     - ``chunk_manifest.csv``
+   * - ``--hash-chunks`` / ``--no-hash-chunks``
+     - Toggle SHA256 hashing for each manifest row.
+     - ``--no-hash-chunks``
 
 ``badc chunk run``
 ------------------
@@ -86,6 +143,34 @@ Key behaviors:
   ``datalad run`` can track provenance.
 
 After chunking, the command prints the manifest path plus whether chunks were written or skipped.
+
+Option reference
+^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+
+   * - Option / Argument
+     - Description
+     - Default
+   * - ``AUDIO.wav``
+     - Source WAV to split into fixed-length files.
+     - Required
+   * - ``--chunk-duration SECONDS``
+     - Chunk length (seconds). Determines chunk count and manifest offsets.
+     - Required
+   * - ``--overlap SECONDS``
+     - Sliding window overlap between consecutive chunks.
+     - ``0``
+   * - ``--output-dir PATH``
+     - Directory that will contain generated chunk WAVs.
+     - ``artifacts/chunks``
+   * - ``--manifest PATH``
+     - Manifest CSV destination.
+     - ``chunk_manifest.csv``
+   * - ``--dry-run`` / ``--write-chunks``
+     - Skip writing WAVs and emit mock metadata when ``--dry-run`` is set.
+     - ``--write-chunks``
 
 Automation tips
 ---------------

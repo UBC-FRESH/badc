@@ -54,6 +54,19 @@ Usage::
 
    badc telemetry [--log PATH]
 
+Option reference
+^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+
+   * - Option / Argument
+     - Description
+     - Default
+   * - ``--log PATH``
+     - Telemetry JSONL to read (supports arbitrary pipelines).
+     - ``data/telemetry/infer/log.jsonl``
+
 Each line prints status, chunk id, GPU index, timestamp, and runtime seconds. Example::
 
    Telemetry records (3):
