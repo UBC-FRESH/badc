@@ -1,3 +1,10 @@
+# 2025-12-09 — GPU monitoring roadmap closure
+- Marked the Phase 1 GPU monitoring task complete: ``badc infer monitor --follow`` already exposes
+  per-GPU utilization + VRAM sparklines, and `notes/gpu-monitoring.md` now documents the baseline
+  telemetry captured on the dev Quadro RTX 4000 box (log
+  `data/telemetry/infer/XXXX-000_20251001_093000_20251208T215527Z.jsonl`). Sockeye/multi-GPU runs
+  will reuse the same tooling in Phase 2.
+
 # 2025-12-09 — GPU telemetry baseline
 - Captured a baseline `badc infer monitor` snapshot for the bogus HawkEars run (telemetry log
   `data/telemetry/infer/XXXX-000_20251001_093000_20251208T215527Z.jsonl`) and summarized the dev

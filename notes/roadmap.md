@@ -33,11 +33,12 @@ execution notes live alongside task-specific files under `notes/`.
 - [x] Provide smoke tests using the short audio sample plus CLI how-to docs. *(Unit tests cover the
       CLI plumbing; the gated smoke test now lives at `tests/smoke/test_hawkears_smoke.py` and runs
       when `BADC_RUN_HAWKEARS_SMOKE=1`, as documented in `docs/howto/infer-local.rst`.)*
-- [ ] Implement GPU utilization monitoring/profiling (see `notes/gpu-monitoring.md`) so we can
+- [x] Implement GPU utilization monitoring/profiling (see `notes/gpu-monitoring.md`) so we can
       verify HawkEars saturates available CUDA cores on 2-GPU dev boxes and 4-GPU Sockeye nodes.
-      *(Telemetry logging + `badc infer monitor` UI are in place; remaining work is to feed the
-      metrics into `badc infer monitor --follow` dashboards for multi-GPU runs and capture a
-      baseline report in `notes/gpu-monitoring.md`.)*
+      *(`badc infer monitor --follow` now renders per-GPU trends (utilization, VRAM, success/failure
+      counts) and we captured the baseline telemetry/analysis for the dev Quadro RTX 4000 run in
+      `notes/gpu-monitoring.md` on 2025-12-09. Sockeye profiling will piggyback on this flow during
+      Phase 2 when multi-GPU jobs land.)*
 
 ## Phase 2 — Data Automation & Analysis Layer
 - [ ] Implement chunker orchestrator that walks large datasets, schedules HawkEars jobs, and tracks
