@@ -30,11 +30,9 @@ execution notes live alongside task-specific files under `notes/`.
       JSON/CSV/Parquet parsing into a canonical events table. *(Verified 2025-12-08 on the bogus
       dataset: `badc infer run --use-hawkears` now produces manifest-driven chunks, HawkEars JSON,
       telemetry, and canonical CSV/Parquet artifacts under `data/datalad/bogus/artifacts/`.)*
-- [ ] Provide smoke tests using the short audio sample plus CLI how-to docs. *(Unit tests cover the
-      CLI plumbing, but we still need an automated “happy path” that runs `badc infer run
-      --use-hawkears` against the bogus chunk + asserts that CSV/Parquet artifacts exist. Plan:
-      add a lightweight smoke test under `tests/smoke/test_hawkears_bogus.py` gated behind an
-      environment variable so local dev boxes can run it before releases.)*
+- [x] Provide smoke tests using the short audio sample plus CLI how-to docs. *(Unit tests cover the
+      CLI plumbing; the gated smoke test now lives at `tests/smoke/test_hawkears_smoke.py` and runs
+      when `BADC_RUN_HAWKEARS_SMOKE=1`, as documented in `docs/howto/infer-local.rst`.)*
 - [ ] Implement GPU utilization monitoring/profiling (see `notes/gpu-monitoring.md`) so we can
       verify HawkEars saturates available CUDA cores on 2-GPU dev boxes and 4-GPU Sockeye nodes.
       *(Telemetry logging + `badc infer monitor` UI are in place; remaining work is to feed the
