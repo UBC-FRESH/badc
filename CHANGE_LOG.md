@@ -1,3 +1,15 @@
+# 2025-12-09 — DataLad push to origin + arbutus-s3
+- Re-sourced `setup/datalad_config.sh` to populate AWS credentials and reran dataset pushes so the
+  bogus DataLad dataset mirrors the validation artifacts on both GitHub and the Chinook S3 remote.
+- Confirmed `datalad push --to origin` had no further metadata to publish and `datalad push --to
+  arbutus-s3` copied all annexed artifacts (chunks, quicklook exports, canonical Parquet/CSV,
+  validation outputs) to the object store.
+- Commands executed:
+  - `source setup/datalad_config.sh`
+  - `cd data/datalad/bogus`
+  - `datalad push --to origin`
+  - `datalad push --to arbutus-s3`
+
 # 2025-12-09 — HawkEars validation + parser fix
 - Validated ``badc infer run --use-hawkears`` end-to-end on the bogus manifest with a fresh output
   root (``data/datalad/bogus/artifacts/infer_validation``) so we could bypass existing git-annex
