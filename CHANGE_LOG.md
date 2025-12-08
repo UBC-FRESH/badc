@@ -1,3 +1,9 @@
+# 2025-12-09 — GPU telemetry baseline
+- Captured a baseline `badc infer monitor` snapshot for the bogus HawkEars run (telemetry log
+  `data/telemetry/infer/XXXX-000_20251001_093000_20251208T215527Z.jsonl`) and summarized the dev
+  Quadro RTX 4000 utilization/VRAM observations in `notes/gpu-monitoring.md`.
+- Provides a reference point before we profile multi-GPU Sockeye jobs.
+
 # 2025-12-09 — HawkEars smoke test
 - Added `tests/smoke/test_hawkears_smoke.py`, a gated end-to-end test that runs `badc infer
   run-config` against a single bogus chunk when `BADC_RUN_HAWKEARS_SMOKE=1`; ensures JSON and

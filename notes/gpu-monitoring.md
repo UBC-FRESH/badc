@@ -38,6 +38,18 @@ and automation we will use to monitor/record GPU utilization.
 7. Store telemetry summaries in `notes/chunking.md` and/or a dedicated `data/telemetry/` folder for
    reproducibility.
 
+## Baseline snapshot — 2025-12-09 (dev Quadro RTX 4000)
+
+- Command: ``badc infer monitor --log data/telemetry/infer/XXXX-000_20251001_093000_20251208T215527Z.jsonl --tail 15``
+- Dataset: bogus 7-minute clip, chunked into 15 × 30 s windows, single-GPU HawkEars run.
+- Observations:
+  - GPU 0 (Quadro RTX 4000, 8 GB) reported ~9.6 s runtime per chunk with utilization averaging ~4.5 % (min 0 %, max 14 %) because HawkEars works sequentially on relatively short clips.
+  - VRAM usage plateaued at 5743 MiB throughout the run (≈70 % of available memory), aligning with the chunk-size heuristic captured in `notes/chunking.md`.
+  - Telemetry sparked lines show stable utilization/memory trends; fans/power remained at idle (~10 W) per `nvidia-smi`.
+- Next steps:
+  - Repeat the monitor capture on Sockeye (4× GPUs) once the job array harness lands to compare concurrency scaling.
+  - Extend telemetry monitor docs with the new snapshot so operators know what steady-state looks like on the dev workstation.
+
 ## Open questions
 - Does Sockeye allow Nsight profiling, or do we need administrator approval?
 - Should GPU monitoring run continuously via a daemon, or only when BADC commands execute?
