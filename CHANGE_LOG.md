@@ -1,3 +1,21 @@
+# 2025-12-09 — Chunk probe telemetry utility
+- Replaced the placeholder ``badc chunk probe`` logic with a real WAV-aware estimator: it now reads
+  sample rate / channels / bit depth, detects GPUs, performs a binary search to find the largest
+  chunk size that fits within ~80 % of a GPU's VRAM, and records every attempt to
+  ``artifacts/telemetry/chunk_probe/*.jsonl``.
+- Added CLI options for ``--max-duration``, ``--tolerance``, ``--gpu-index``, and ``--log`` so probes
+  can be tailored per environment. Rich output now surfaces the recommended duration and the latest
+  attempts for quick debugging.
+- Updated docs (README, CLI reference, usage guide) and ``notes/chunking.md`` to reflect the new
+  behavior; chunk CLI tests now create real WAV fixtures to exercise the flow.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `.venv/bin/pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `.venv/bin/pre-commit run --all-files`
+
 # 2025-12-08 — Quicklook notebook wiring
 - Ran ``badc report quicklook --parquet ... --output-dir ...`` on the bogus dataset so label/
   recording/chunk CSV exports exist under ``artifacts/aggregate/XXXX-000_20251001_093000_quicklook``

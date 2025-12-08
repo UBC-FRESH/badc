@@ -69,8 +69,11 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
 - `badc data disconnect bogus --drop-content` — marks the dataset as disconnected and optionally
   removes the files (useful for freeing disk space).
 - `badc data status` — prints all recorded datasets and their local paths/status.
-- `badc chunk probe|split` — scaffold commands for chunk-size experiments (currently stubs until
-  HawkEars + GPU telemetry wiring lands).
+- `badc chunk probe` — inspects WAV metadata, estimates GPU VRAM needs, runs a binary search to
+  find the largest chunk duration that fits in memory, and logs telemetry to
+  `artifacts/telemetry/chunk_probe/…`.
+- `badc chunk split` — scaffold command for chunk-size experiments (placeholder identifiers until
+  the full chunk writer lands).
 - `badc chunk manifest` — generates a chunk manifest CSV, optionally writing chunk files + hashes
   via `--hash-chunks`.
 - `badc chunk run` — splits audio into chunk WAVs and produces a manifest for inference.

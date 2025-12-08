@@ -18,8 +18,9 @@ then design automation that splits ~60 TB of recordings accordingly.
 1. Automated probe utility that:
    - Accepts a target file and an initial chunk duration.
    - Iteratively increases/decreases the window until HawkEars runs out of memory, logging the
-     largest safe chunk.
-   - Stores telemetry (GPU usage + chunk metadata) in `data/telemetry/chunk_probe/*.jsonl`.
+     largest safe chunk. *(Partial: `badc chunk probe` now estimates chunk sizes via WAV metadata +
+     GPU VRAM heuristics, runs a binary search, and logs attempts to
+     `artifacts/telemetry/chunk_probe/*.jsonl`. HawkEars-backed validation still pending.)*
 2. Configurable chunking engine that:
    - Reads audio files (WAV/FLAC) and slices them into overlapping windows.
    - Names temp files deterministically (e.g., `<recording>_chunk_<start_ms>_<end_ms>.wav`).

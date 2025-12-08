@@ -19,5 +19,6 @@
 
    .. autosummary::
    
+      ChunkProbeAttempt
       ChunkProbeResult
    

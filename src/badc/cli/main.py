@@ -287,33 +287,61 @@ def data_status(
 
 @chunk_app.command("probe")
 def chunk_probe(
-    file: Annotated[Path, typer.Argument(help="Path to audio file to probe.")],
+    file: Annotated[Path, typer.Argument(help="Path to the WAV file to probe.")],
     initial_duration: Annotated[
         float,
-        typer.Option("--initial-duration", help="Starting chunk duration in seconds."),
+        typer.Option("--initial-duration", help="Starting chunk duration (seconds)."),
     ] = 60.0,
+    max_duration: Annotated[
+        float | None,
+        typer.Option("--max-duration", help="Upper bound for the search window (seconds)."),
+    ] = None,
+    tolerance: Annotated[
+        float,
+        typer.Option("--tolerance", help="Stop when bounds differ by <= tolerance (seconds)."),
+    ] = 5.0,
+    gpu_index: Annotated[
+        int | None,
+        typer.Option("--gpu-index", help="GPU index to base estimates on (defaults to first GPU)."),
+    ] = None,
+    log_path: Annotated[
+        Path | None,
+        typer.Option(
+            "--log",
+            help="Telemetry log path (JSONL). Defaults to artifacts/telemetry/chunk_probe/<stem>_<timestamp>.jsonl.",
+            dir_okay=False,
+        ),
+    ] = None,
 ) -> None:
-    """Estimate chunk duration feasibility for a single audio file.
+    """Estimate chunk duration feasibility for a single audio file."""
 
-    Parameters
-    ----------
-    file : Path
-        Path to the WAV file being analyzed.
-    initial_duration : float
-        Starting chunk size in seconds fed to the placeholder probe logic.
+    try:
+        result = chunking.probe_chunk_duration(
+            file,
+            initial_duration,
+            max_duration_s=max_duration,
+            tolerance_s=tolerance,
+            gpu_index=gpu_index,
+            log_path=log_path,
+        )
+    except (ValueError, FileNotFoundError, RuntimeError) as exc:
+        console.print(str(exc), style="red")
+        raise typer.Exit(code=1) from exc
 
-    Notes
-    -----
-    The current implementation delegates to :func:`badc.chunking.probe_chunk_duration`,
-    which returns mocked values until the HawkEars-driven calibration lands.
-    """
-
-    result = chunking.probe_chunk_duration(file, initial_duration)
     console.print(
-        f"Probe placeholder: max chunk {result.max_duration_s:.2f}s for {result.file}",
-        style="cyan",
+        f"Recommended chunk duration: [bold]{result.max_duration_s:.2f} s[/] "
+        f"(strategy: {result.strategy})",
     )
-    console.print("Notes: " + result.notes)
+    console.print(f"Notes: {result.notes}")
+    if result.log_path:
+        console.print(f"Telemetry log: {result.log_path}")
+    if result.attempts:
+        console.print("Recent attempts:")
+        for attempt in result.attempts[-3:]:
+            status = "[green]fits[/]" if attempt.fits else "[yellow]fails[/]"
+            console.print(
+                f" • {attempt.duration_s:.2f}s -> {attempt.estimated_vram_mb:.1f} MiB {status} ({attempt.reason})"
+            )
 
 
 @chunk_app.command("split")

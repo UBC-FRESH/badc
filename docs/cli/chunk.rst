@@ -24,15 +24,27 @@ Overview
 ``badc chunk probe``
 --------------------
 
-Quickly tests whether the requested chunk duration is viable.
+Estimates the largest chunk size that will fit in GPU memory by reading WAV metadata,
+estimating VRAM requirements, and running a binary search. Each attempt is recorded in
+``artifacts/telemetry/chunk_probe/`` as a JSONL log so you can reference the probe history later.
 
 Usage::
 
-   badc chunk probe AUDIO.wav [--initial-duration SECONDS]
+   badc chunk probe AUDIO.wav \
+       --initial-duration 60 \
+       --max-duration 600 \
+       --tolerance 5 \
+       --gpu-index 0 \
+       --log artifacts/telemetry/chunk_probe/AUDIO_custom.jsonl
 
-* Reads file metadata via ``badc.chunking.probe_chunk_duration``.
-* Returns the maximum supported duration and notes (placeholder implementation today).
-* Use this before launching a large split to avoid creating millions of tiny files.
+Workflow:
+
+* Reads sample rate, channels, and bit depth via :func:`badc.chunking.probe_chunk_duration`.
+* Detects GPUs (falls back to a conservative default when unavailable) and reserves ~80 % of the
+  chosen device's memory as the working limit.
+* Performs a binary search between ``--initial-duration`` and ``--max-duration`` (or the full
+  recording length) until the bounds differ by at most ``--tolerance`` seconds.
+* Appends every attempt to a JSONL log for downstream notebooks/visualisations.
 
 Option reference
 ^^^^^^^^^^^^^^^^
@@ -47,8 +59,20 @@ Option reference
      - Path to the source WAV file to probe.
      - Required
    * - ``--initial-duration SECONDS``
-     - Starting chunk duration (seconds) passed to ``probe_chunk_duration``.
+     - Starting chunk duration (seconds).
      - ``60``
+   * - ``--max-duration SECONDS``
+     - Upper bound for the search window (seconds). Defaults to the recording length.
+     - Recording duration
+   * - ``--tolerance SECONDS``
+     - Stop when ``high - low <= tolerance``.
+     - ``5``
+   * - ``--gpu-index INT``
+     - GPU index to base VRAM estimates on (defaults to the first detected GPU).
+     - ``0``
+   * - ``--log PATH``
+     - Telemetry log path (JSONL). Defaults to ``artifacts/telemetry/chunk_probe/<stem>_<timestamp>.jsonl``.
+     - Generated automatically
 
 Help excerpt
 ^^^^^^^^^^^^
@@ -59,9 +83,13 @@ Help excerpt
    Usage: badc chunk probe [OPTIONS] FILE
      Estimate chunk duration feasibility for a single audio file.
    Arguments:
-     FILE  Path to audio file to probe.  [required]
+     FILE  Path to the WAV file to probe.  [required]
    Options:
-     --initial-duration FLOAT  Starting chunk duration in seconds.  [default: 60]
+     --initial-duration FLOAT  Starting chunk duration (seconds).  [default: 60]
+     --max-duration FLOAT      Upper bound for the search window (seconds).
+     --tolerance FLOAT         Stop when bounds differ by <= tolerance (seconds).  [default: 5]
+     --gpu-index INTEGER       GPU index to base estimates on.
+     --log FILE                Optional telemetry log path (JSONL).
      --help                    Show this message and exit.
 
 ``badc chunk split``

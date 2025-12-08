@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import wave
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -9,17 +11,46 @@ from badc.cli.main import app
 runner = CliRunner()
 
 
-def test_chunk_probe_placeholder(tmp_path: Path) -> None:
+def _write_wav(path: Path, duration_s: float = 2.0, sample_rate: int = 8000) -> None:
+    frames = int(sample_rate * duration_s)
+    with wave.open(str(path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(b"\x00\x00" * frames)
+
+
+def test_chunk_probe_estimation(tmp_path: Path) -> None:
     audio = tmp_path / "sample.wav"
-    audio.write_bytes(b"fake data")
-    result = runner.invoke(app, ["chunk", "probe", str(audio), "--initial-duration", "90"])
-    assert result.exit_code == 0
-    assert "90.00" in result.stdout
+    _write_wav(audio, duration_s=2.0)
+    log_path = tmp_path / "probe.jsonl"
+    result = runner.invoke(
+        app,
+        [
+            "chunk",
+            "probe",
+            str(audio),
+            "--initial-duration",
+            "1",
+            "--max-duration",
+            "3",
+            "--tolerance",
+            "0.5",
+            "--log",
+            str(log_path),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    assert "Recommended chunk duration" in result.stdout
+    assert log_path.exists()
+    entries = [json.loads(line) for line in log_path.read_text().splitlines() if line.strip()]
+    assert entries, "probe log should have entries"
+    assert entries[-1]["duration_s"] <= 3
 
 
 def test_chunk_split_placeholder(tmp_path: Path) -> None:
     audio = tmp_path / "sample.wav"
-    audio.write_bytes(b"fake data")
+    _write_wav(audio, duration_s=2.0)
     result = runner.invoke(app, ["chunk", "split", str(audio), "--chunk-duration", "30"])
     assert result.exit_code == 0
     assert "placeholder chunks" in result.stdout

@@ -38,8 +38,15 @@ Refer to :doc:`cli/chunk` for option details. A typical sequence:
 
 1. Probe a file to estimate viable chunk durations::
 
-      $ badc chunk probe data/datalad/bogus/audio/XXXX-000_20251001_093000.wav           --initial-duration 120
-      Probe placeholder: max chunk 120.00s for ...
+      $ badc chunk probe data/datalad/bogus/audio/XXXX-000_20251001_093000.wav \
+          --initial-duration 120 --max-duration 600 --tolerance 10
+      Recommended chunk duration: 248.00 s (strategy: memory_estimator_v1)
+      Notes: GPU 0 (Quadro RTX 4000) limit 6554 MiB
+      Telemetry log: artifacts/telemetry/chunk_probe/XXXX-000_20251001_093000_20251208T210945Z.jsonl
+      Recent attempts:
+       • 120.00s -> 1050.5 MiB fits (fits memory budget)
+       • 360.00s -> 3151.6 MiB fits (fits memory budget)
+       • 480.00s -> 4202.1 MiB fits (fits memory budget)
 
 2. Generate a manifest without writing audio (hashes optional)::
 
