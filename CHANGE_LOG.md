@@ -854,3 +854,9 @@
   - `ruff format src tests`
   - `ruff check src tests`
   - `pytest`
+# 2025-12-09 — Chunk probe telemetry logs
+- Captured heuristic chunk-probe runs for the bogus 7 min + 60 min recordings using the new CLI and
+  recorded the recommended chunk sizes plus telemetry log paths in `notes/chunking.md`.
+- Commands executed:
+  - `.venv/bin/badc chunk probe data/datalad/bogus/audio/XXXX-000_20251001_093000.wav --initial-duration 60 --max-duration 600 --tolerance 5`
+  - `.venv/bin/badc chunk probe data/datalad/bogus/audio/GNWT-290_20230331_235938.wav --initial-duration 120 --max-duration 3600 --tolerance 10`

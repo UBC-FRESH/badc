@@ -18,9 +18,10 @@ then design automation that splits ~60 TB of recordings accordingly.
 1. Automated probe utility that:
    - Accepts a target file and an initial chunk duration.
    - Iteratively increases/decreases the window until HawkEars runs out of memory, logging the
-     largest safe chunk. *(Partial: `badc chunk probe` now estimates chunk sizes via WAV metadata +
-     GPU VRAM heuristics, runs a binary search, and logs attempts to
-     `artifacts/telemetry/chunk_probe/*.jsonl`. HawkEars-backed validation still pending.)*
+     largest safe chunk. *(Prototype in place: `badc chunk probe` estimates chunk sizes via WAV metadata +
+     GPU VRAM heuristics, runs a binary search, and writes telemetry to
+     `artifacts/telemetry/chunk_probe/*.jsonl`. Next step is validating the heuristic against real
+     HawkEars runs so we can compare estimates vs. CUDA success/failure.)*
 2. Configurable chunking engine that:
    - Reads audio files (WAV/FLAC) and slices them into overlapping windows.
    - Names temp files deterministically (e.g., `<recording>_chunk_<start_ms>_<end_ms>.wav`).
@@ -49,6 +50,24 @@ then design automation that splits ~60 TB of recordings accordingly.
   chunk, include overlap offsets, and store chunk file locations within the temp directory
   structure defined in `notes/pipeline-plan.md`. SHA256 should cover the actual chunk file contents
   once chunking is implemented, not just the source path.
+
+## Dev server probe runs — 2025-12-09
+
+Performed heuristic probes on the bogus dataset recordings using the new CLI.
+
+| Recording | Duration (s) | Recommended chunk (s) | GPU notes | Telemetry log |
+| --- | --- | --- | --- | --- |
+| `XXXX-000_20251001_093000.wav` | ~420 | 429.20 | GPU 0 (Quadro RTX 4000) limit 6554 MiB | `artifacts/telemetry/chunk_probe/MD5E-s38112038--1eca4ef56ef14b88f819437a5c12124e_20251208T212629Z.jsonl` |
+| `GNWT-290_20230331_235938.wav` | ~3600 | 3591.20 | GPU 0 (Quadro RTX 4000) limit 6554 MiB | `artifacts/telemetry/chunk_probe/MD5E-s634689094--17d5cebd521ca376a362cf27f9f715f3_20251208T212634Z.jsonl` |
+
+Observations:
+
+- Both recordings fit comfortably under the 8 GB Quadro RTX 4000 limit; even a full 60‑minute chunk
+  stays under ~3.3 GB according to the heuristic. We will still validate with real HawkEars runs,
+  but for development purposes a 7‑minute chunk (420 s) is a safe default.
+- Telemetry lives under `artifacts/telemetry/chunk_probe/…` at the repo root (not within the
+  DataLad dataset). Copy or reference these logs when preparing chunk-size justification for future
+  dev boxes.
 
 ## Open questions
 - Does HawkEars expose a Python API we can call directly, or do we shell out to its CLI?
