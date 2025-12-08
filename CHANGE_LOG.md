@@ -971,3 +971,7 @@
 - Commands executed:
   - `.venv/bin/badc chunk probe data/datalad/bogus/audio/XXXX-000_20251001_093000.wav --initial-duration 60 --max-duration 600 --tolerance 5`
   - `.venv/bin/badc chunk probe data/datalad/bogus/audio/GNWT-290_20230331_235938.wav --initial-duration 120 --max-duration 3600 --tolerance 10`
+- Enhanced ``badc chunk orchestrate`` with plan persistence (`--plan-csv/--plan-json`) and an
+  ``--apply`` flag that runs ``badc chunk run`` for every recording, so dataset-wide chunking can
+  both be previewed and executed in one pass. README/CLI/how-to docs now mention the saved plan
+  workflow, and tests cover the new behavior.

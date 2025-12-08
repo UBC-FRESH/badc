@@ -20,6 +20,16 @@ class ChunkPlan:
     def recording_id(self) -> str:
         return self.audio_path.stem
 
+    def to_dict(self) -> dict[str, str | float]:
+        return {
+            "recording_id": self.recording_id,
+            "audio_path": str(self.audio_path),
+            "manifest_path": str(self.manifest_path),
+            "chunk_output_dir": str(self.chunk_output_dir),
+            "chunk_duration": self.chunk_duration,
+            "overlap": self.overlap,
+        }
+
 
 def _resolve(base: Path, value: Path) -> Path:
     return value if value.is_absolute() else (base / value)

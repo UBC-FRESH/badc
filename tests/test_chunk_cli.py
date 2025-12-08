@@ -105,3 +105,23 @@ def test_chunk_orchestrate_apply_runs_chunk(tmp_path: Path) -> None:
     chunks_dir = dataset / "artifacts" / "chunks" / "rec"
     assert manifest.exists()
     assert chunks_dir.exists()
+    plan_csv = dataset / "plan.csv"
+    plan_json = dataset / "plan.json"
+    result = runner.invoke(
+        app,
+        [
+            "chunk",
+            "orchestrate",
+            str(dataset),
+            "--chunk-duration",
+            "0.25",
+            "--include-existing",
+            "--plan-csv",
+            str(plan_csv),
+            "--plan-json",
+            str(plan_json),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    assert plan_csv.exists()
+    assert plan_json.exists()

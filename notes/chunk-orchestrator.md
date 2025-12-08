@@ -31,3 +31,5 @@ command + helpers in ``badc.chunk_orchestrator`` provide the first slice of that
 - Extend to emit ``badc infer run-config`` scaffolding once chunking completes (closing the loop
   from audio -> manifest -> inference plan).
 - Sockeye mode: add template generation for SLURM job arrays (one recording per task).
+- Plan persistence (Phase 2 follow-up): once the CSV/JSON plan is saved, we can feed it into HPC
+  submit scripts or orchestrate partial re-runs by filtering rows.

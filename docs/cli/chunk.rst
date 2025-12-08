@@ -304,5 +304,7 @@ Highlights:
             --overlap 0 --output-dir artifacts/chunks/REC \
             --manifest manifests/REC.csv
 
+* ``--plan-csv`` / ``--plan-json`` — write the computed plan to disk for future reference or to feed
+  into batch submission scripts.
 * ``--apply`` immediately invokes :command:`badc chunk run` for every listed recording, writing
   manifests/chunks exactly as shown in the plan (combine with ``datalad run`` to capture provenance).

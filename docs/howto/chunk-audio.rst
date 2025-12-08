@@ -44,7 +44,7 @@ entire DataLad dataset.
 
 3. **Write chunks + manifests** using ``badc chunk run`` (either manually or by reusing the command
    emitted above). If you trust the plan, append ``--apply`` to ``badc chunk orchestrate`` to run
-   every chunk job automatically.
+   every chunk job automatically and consider ``--plan-csv``/``--plan-json`` to capture provenance.
 
    .. code-block:: console
 

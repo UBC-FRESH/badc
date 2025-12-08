@@ -609,6 +609,14 @@ def chunk_orchestrate(
             help="Execute badc chunk run for every plan instead of printing only.",
         ),
     ] = False,
+    plan_csv: Annotated[
+        Path | None,
+        typer.Option("--plan-csv", help="Optional CSV path to save the generated plan."),
+    ] = None,
+    plan_json: Annotated[
+        Path | None,
+        typer.Option("--plan-json", help="Optional JSON path to save the generated plan."),
+    ] = None,
 ) -> None:
     """Plan chunk jobs across an entire dataset without touching audio files."""
 
@@ -645,6 +653,22 @@ def chunk_orchestrate(
             str(plan.chunk_output_dir),
         )
     console.print(table)
+    if plan_csv or plan_json:
+        records = [plan.to_dict() for plan in plans]
+        if plan_csv:
+            plan_csv.parent.mkdir(parents=True, exist_ok=True)
+            headers = list(records[0].keys())
+            lines = [",".join(headers)]
+            for record in records:
+                lines.append(",".join(str(record[h]) for h in headers))
+            plan_csv.write_text("\n".join(lines) + "\n")
+            console.print(f"Saved plan CSV to {plan_csv}")
+        if plan_json:
+            import json
+
+            plan_json.parent.mkdir(parents=True, exist_ok=True)
+            plan_json.write_text(json.dumps(records, indent=2))
+            console.print(f"Saved plan JSON to {plan_json}")
 
     if print_datalad_run:
         console.print("\nDatalad commands (run from dataset root):", style="bold")
