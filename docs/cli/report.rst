@@ -74,4 +74,78 @@ See also
 
 * :doc:`/cli/infer` for emitting the Parquet detections export.
 * :doc:`/howto/aggregate-results` for a guided walkthrough that chains ``badc infer aggregate``,
-  ``badc report summary``, and notebook-ready DuckDB queries.
+  ``badc report summary``, ``badc report quicklook``, and notebook-ready DuckDB queries.
+
+``badc report quicklook``
+-------------------------
+
+Produce a multi-table “quicklook” report that highlights the busiest labels, the loudest recordings,
+and a per-chunk detection timeline. The command always targets the canonical Parquet export produced
+by ``badc infer aggregate --parquet`` and renders ASCII sparklines directly in the terminal.
+
+Usage::
+
+   badc report quicklook \
+       --parquet data/datalad/bogus/artifacts/aggregate/detections.parquet \
+       --top-labels 12 \
+       --top-recordings 5 \
+       --output-dir data/datalad/bogus/artifacts/aggregate/quicklook
+
+Key options
+^^^^^^^^^^^
+
+``--parquet``
+   Canonical detections Parquet file (required).
+``--top-labels``
+   Number of label rows to display (default 10).
+``--top-recordings``
+   Number of recording rows to display (default 5).
+``--output-dir``
+   Optional directory for CSV exports (``labels.csv``, ``recordings.csv``, ``chunks.csv``).
+
+Option reference
+^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+
+   * - Option / Argument
+     - Description
+     - Default
+   * - ``--parquet PATH``
+     - Path to the canonical detections Parquet file.
+     - Required
+   * - ``--top-labels INT``
+     - Number of label rows to display/export.
+     - ``10``
+   * - ``--top-recordings INT``
+     - Number of recording rows to display/export.
+     - ``5``
+   * - ``--output-dir PATH``
+     - Directory where CSV snapshots will be stored.
+     - Disabled
+
+Help excerpt
+^^^^^^^^^^^^
+
+.. code-block:: console
+
+   $ badc report quicklook --help
+   Usage: badc report quicklook [OPTIONS]
+     Generate quicklook tables/plots for canonical detections.
+   Options:
+     --parquet PATH       Parquet detections file.  [required]
+     --top-labels INTEGER
+                           Number of label rows to display.
+     --top-recordings INTEGER
+                           Number of recording rows to display.
+     --output-dir PATH    Optional directory for CSV exports.
+     --help               Show this message and exit.
+
+Output
+^^^^^^
+
+The command prints three Rich tables (labels, recordings, chunk timeline) and an ASCII sparkline
+representing detections-per-chunk so you can eyeball bursts of activity without launching a
+notebook. When ``--output-dir`` is set the same data lands in CSVs for downstream DuckDB/Pandas
+pipelines.

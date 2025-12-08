@@ -36,6 +36,15 @@ class DetectionRecord:
 
 
 @dataclass
+class QuicklookReport:
+    """Convenience container for DuckDB quicklook metrics."""
+
+    top_labels: list[tuple[str, str | None, int, float | None]]
+    top_recordings: list[tuple[str, int, float | None]]
+    chunk_timeline: list[tuple[str, int | None, int, float | None]]
+
+
+@dataclass
 class _ManifestRecord:
     """Subset of manifest metadata used to enrich detections."""
 
@@ -338,6 +347,102 @@ def summarize_parquet(
     rows = con.execute(query, [str(parquet_path)]).fetchall()
     con.close()
     return rows
+
+
+def quicklook_metrics(
+    parquet_path: Path,
+    *,
+    top_labels: int = 10,
+    top_recordings: int | None = None,
+) -> QuicklookReport:
+    """Return multi-table summary metrics from the canonical Parquet export.
+
+    Parameters
+    ----------
+    parquet_path
+        Path to the canonical detections Parquet file.
+    top_labels
+        Number of label rows to include in the quicklook summary (default 10).
+    top_recordings
+        Number of recording rows to include. When ``None`` this mirrors ``top_labels``.
+
+    Returns
+    -------
+    QuicklookReport
+        Container with top labels, top recordings, and a per-chunk timeline suitable for
+        ASCII or graphical plots.
+    """
+
+    try:
+        import duckdb  # type: ignore
+    except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency
+        raise RuntimeError(
+            "duckdb is required for quicklook summaries. Install with `pip install duckdb`."
+        ) from exc
+
+    limit_labels = max(1, top_labels)
+    limit_recordings = max(1, top_recordings or top_labels)
+    con = duckdb.connect()
+    label_rows = con.execute(
+        """
+        SELECT label,
+               COALESCE(label_name, '') AS label_name,
+               COUNT(*) AS detections,
+               AVG(confidence) AS avg_confidence
+        FROM read_parquet(?)
+        GROUP BY label, label_name
+        ORDER BY detections DESC
+        LIMIT ?
+        """,
+        [str(parquet_path), limit_labels],
+    ).fetchall()
+    recording_rows = con.execute(
+        """
+        SELECT recording_id,
+               COUNT(*) AS detections,
+               AVG(confidence) AS avg_confidence
+        FROM read_parquet(?)
+        GROUP BY recording_id
+        ORDER BY detections DESC
+        LIMIT ?
+        """,
+        [str(parquet_path), limit_recordings],
+    ).fetchall()
+    chunk_rows = con.execute(
+        """
+        SELECT chunk_id,
+               MIN(chunk_start_ms) AS chunk_start_ms,
+               COUNT(*) AS detections,
+               AVG(confidence) AS avg_confidence
+        FROM read_parquet(?)
+        GROUP BY chunk_id
+        ORDER BY chunk_start_ms NULLS FIRST, chunk_id
+        """,
+        [str(parquet_path)],
+    ).fetchall()
+    con.close()
+    label_cast = [
+        (row[0], row[1] or None, int(row[2]), float(row[3]) if row[3] is not None else None)
+        for row in label_rows
+    ]
+    recording_cast = [
+        (row[0] or "unknown", int(row[1]), float(row[2]) if row[2] is not None else None)
+        for row in recording_rows
+    ]
+    chunk_cast = [
+        (
+            row[0],
+            int(row[1]) if row[1] is not None else None,
+            int(row[2]),
+            float(row[3]) if row[3] is not None else None,
+        )
+        for row in chunk_rows
+    ]
+    return QuicklookReport(
+        top_labels=label_cast,
+        top_recordings=recording_cast,
+        chunk_timeline=chunk_cast,
+    )
 
 
 def _load_manifest_index(manifest: Path | None) -> Dict[str, _ManifestRecord]:

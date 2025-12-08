@@ -940,6 +940,17 @@ def _sparkline(
     return "".join(out)
 
 
+def _write_csv(rows: Sequence[Sequence[object]], headers: Sequence[str], out_path: Path) -> None:
+    """Write ``rows`` to ``out_path`` with ``headers``."""
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [",".join(headers)]
+    for row in rows:
+        formatted = ["" if value is None else str(value) for value in row]
+        lines.append(",".join(formatted))
+    out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def _select_metric_entry(details: dict | None) -> dict | None:
     """Return the preferred GPU metric block for a telemetry record."""
 
@@ -1262,6 +1273,123 @@ def report_summary(
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text("\n".join(lines) + "\n")
         console.print(f"Wrote summary CSV to {output}")
+
+
+@report_app.command("quicklook")
+def report_quicklook(
+    parquet: Annotated[
+        Path,
+        typer.Option("--parquet", help="Parquet detections file", exists=True, dir_okay=False),
+    ],
+    top_labels: Annotated[
+        int,
+        typer.Option(
+            "--top-labels",
+            help="Number of label rows to display.",
+        ),
+    ] = 10,
+    top_recordings: Annotated[
+        int,
+        typer.Option(
+            "--top-recordings",
+            help="Number of recording rows to display.",
+        ),
+    ] = 5,
+    output_dir: Annotated[
+        Optional[Path],
+        typer.Option(
+            "--output-dir",
+            help="Optional directory for CSV exports (labels.csv, recordings.csv, chunks.csv).",
+        ),
+    ] = None,
+) -> None:
+    """Generate quicklook tables/plots for canonical detections."""
+
+    from badc.aggregate import quicklook_metrics
+
+    try:
+        quicklook = quicklook_metrics(
+            parquet,
+            top_labels=top_labels,
+            top_recordings=top_recordings,
+        )
+    except RuntimeError as exc:
+        console.print(str(exc), style="red")
+        raise typer.Exit(code=1) from exc
+
+    if not quicklook.top_labels:
+        console.print("No detections found in the Parquet file.", style="yellow")
+        return
+
+    label_table = Table(title=f"Top {top_labels} labels", expand=True)
+    label_table.add_column("Label")
+    label_table.add_column("Name")
+    label_table.add_column("Detections", justify="right")
+    label_table.add_column("Avg confidence", justify="right")
+    for label, label_name, detections, avg_conf in quicklook.top_labels:
+        label_table.add_row(
+            label,
+            label_name or "",
+            str(detections),
+            "-" if avg_conf is None else f"{avg_conf:.3f}",
+        )
+    console.print(label_table)
+
+    recording_table = Table(title=f"Top {top_recordings} recordings", expand=True)
+    recording_table.add_column("Recording")
+    recording_table.add_column("Detections", justify="right")
+    recording_table.add_column("Avg confidence", justify="right")
+    for recording_id, detections, avg_conf in quicklook.top_recordings:
+        recording_table.add_row(
+            recording_id or "unknown",
+            str(detections),
+            "-" if avg_conf is None else f"{avg_conf:.3f}",
+        )
+    console.print(recording_table)
+
+    if quicklook.chunk_timeline:
+        counts = [float(row[2]) for row in quicklook.chunk_timeline]
+        timeline = _sparkline(counts, width=min(60, len(counts)))
+        first_chunk = quicklook.chunk_timeline[0][0]
+        last_chunk = quicklook.chunk_timeline[-1][0]
+        chunk_table = Table(title="Chunk detections (chronological)", expand=True)
+        chunk_table.add_column("Chunk")
+        chunk_table.add_column("Start (s)", justify="right")
+        chunk_table.add_column("Detections", justify="right")
+        chunk_table.add_column("Avg confidence", justify="right")
+        for chunk_id, start_ms, det_count, avg_conf in quicklook.chunk_timeline[:10]:
+            start_display = "-" if start_ms is None else f"{start_ms / 1000:.1f}"
+            chunk_table.add_row(
+                chunk_id,
+                start_display,
+                str(det_count),
+                "-" if avg_conf is None else f"{avg_conf:.3f}",
+            )
+        console.print(chunk_table)
+        console.print("Chunk timeline (detections per chunk):", style="bold")
+        console.print(f"  {timeline}")
+        console.print(
+            f"  first chunk: {first_chunk}, last chunk: {last_chunk}, total chunks: {len(quicklook.chunk_timeline)}"
+        )
+
+    if output_dir:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        _write_csv(
+            quicklook.top_labels,
+            ["label", "label_name", "detections", "avg_confidence"],
+            output_dir / "labels.csv",
+        )
+        _write_csv(
+            quicklook.top_recordings,
+            ["recording_id", "detections", "avg_confidence"],
+            output_dir / "recordings.csv",
+        )
+        _write_csv(
+            quicklook.chunk_timeline,
+            ["chunk_id", "chunk_start_ms", "detections", "avg_confidence"],
+            output_dir / "chunks.csv",
+        )
+        console.print(f"Wrote quicklook CSVs to {output_dir}")
 
 
 def main() -> None:

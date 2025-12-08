@@ -1,3 +1,18 @@
+# 2025-12-08 — DuckDB quicklook helper
+- Added ``badc report quicklook`` plus the underlying ``aggregate.quicklook_metrics`` helper so
+  canonical Parquet files can be turned into top-label tables, recording summaries, and per-chunk
+  timelines in one command. ASCII sparklines expose detection bursts directly in the terminal, and
+  ``--output-dir`` writes CSV snapshots (labels/recordings/chunks) for notebooks.
+- Updated README, CLI docs, usage/how-to guides, and the roadmap to highlight the new workflow.
+- Tests now cover the helper + CLI, and the documentation note for Phase 2 aggregation reflects the
+  deliverable.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `.venv/bin/pre-commit run --all-files`
+
 # 2025-12-08 — Telemetry monitor rolling trends
 - Extended ``badc infer monitor`` with rolling utilization/VRAM trends: new helper utilities build
   ASCII sparklines over the last ~24 telemetry samples per GPU, exposing how busy each device stays

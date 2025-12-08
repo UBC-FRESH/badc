@@ -119,6 +119,14 @@ aggregation::
    | grouse  | 42         | 0.87           |
    +---------+------------+----------------+
 
+Need more color than a single pivot? ``badc report quicklook`` hits the same Parquet file but emits
+multiple Rich tables (top labels, top recordings, chunk timeline) and ASCII sparklines while also
+writing optional CSV snapshots for notebooks::
+
+   $ badc report quicklook --parquet artifacts/aggregate/detections.parquet --output-dir artifacts/aggregate/quicklook
+   $ ls artifacts/aggregate/quicklook
+   chunks.csv  labels.csv  recordings.csv
+
 Telemetry logs are unique per manifest/timestamp (default path printed by ``badc infer run``). Tail
 them with :doc:`cli/infer`'s monitor view (per-GPU utilization/memory trends, rolling ASCII
 sparklines, success/failure counts, and a live event tail) or the lightweight :doc:`cli/misc`

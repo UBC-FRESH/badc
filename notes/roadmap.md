@@ -44,8 +44,9 @@ execution notes live alongside task-specific files under `notes/`.
 - [ ] Build `badc chunk run` per `notes/chunk-files.md` (real chunk WAV writer + manifest linking).
 - [ ] Design the aggregated “bird call events” datastore (likely DuckDB/Parquet) and expose query
       helpers for down-stream stats/figures. *(Canonical Parquet export +
-      ``badc report summary`` now provide grouped counts/avg confidence; next up is richer
-      aggregation notebooks.)*
+      ``badc report summary`` and the new ``badc report quicklook`` command now surface grouped
+      counts, per-recording tables, and chunk timelines. Next up is wiring these outputs into the
+      docs/notebook gallery.)*
 - [ ] Wire Typer CLI commands for end-to-end runs (`badc chunk`, `badc infer`, `badc aggregate`,
       `badc report`). *(Scaffolded chunk/infer commands exist; `notes/pipeline-plan.md` now captures
       the full flow.)*
@@ -83,18 +84,16 @@ execution notes live alongside task-specific files under `notes/`.
 - [ ] Prep outreach materials (README story, example notebook, thesis-aligned figures).
 
 ## Detailed Next Steps
-1. **Telemetry monitor uplift** — feed the recorded per-GPU utilization/memory snapshots into
-   `badc infer monitor` so long HawkEars runs surface live GPU usage trends (`notes/gpu-monitoring.md`).
-2. **Canonical detection serialization** — finish the HawkEars parsing story by locking down the
-   manifest-aware Parquet schema (chunk offsets, model metadata) and exposing helpers that pipe the
-   outputs straight into DuckDB for Phase 2 aggregation tooling (`notes/pipeline-plan.md`).
-3. **DuckDB aggregation helper** — automate Parquet consumption via a `badc aggregate parquet`/report
-   helper or notebook that loads the bogus detections and produces summary tables/plots for Erin to
-   review (`docs/howto/aggregate-results.rst` + notebook gallery).
-4. **Chunk-size probe utility** — script the automated GPU-memory probing routine, log results for
+1. **Quicklook notebook wiring** — integrate the ``badc report quicklook`` CSV exports into the
+   docs/notebook gallery so Erin can review real plots without running the CLI locally.
+2. **Chunk-size probe utility** — script the automated GPU-memory probing routine, log results for
    the 1 min / 7 min / 60 min samples, and store telemetry in `notes/chunking.md`.
-5. **Data management plan** — flesh out `notes/datalad-plan.md`, scaffold the bogus dataset, and
+3. **Data management plan** — flesh out `notes/datalad-plan.md`, scaffold the bogus dataset, and
    draft the Chinook special-remote workflow ahead of the 60 TB ingest.
+4. **HPC orchestration** — extend the inference scheduler with multi-node/Sockeye hooks and document
+   the submission templates referenced in `docs/howto/infer-hpc.rst`.
+5. **Regression scaffolding** — add smoke tests/notebooks that exercise Parquet exports end-to-end so
+   CI can catch schema regressions without running HawkEars.
 
 ## Backlog & Ideas
 - GPU-aware scheduling heuristics that prioritise short chunks when VRAM is scarce.

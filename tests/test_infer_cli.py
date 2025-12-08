@@ -128,3 +128,65 @@ def test_report_summary_cli(tmp_path: Path) -> None:
     )
     assert result.exit_code == 0, result.stdout
     assert "Detection summary" in result.stdout
+
+
+def test_report_quicklook_cli(tmp_path: Path) -> None:
+    pytest.importorskip("duckdb")
+    parquet_path = tmp_path / "detections.parquet"
+    records = [
+        DetectionRecord(
+            recording_id="rec1",
+            chunk_id="chunk_a",
+            chunk_start_ms=0,
+            chunk_end_ms=1000,
+            timestamp_ms=100,
+            absolute_time_ms=100,
+            label="grouse",
+            label_name="Grouse",
+            confidence=0.9,
+            status="ok",
+            runner="hawkears",
+            chunk_sha256="abc123",
+            source_path=tmp_path / "chunk_a.json",
+            dataset_root=tmp_path,
+        ),
+        DetectionRecord(
+            recording_id="rec2",
+            chunk_id="chunk_b",
+            chunk_start_ms=1000,
+            chunk_end_ms=2000,
+            timestamp_ms=200,
+            absolute_time_ms=1200,
+            label="grouse",
+            label_name="Grouse",
+            confidence=0.95,
+            status="ok",
+            runner="hawkears",
+            chunk_sha256="def456",
+            source_path=tmp_path / "chunk_b.json",
+            dataset_root=tmp_path,
+        ),
+    ]
+    write_parquet(records, parquet_path)
+    output_dir = tmp_path / "quicklook"
+    result = runner.invoke(
+        app,
+        [
+            "report",
+            "quicklook",
+            "--parquet",
+            str(parquet_path),
+            "--top-labels",
+            "5",
+            "--top-recordings",
+            "2",
+            "--output-dir",
+            str(output_dir),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    assert "Top 5 labels" in result.stdout
+    assert "Chunk timeline" in result.stdout
+    assert (output_dir / "labels.csv").exists()
+    assert (output_dir / "recordings.csv").exists()
+    assert (output_dir / "chunks.csv").exists()

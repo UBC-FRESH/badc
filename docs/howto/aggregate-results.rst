@@ -48,7 +48,22 @@ Step 2 — Summaries via ``badc report summary``
 3. The optional ``--output`` path mirrors the on-screen table so collaborators without DuckDB can
    review the same summary.
 
-Step 3 — Notebook/SQL exploration
+Step 3 — Quicklook dashboards via ``badc report quicklook``
+-----------------------------------------------------------
+
+1. Run the quicklook command to capture label/recording highlights plus a per-chunk timeline::
+
+      badc report quicklook \
+          --parquet data/datalad/bogus/artifacts/aggregate/detections.parquet \
+          --top-labels 12 \
+          --top-recordings 5 \
+          --output-dir data/datalad/bogus/artifacts/aggregate/quicklook
+
+2. The CLI prints Rich tables and ASCII sparklines so you can scan activity bursts directly in the
+   terminal. When ``--output-dir`` is set, CSV snapshots land alongside the detections and can be
+   imported into notebooks or attached to CHANGE_LOG entries for asynchronous reviews.
+
+Step 4 — Notebook/SQL exploration
 ---------------------------------
 
 1. Open the Parquet file with DuckDB for ad-hoc SQL::

@@ -189,3 +189,66 @@ def test_summarize_parquet_rejects_unknown_column(tmp_path: Path) -> None:
     parquet_path = write_parquet(records, tmp_path / "detections.parquet")
     with pytest.raises(ValueError):
         summarize_parquet(parquet_path, group_by=["unknown"])
+
+
+def test_quicklook_metrics_returns_expected_tables(tmp_path: Path) -> None:
+    pytest.importorskip("duckdb")
+    records = [
+        DetectionRecord(
+            recording_id="rec1",
+            chunk_id="chunk_a",
+            chunk_start_ms=0,
+            chunk_end_ms=30000,
+            timestamp_ms=100,
+            absolute_time_ms=100,
+            label="WTSP",
+            label_name="White-throated Sparrow",
+            confidence=0.9,
+            status="ok",
+            runner="hawkears",
+            chunk_sha256="chunk_a_sha",
+            source_path=tmp_path / "chunk_a.json",
+            dataset_root=tmp_path,
+        ),
+        DetectionRecord(
+            recording_id="rec2",
+            chunk_id="chunk_b",
+            chunk_start_ms=30000,
+            chunk_end_ms=60000,
+            timestamp_ms=200,
+            absolute_time_ms=30200,
+            label="BAWW",
+            label_name="Black-and-white Warbler",
+            confidence=0.8,
+            status="ok",
+            runner="hawkears",
+            chunk_sha256="chunk_b_sha",
+            source_path=tmp_path / "chunk_b.json",
+            dataset_root=tmp_path,
+        ),
+        DetectionRecord(
+            recording_id="rec1",
+            chunk_id="chunk_b",
+            chunk_start_ms=30000,
+            chunk_end_ms=60000,
+            timestamp_ms=500,
+            absolute_time_ms=30500,
+            label="WTSP",
+            label_name="White-throated Sparrow",
+            confidence=0.95,
+            status="ok",
+            runner="hawkears",
+            chunk_sha256="chunk_b_sha",
+            source_path=tmp_path / "chunk_b.json",
+            dataset_root=tmp_path,
+        ),
+    ]
+    parquet_path = write_parquet(records, tmp_path / "detections.parquet")
+    from badc.aggregate import quicklook_metrics
+
+    quicklook = quicklook_metrics(parquet_path, top_labels=5, top_recordings=5)
+    assert quicklook.top_labels[0][0] == "WTSP"
+    assert quicklook.top_labels[0][2] == 2
+    assert quicklook.top_recordings[0][0] == "rec1"
+    assert quicklook.chunk_timeline[0][0] == "chunk_a"
+    assert quicklook.chunk_timeline[-1][0] == "chunk_b"

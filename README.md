@@ -88,6 +88,9 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
 - `badc report summary --parquet artifacts/aggregate/detections.parquet --group-by label` — loads the
   Parquet detections export via DuckDB, prints grouped counts/average confidence, and optionally
   writes another CSV for downstream notebooks.
+- `badc report quicklook --parquet artifacts/aggregate/detections.parquet` — runs a suite of DuckDB
+  queries (top labels, top recordings, per-chunk timeline) and prints ASCII sparklines while saving
+  optional CSV snapshots for notebooks/Phase 2 analytics.
 - `badc infer monitor --log data/telemetry/infer/<manifest>_<timestamp>.jsonl` — stream per-GPU
   telemetry tables with events/success/failure counts, trending utilization (min/avg/max), peak VRAM
   usage, rolling ASCII sparklines (utilization + VRAM), and a live tail of recent chunk status
