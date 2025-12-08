@@ -46,9 +46,9 @@ execution notes live alongside task-specific files under `notes/`.
       `audio/`, builds manifest/output plans, and prints datalad-run commands; next step is wiring it
       to actually invoke `badc chunk run`/HawkEars jobs.)*
 - [ ] Implement HawkEars inference scheduler per `notes/inference-plan.md` (manifest loader, GPU
-      worker pool, telemetry, output persistence). *(Manifest loader + telemetry exist; the bogus
-      dataset run exercised the GPU worker path with per-chunk utilization snapshots. Still need
-      multi-process/HPC orchestration and configurable chunk sizing per host.)*
+      worker pool, telemetry, output persistence). *(Manifest loader + telemetry exist; Phase 2 now
+      includes `badc infer orchestrate` for planning/`datalad run` output + optional `--apply`. Next
+      steps: integrate with Sockeye arrays + multi-GPU scheduling.)*
 - [ ] Parse HawkEars JSON outputs into canonical detection schema and wire DuckDB aggregation
       (`notes/pipeline-plan.md`). *(Real HawkEars detections from the bogus dataset now serialize to
       canonical CSV/Parquet with model metadata + chunk hashes; next milestone is packaging DuckDB

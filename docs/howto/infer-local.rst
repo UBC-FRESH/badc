@@ -211,6 +211,24 @@ Configuration tips
 * Use `.venv/bin/badc infer run …` so telemetry references the correct interpreter in virtualenv
   setups.
 
+Batch planning
+--------------
+When multiple manifests need to run back-to-back, use ``badc infer orchestrate`` to plan or execute
+them:
+
+.. code-block:: console
+
+   $ badc infer orchestrate data/datalad/bogus \
+       --manifest-dir manifests \
+       --output-dir artifacts/infer \
+       --plan-csv plans/infer.csv \
+       --plan-json plans/infer.json \
+       --print-datalad-run \
+       --apply
+
+The command prints a Rich table, saves CSV/JSON plans for later, and (with ``--apply``) runs
+``badc infer run`` for every manifest automatically.
+
 Smoke tests
 -----------
 When you need extra assurance that HawkEars still runs end-to-end, enable the gated smoke test:

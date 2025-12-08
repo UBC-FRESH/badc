@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import queue
 import shlex
 import subprocess
@@ -19,7 +20,7 @@ from rich.markup import escape
 from rich.panel import Panel
 from rich.table import Table
 
-from badc import __version__, chunk_orchestrator, chunking
+from badc import __version__, chunk_orchestrator, chunking, infer_orchestrator
 from badc import data as data_utils
 from badc.audio import get_wav_duration
 from badc.chunk_writer import ChunkMetadata, iter_chunk_metadata
@@ -856,6 +857,152 @@ def infer_run(
             display += ", ..."
         location_msg = display
     console.print(f"Processed {len(jobs)} jobs; outputs stored in {location_msg}")
+
+
+@infer_app.command("orchestrate")
+def infer_orchestrate(
+    dataset: Annotated[
+        Path,
+        typer.Argument(help="DataLad dataset containing manifests/chunks."),
+    ] = Path("data/datalad/bogus"),
+    manifest_dir: Annotated[
+        Path,
+        typer.Option("--manifest-dir", help="Directory that stores chunk manifests."),
+    ] = Path("manifests"),
+    pattern: Annotated[
+        str,
+        typer.Option("--pattern", help="Glob used to select manifests."),
+    ] = "*.csv",
+    output_dir: Annotated[
+        Path,
+        typer.Option("--output-dir", help="Root directory for inference outputs."),
+    ] = Path("artifacts/infer"),
+    telemetry_dir: Annotated[
+        Path,
+        typer.Option("--telemetry-dir", help="Directory for telemetry logs."),
+    ] = Path("artifacts/telemetry"),
+    chunk_plan: Annotated[
+        Path | None,
+        typer.Option("--chunk-plan", help="Optional chunk plan CSV/JSON to source manifests."),
+    ] = None,
+    include_existing: Annotated[
+        bool,
+        typer.Option(
+            "--include-existing/--skip-existing",
+            help="Include manifests that already have inference outputs.",
+        ),
+    ] = False,
+    limit: Annotated[
+        int,
+        typer.Option("--limit", help="Cap number of planned manifests."),
+    ] = 0,
+    max_gpus: Annotated[
+        int | None,
+        typer.Option("--max-gpus", help="Max GPUs to set in the plan/apply step."),
+    ] = None,
+    use_hawkears: Annotated[
+        bool,
+        typer.Option(
+            "--use-hawkears/--stub-runner",
+            help="Use HawkEars analyze.py in the generated plan.",
+        ),
+    ] = True,
+    hawkears_arg: Annotated[
+        list[str] | None,
+        typer.Option("--hawkears-arg", help="Extra HawkEars args to bake into the plan."),
+    ] = None,
+    print_datalad_run: Annotated[
+        bool,
+        typer.Option(
+            "--print-datalad-run",
+            help="Print `datalad run` commands for each manifest.",
+        ),
+    ] = False,
+    apply: Annotated[
+        bool,
+        typer.Option(
+            "--apply/--plan-only",
+            help="Execute badc infer run for every plan.",
+        ),
+    ] = False,
+    plan_csv: Annotated[
+        Path | None,
+        typer.Option("--plan-csv", help="Optional CSV path to save the inference plan."),
+    ] = None,
+    plan_json: Annotated[
+        Path | None,
+        typer.Option("--plan-json", help="Optional JSON path to save the inference plan."),
+    ] = None,
+) -> None:
+    """Plan inference runs across manifests without executing them."""
+
+    dataset = dataset.expanduser()
+    manifest_paths: list[Path] | None = None
+    if chunk_plan:
+        manifest_paths = infer_orchestrator.load_manifest_paths_from_plan(chunk_plan)
+    plans = infer_orchestrator.build_infer_plan(
+        dataset,
+        manifest_paths=manifest_paths,
+        manifest_dir=manifest_dir,
+        pattern=pattern,
+        output_dir=output_dir,
+        telemetry_dir=telemetry_dir,
+        include_existing=include_existing,
+        use_hawkears=use_hawkears,
+        hawkears_args=hawkears_arg,
+        max_gpus=max_gpus,
+        limit=limit or None,
+    )
+    if not plans:
+        console.print("No manifests matched the provided criteria.", style="yellow")
+        return
+    table = Table(title="Inference plan", expand=True)
+    table.add_column("Recording")
+    table.add_column("Manifest")
+    table.add_column("Output dir")
+    table.add_column("Telemetry log")
+    for plan in plans:
+        table.add_row(
+            plan.recording_id,
+            str(plan.manifest_path),
+            str(plan.output_dir),
+            str(plan.telemetry_log),
+        )
+    console.print(table)
+
+    if plan_csv or plan_json:
+        records = [plan.to_dict() for plan in plans]
+        if plan_csv:
+            plan_csv.parent.mkdir(parents=True, exist_ok=True)
+            headers = list(records[0].keys())
+            lines = [",".join(headers)]
+            for record in records:
+                lines.append(",".join(str(record[h]) for h in headers))
+            plan_csv.write_text("\n".join(lines) + "\n")
+            console.print(f"Saved inference plan CSV to {plan_csv}")
+        if plan_json:
+            plan_json.parent.mkdir(parents=True, exist_ok=True)
+            plan_json.write_text(json.dumps(records, indent=2))
+            console.print(f"Saved inference plan JSON to {plan_json}")
+
+    if print_datalad_run:
+        console.print("\nDatalad commands (run from dataset root):", style="bold")
+        for plan in plans:
+            command = infer_orchestrator.render_datalad_run(plan, dataset)
+            console.print(f" - {command}")
+
+    if apply:
+        console.print("\nExecuting inference plan…", style="bold")
+        for plan in plans:
+            plan.telemetry_log.parent.mkdir(parents=True, exist_ok=True)
+            infer_run(
+                manifest=plan.manifest_path,
+                max_gpus=plan.max_gpus,
+                output_dir=plan.output_dir,
+                telemetry_log=plan.telemetry_log,
+                use_hawkears=plan.use_hawkears,
+                hawkears_arg=list(plan.hawkears_args),
+            )
 
 
 @infer_app.command("run-config")

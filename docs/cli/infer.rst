@@ -267,3 +267,37 @@ Options:
 Use this view during long HawkEars jobs to confirm GPUs remain busy (sustained utilization, stable
 VRAM headroom) and to spot failing chunks immediately via the event tail. The sparkline columns
 update every refresh when ``--follow`` is enabled, exposing rolling trends without leaving the CLI.
+``badc infer orchestrate``
+-------------------------
+
+Plan inference runs across an entire dataset (or a saved chunk plan) without executing HawkEars
+immediately.
+
+Usage::
+
+   badc infer orchestrate data/datalad/bogus \
+       --manifest-dir manifests \
+       --output-dir artifacts/infer \
+       --telemetry-dir artifacts/telemetry \
+       --plan-csv plans/infer.csv \
+       --print-datalad-run
+
+Highlights:
+
+* Loads manifests from ``<dataset>/manifests`` (or a supplied chunk plan CSV/JSON).
+* Builds per-recording plans that capture manifest path, output directory, telemetry log, and
+  HawkEars settings.
+* ``--plan-csv`` / ``--plan-json`` save the plan for HPC submission scripts or future re-runs.
+* ``--print-datalad-run`` emits commands such as::
+
+     datalad run -m "Infer REC" --input manifests/REC.csv \
+       --output artifacts/infer/REC \
+       -- badc infer run manifests/REC.csv \
+            --use-hawkears \
+            --output-dir artifacts/infer/REC \
+            --telemetry-log artifacts/telemetry/infer/REC.jsonl
+
+* ``--apply`` executes :command:`badc infer run` for each plan entry using the saved settings.
+
+Combine this with :command:`badc chunk orchestrate` to move from chunk plans to inference runs in a
+single workflow.

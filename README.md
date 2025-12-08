@@ -86,6 +86,9 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
   to process chunks concurrently when no GPUs are available. When chunks come from a DataLad dataset
   (e.g., `data/datalad/bogus`), outputs automatically land under `artifacts/infer/` inside that same
   dataset so you can `datalad save` immediately.
+- `badc infer orchestrate` — scans a dataset’s manifests (or a saved chunk plan), prints an inference
+  plan table, emits ready-to-run `datalad run` commands, saves CSV/JSON plans, and can execute the
+  run list with `--apply`.
 - `badc infer aggregate artifacts/infer --manifest chunk_manifest.csv --parquet artifacts/aggregate/detections.parquet`
   — reads detection JSON files, pulls in chunk metadata from the manifest when available (start/end
   offsets, hashes), ingests the real HawkEars label output (label code/name, detection end offset,

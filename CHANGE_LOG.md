@@ -975,3 +975,8 @@
   ``--apply`` flag that runs ``badc chunk run`` for every recording, so dataset-wide chunking can
   both be previewed and executed in one pass. README/CLI/how-to docs now mention the saved plan
   workflow, and tests cover the new behavior.
+# 2025-12-09 — Inference orchestrator
+- Added ``src/badc/infer_orchestrator.py`` plus ``badc infer orchestrate`` so we can scan manifests
+  (or saved chunk plans), print inference plans, save CSV/JSON summaries, emit ready-to-run
+  ``datalad run`` commands, and even execute the entire run list via ``--apply``. README, CLI docs,
+  and the infer how-to now document the workflow; tests cover the planner + CLI path.
