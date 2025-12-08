@@ -23,6 +23,43 @@ PhD analyses.
 
 GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push/PR.
 
+> **GPU access tip:** if `badc gpus` prints “No GPUs detected via nvidia-smi” and a direct call to
+> `nvidia-smi` returns “Failed to initialize NVML: Insufficient Permissions”, the driver is gating
+> NVML to privileged users. Running `sudo nvidia-smi` should work, confirming the cards are present—
+> ask the cluster admin to grant your user access (e.g., add you to the video group) so BADC can see
+> the GPUs. Example session:
+> ```bash
+> gep@jupyterhub05:~/projects/badc$ badc gpus 
+> No GPUs detected via nvidia-smi.
+> gep@jupyterhub05:~/projects/badc$ nvidia-smi
+> Failed to initialize NVML: Insufficient Permissions
+> gep@jupyterhub05:~/projects/badc$ sudo nvidia-smi
+> Sun Dec  7 07:50:48 2025       
+> +-----------------------------------------------------------------------------------------+
+> | NVIDIA-SMI 580.95.05              Driver Version: 580.95.05      CUDA Version: 13.0     |
+> +-----------------------------------------+------------------------+----------------------+
+> | GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+> | Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+> |                                         |                        |               MIG M. |
+> |=========================================+========================+======================|
+> |   0  Quadro RTX 4000                Off |   00000000:18:00.0 Off |                  N/A |
+> | 30%   26C    P8              9W /  125W |    5743MiB /   8192MiB |      0%      Default |
+> |                                         |                        |                  N/A |
+> +-----------------------------------------+------------------------+----------------------+
+> |   1  Quadro RTX 4000                Off |   00000000:3B:00.0 Off |                  N/A |
+> | 30%   33C    P8             16W /  125W |    7548MiB /   8192MiB |      0%      Default |
+> |                                         |                        |                  N/A |
+> +-----------------------------------------+------------------------+----------------------+
+> 
+> +-----------------------------------------------------------------------------------------+
+> | Processes:                                                                              |
+> |  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+> |        ID   ID                                                               Usage      |
+> |=========================================================================================|
+> |  No running processes found                                                             |
+> +-----------------------------------------------------------------------------------------+
+> ```
+
 ## CLI preview
 
 - `badc version` — display current package version.
@@ -43,8 +80,17 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
   to process chunks concurrently when no GPUs are available. When chunks come from a DataLad dataset
   (e.g., `data/datalad/bogus`), outputs automatically land under `artifacts/infer/` inside that same
   dataset so you can `datalad save` immediately.
-- `badc infer aggregate artifacts/infer` — reads detection JSON files and writes a summary CSV.
-- `badc telemetry --log data/telemetry/infer/log.jsonl` — tail recent telemetry entries.
+- `badc infer aggregate artifacts/infer --manifest chunk_manifest.csv --parquet artifacts/aggregate/detections.parquet`
+  — reads detection JSON files, pulls in chunk metadata from the manifest when available (start/end
+  offsets, hashes), writes a summary CSV, and (optionally) persists the canonical Parquet export for
+  DuckDB tooling.
+- `badc report summary --parquet artifacts/aggregate/detections.parquet --group-by label` — loads the
+  Parquet detections export via DuckDB, prints grouped counts/average confidence, and optionally
+  writes another CSV for downstream notebooks.
+- `badc infer monitor --log data/telemetry/infer/<manifest>_<timestamp>.jsonl` — stream per-GPU
+  telemetry tables (utilization, memory, chunk status) for a specific run.
+- `badc telemetry --log data/telemetry/infer/<manifest>_<timestamp>.jsonl` — plain tail of telemetry
+  events (the run command prints the exact log path).
 - `badc gpus` — lists detected GPUs via `nvidia-smi` so we can size the HawkEars worker pool.
 
 ### Attaching the sample dataset

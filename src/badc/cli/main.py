@@ -6,12 +6,17 @@ import queue
 import shlex
 import subprocess
 import threading
+import time
+from collections import defaultdict
 from pathlib import Path
 from typing import Annotated, Optional, Sequence
 
 import typer
-from rich.console import Console
+from rich.console import Console, Group
+from rich.live import Live
 from rich.markup import escape
+from rich.panel import Panel
+from rich.table import Table
 
 from badc import __version__, chunking
 from badc import data as data_utils
@@ -20,7 +25,7 @@ from badc.chunk_writer import ChunkMetadata, iter_chunk_metadata
 from badc.gpu import detect_gpus
 from badc.hawkears_runner import run_job
 from badc.infer_scheduler import GPUWorker, InferenceJob, load_jobs, plan_workers
-from badc.telemetry import load_telemetry
+from badc.telemetry import default_log_path, load_telemetry
 
 console = Console()
 app = typer.Typer(help="Utilities for chunking and processing large bird audio corpora.")
@@ -30,9 +35,11 @@ DEFAULT_INFER_OUTPUT = Path("artifacts") / "infer"
 data_app = typer.Typer(help="Manage DataLad-backed audio repositories (stub commands).")
 chunk_app = typer.Typer(help="Chunking utilities and HawkEars probe helpers.")
 infer_app = typer.Typer(help="Inference + aggregation helpers (placeholder).")
+report_app = typer.Typer(help="Reporting helpers built atop DuckDB/parquet detections.")
 app.add_typer(data_app, name="data")
 app.add_typer(chunk_app, name="chunk")
 app.add_typer(infer_app, name="infer")
+app.add_typer(report_app, name="report")
 
 
 def _print_header() -> None:
@@ -508,6 +515,10 @@ def infer_run(
         str | None,
         typer.Option("--runner-cmd", help="Command used to invoke HawkEars (default stub)."),
     ] = None,
+    telemetry_log: Annotated[
+        Path | None,
+        typer.Option("--telemetry-log", help="Telemetry log path (JSONL)."),
+    ] = None,
     max_retries: Annotated[
         int,
         typer.Option("--max-retries", help="Maximum retries per chunk."),
@@ -593,6 +604,12 @@ def infer_run(
     default_output = output_dir.expanduser()
     use_dataset_outputs = default_output == DEFAULT_INFER_OUTPUT
     job_contexts = _prepare_job_contexts(jobs, default_output, use_dataset_outputs)
+    telemetry_base: Path | None = None
+    if telemetry_log is None and use_dataset_outputs and job_contexts:
+        first_root = job_contexts[0][2]
+        if first_root:
+            telemetry_base = first_root / "artifacts" / "telemetry"
+    telemetry_path = telemetry_log or default_log_path(manifest, base_dir=telemetry_base)
 
     if print_datalad_run:
         _print_datalad_run_instructions(
@@ -601,6 +618,7 @@ def infer_run(
             max_gpus=max_gpus,
             output_dir=default_output,
             runner_cmd=runner_cmd,
+            telemetry_log=telemetry_path,
             max_retries=max_retries,
             use_hawkears=use_hawkears,
             hawkears_args=extra_args,
@@ -608,6 +626,7 @@ def infer_run(
         )
         return
 
+    console.print(f"Telemetry log: {telemetry_path}")
     _run_scheduler(
         job_contexts=job_contexts,
         worker_pool=worker_pool,
@@ -615,6 +634,7 @@ def infer_run(
         max_retries=max_retries,
         use_hawkears=use_hawkears,
         hawkears_args=extra_args,
+        telemetry_path=telemetry_path,
     )
     output_locations = sorted({ctx[1] for ctx in job_contexts})
     if len(output_locations) == 1:
@@ -634,6 +654,7 @@ def _run_scheduler(
     max_retries: int,
     use_hawkears: bool,
     hawkears_args: Sequence[str],
+    telemetry_path: Path,
 ) -> None:
     """Dispatch inference jobs to worker threads.
 
@@ -690,6 +711,7 @@ def _run_scheduler(
                     use_hawkears=use_hawkears,
                     hawkears_args=runner_args,
                     dataset_root=dataset_root,
+                    telemetry_path=telemetry_path,
                 )
             except Exception as exc:  # pragma: no cover - propagated to main thread
                 errors.append(exc)
@@ -772,6 +794,7 @@ def _print_datalad_run_instructions(
     max_gpus: int | None,
     output_dir: Path,
     runner_cmd: str | None,
+    telemetry_log: Path,
     max_retries: int,
     use_hawkears: bool,
     hawkears_args: Sequence[str],
@@ -792,6 +815,8 @@ def _print_datalad_run_instructions(
         Requested output directory from the CLI invocation.
     runner_cmd : str, optional
         Custom runner command to include in the generated invocation.
+    telemetry_log : Path
+        Telemetry log path to embed in the generated command.
     max_retries : int
         Retry budget to embed in the printed command.
     use_hawkears : bool
@@ -841,6 +866,8 @@ def _print_datalad_run_instructions(
         cmd += ["--runner-cmd", runner_cmd]
     if max_retries != 2:
         cmd += ["--max-retries", str(max_retries)]
+    rel_telemetry = _relativize(telemetry_log, dataset_root)
+    cmd += ["--telemetry-log", rel_telemetry]
     if use_hawkears:
         cmd.append("--use-hawkears")
     for arg in hawkears_args:
@@ -865,6 +892,84 @@ def _print_datalad_run_instructions(
     console.print(f"  {shlex.join(datalad_cmd)}")
 
 
+def _format_metrics(entry: dict | None) -> str:
+    if not entry:
+        return "-"
+    parts = []
+    util = entry.get("utilization")
+    if util is not None:
+        parts.append(f"{util}%")
+    used = entry.get("memory_used_mb")
+    total = entry.get("memory_total_mb")
+    if used is not None:
+        if total:
+            parts.append(f"{used}/{total} MiB")
+        else:
+            parts.append(f"{used} MiB")
+    return " ".join(parts) if parts else "-"
+
+
+def _build_monitor_renderable(records: list, tail: int) -> Group | Panel:
+    if not records:
+        return Panel("No telemetry entries found.", title="Telemetry")
+    gpu_summary: dict[str, dict] = defaultdict(
+        lambda: {"events": 0, "status": "-", "chunk": "-", "timestamp": "-", "metrics": "-"}
+    )
+    for rec in records:
+        key = f"GPU {rec.gpu_index}" if rec.gpu_index is not None else "CPU"
+        gpu_summary[key]["events"] += 1
+        gpu_summary[key]["status"] = rec.status
+        gpu_summary[key]["chunk"] = rec.chunk_id
+        gpu_summary[key]["timestamp"] = rec.timestamp
+        metrics_block = None
+        if isinstance(rec.details, dict):
+            gm = rec.details.get("gpu_metrics")
+            if isinstance(gm, dict):
+                metrics_block = gm.get("after") or gm.get("before")
+        gpu_summary[key]["metrics"] = _format_metrics(metrics_block)
+        gpu_summary[key]["runtime"] = rec.runtime_s or 0.0
+    gpu_table = Table(title="GPU Summary", expand=True)
+    gpu_table.add_column("GPU")
+    gpu_table.add_column("Events", justify="right")
+    gpu_table.add_column("Status")
+    gpu_table.add_column("Chunk")
+    gpu_table.add_column("Runtime (s)", justify="right")
+    gpu_table.add_column("Metrics")
+    for gpu_name in sorted(gpu_summary):
+        entry = gpu_summary[gpu_name]
+        runtime_display = f"{entry.get('runtime', 0.0):.1f}" if entry.get("runtime") else "-"
+        gpu_table.add_row(
+            gpu_name,
+            str(entry["events"]),
+            entry["status"],
+            entry["chunk"],
+            runtime_display,
+            entry["metrics"],
+        )
+    tail_table = Table(title=f"Last {tail} Events", expand=True)
+    tail_table.add_column("Time")
+    tail_table.add_column("Status")
+    tail_table.add_column("Chunk")
+    tail_table.add_column("GPU")
+    tail_table.add_column("Runtime (s)")
+    tail_table.add_column("Metrics")
+    for rec in records[-tail:]:
+        metrics_block = None
+        if isinstance(rec.details, dict):
+            gm = rec.details.get("gpu_metrics")
+            if isinstance(gm, dict):
+                metrics_block = gm.get("after") or gm.get("before")
+        tail_table.add_row(
+            rec.timestamp,
+            rec.status,
+            rec.chunk_id,
+            f"{rec.gpu_index}" if rec.gpu_index is not None else "CPU",
+            "-" if rec.runtime_s is None else f"{rec.runtime_s:.1f}",
+            _format_metrics(metrics_block),
+        )
+    return Group(gpu_table, tail_table)
+
+
 @infer_app.command("aggregate")
 def infer_aggregate(
     detections_dir: Annotated[
@@ -875,6 +980,21 @@ def infer_aggregate(
         Path,
         typer.Option("--output", help="Summary CSV path."),
     ] = Path("artifacts/aggregate/summary.csv"),
+    manifest: Annotated[
+        Optional[Path],
+        typer.Option(
+            "--manifest",
+            help="Optional chunk manifest CSV to enrich metadata.",
+            exists=True,
+            dir_okay=False,
+            file_okay=True,
+            resolve_path=True,
+        ),
+    ] = None,
+    parquet: Annotated[
+        Optional[Path],
+        typer.Option("--parquet", help="Optional Parquet output path (requires duckdb)."),
+    ] = None,
 ) -> None:
     """Aggregate per-chunk detection JSON files into a summary CSV.
 
@@ -886,14 +1006,114 @@ def infer_aggregate(
         Destination CSV path for the aggregated summary.
     """
 
-    from badc.aggregate import load_detections, write_summary_csv
+    from badc.aggregate import load_detections, write_parquet, write_summary_csv
 
-    records = load_detections(detections_dir)
+    records = load_detections(detections_dir, manifest=manifest)
     if not records:
         console.print("No detections found.", style="yellow")
         return
     summary_path = write_summary_csv(records, output)
     console.print(f"Wrote detection summary to {summary_path}")
+    if parquet:
+        try:
+            parquet_path = write_parquet(records, parquet)
+        except RuntimeError as exc:
+            console.print(str(exc), style="red")
+        else:
+            console.print(f"Wrote Parquet export to {parquet_path}")
+
+
+@infer_app.command("monitor")
+def infer_monitor(
+    log_path: Annotated[
+        Path,
+        typer.Option("--log", help="Telemetry log path to inspect."),
+    ] = Path("data/telemetry/infer/log.jsonl"),
+    tail: Annotated[
+        int,
+        typer.Option("--tail", help="Number of recent events to display."),
+    ] = 15,
+    follow: Annotated[
+        bool,
+        typer.Option("--follow/--once", help="Continuously refresh the view."),
+    ] = False,
+    interval: Annotated[
+        float,
+        typer.Option("--interval", help="Refresh interval in seconds when following."),
+    ] = 5.0,
+) -> None:
+    """Render GPU/telemetry summaries for a run-specific log."""
+
+    def render() -> Group | Panel:
+        records = load_telemetry(log_path)
+        return _build_monitor_renderable(records, tail)
+
+    if follow:
+        console.print(f"Monitoring {log_path} (Ctrl+C to stop)...", style="bold")
+        try:
+            refresh = max(1, int(1 / max(interval, 0.1)))
+            with Live(render(), refresh_per_second=refresh) as live:
+                while True:
+                    time.sleep(interval)
+                    live.update(render())
+        except KeyboardInterrupt:
+            console.print("\nStopped monitor.", style="yellow")
+    else:
+        console.print(render())
+
+
+@report_app.command("summary")
+def report_summary(
+    parquet: Annotated[
+        Path,
+        typer.Option("--parquet", help="Parquet detections file", exists=True, dir_okay=False),
+    ],
+    group_by: Annotated[
+        str,
+        typer.Option(
+            "--group-by",
+            help="Comma-separated columns to group by (label, recording_id)",
+        ),
+    ] = "label",
+    output: Annotated[
+        Optional[Path],
+        typer.Option("--output", help="Optional CSV path for the summary."),
+    ] = None,
+    limit: Annotated[
+        int,
+        typer.Option("--limit", help="Rows to display in console."),
+    ] = 20,
+) -> None:
+    """Summarize detections via DuckDB (group counts + avg confidence)."""
+
+    from badc.aggregate import summarize_parquet
+
+    groups = [col.strip() for col in group_by.split(",") if col.strip()]
+    try:
+        rows = summarize_parquet(parquet, group_by=groups)
+    except (RuntimeError, ValueError) as exc:
+        console.print(str(exc), style="red")
+        raise typer.Exit(code=1) from exc
+    if not rows:
+        console.print("No detections available in the Parquet file.", style="yellow")
+        return
+    headers = groups + ["detections", "avg_confidence"]
+    table = Table(title="Detection summary", expand=True)
+    for header in headers:
+        table.add_column(header)
+    for row in rows[:limit]:
+        formatted = [str(value) if value is not None else "" for value in row]
+        if len(formatted) == len(headers):
+            table.add_row(*formatted)
+    console.print(table)
+    if output:
+        lines = [",".join(headers)]
+        for row in rows:
+            line = ",".join("" if value is None else str(value) for value in row)
+            lines.append(line)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text("\n".join(lines) + "\n")
+        console.print(f"Wrote summary CSV to {output}")
 
 
 def main() -> None:

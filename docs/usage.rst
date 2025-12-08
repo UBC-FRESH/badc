@@ -87,28 +87,46 @@ outputs default to ``<dataset>/artifacts/infer`` so you can immediately ``datala
 GPU planning helpers::
 
    $ badc gpus
-   Detected GPUs:
-    - #0: NVIDIA Quadro RTX 4000 (8129 MiB)
+   nvidia-smi reported 'Insufficient Permissions'. GPU inventory usually requires NVML access—try running `sudo nvidia-smi` to confirm the driver works or ask the cluster admin to grant your user access to the NVIDIA devices.
+   No GPUs detected via nvidia-smi.
 
 Use ``--max-gpus`` to cap the worker pool or ``--cpu-workers`` to bypass GPU detection entirely.
+When detection succeeds the utility lists each GPU (index, name, memory). If you see a permissions
+warning, escalate to the system administrator; otherwise BADC will fall back to CPU workers.
 
 .. _usage-aggregate-telemetry:
 
 Aggregate detections and monitor telemetry
 ------------------------------------------
-Summarise JSON detections into a CSV via :doc:`cli/infer`::
+Summarise detections via :doc:`cli/infer`, optionally emitting a Parquet file for DuckDB and pulling
+chunk metadata from the original manifest::
 
-   $ badc infer aggregate artifacts/infer        --output artifacts/aggregate/summary.csv
+   $ badc infer aggregate artifacts/infer \
+       --manifest manifests/XXXX-000_20251001_093000.csv \
+       --output artifacts/aggregate/summary.csv \
+       --parquet artifacts/aggregate/detections.parquet
    Wrote detection summary to artifacts/aggregate/summary.csv
+   Wrote Parquet export to artifacts/aggregate/detections.parquet
 
-Tail recent telemetry entries (see :doc:`cli/misc`) to monitor long-running jobs::
+Hand the Parquet file to :doc:`cli/report` for quick pivots::
 
-   $ badc telemetry --log data/telemetry/infer/log.jsonl
+   $ badc report summary --parquet artifacts/aggregate/detections.parquet --group-by label
+   +---------+------------+----------------+
+   | label   | detections | avg_confidence |
+   | grouse  | 42         | 0.87           |
+   +---------+------------+----------------+
+
+Telemetry logs are unique per manifest/timestamp (default path printed by ``badc infer run``). Tail
+them with :doc:`cli/infer`'s monitor view or the lightweight :doc:`cli/misc` command::
+
+   $ badc infer monitor --log data/telemetry/infer/GNWT-290_20251207T080000Z.jsonl
+   $ badc telemetry --log data/telemetry/infer/GNWT-290_20251207T080000Z.jsonl
    Telemetry records (4):
    [success] GNWT-290_chunk_1 (GPU 0) 2025-12-06T18:22:11 runtime=12.4
 
 Telemetries are JSONL files, so you can also ingest them into notebooks or log shippers for
-dashboards.
+dashboards. See :doc:`howto/aggregate-results` for a guided walkthrough tying together aggregation,
+Parquet exports, DuckDB summaries, and telemetry monitoring.
 
 See also
 --------

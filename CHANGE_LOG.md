@@ -1,3 +1,83 @@
+# 2025-12-08 — Manifest-aware aggregation
+- `badc infer aggregate` now accepts `--manifest` so chunk metadata (start/end offsets, hashes,
+  recording IDs) can be recovered from the original manifest when custom runners omit it from their
+  JSON outputs. The Parquet + CSV exports now point at the real chunk paths and infer dataset roots
+  automatically.
+- `badc.aggregate.load_detections` enriches detections with manifest data and uses `find_dataset_root`
+  to populate provenance; unit tests cover the new behavior alongside CLI coverage for the manifest
+  flag.
+- Docs (README, CLI reference, usage/how-to) now highlight the manifest option in the aggregation
+  workflow so operators know when to supply it.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+
+# 2025-12-08 — DuckDB reporting helpers
+- Fixed the Parquet summarizer (`badc.aggregate.summarize_parquet`) so it accepts valid group-by
+  columns, runs parameterised DuckDB queries, and now powers the new reporting CLI/test coverage.
+- Extended `badc infer aggregate` with a `--parquet` flag that writes the canonical detections table
+  alongside the CSV summary and reports the generated path in the CLI.
+- Added `badc report summary` (plus docs) to load the Parquet file, group by label and/or recording,
+  print Rich tables, and optionally emit another CSV; README/usage/how-to pages now walk through the
+  workflow end-to-end.
+- Documented the DuckDB analytics workflow in `docs/howto/aggregate-results.rst`, refreshed the CLI
+  reference (new report page, cross-links), and added regression tests for Parquet exports,
+  summariser validation, telemetry monitor output, and the report CLI.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+
+# 2025-12-07 — Telemetry monitor + canonical detections
+- Added `badc infer monitor` with Rich-based GPU/telemetry tables (supports `--follow` refreshes),
+  powered by the per-run telemetry logs introduced earlier.
+- Embed chunk metadata and runner information in HawkEars JSON outputs so aggregation can compute
+  recording-relative timestamps and checksums.
+- `badc infer aggregate` now produces a canonical CSV (chunk offsets, absolute timestamps, runner)
+  and supports `--parquet` exports via DuckDB for Phase 2 analytics.
+- Module updates:
+  - `src/badc/infer_scheduler.py` captures manifest offsets/metadata in `InferenceJob`.
+  - `src/badc/hawkears_runner.py` writes chunk metadata, runner labels, and GPU metrics into each
+    JSON payload.
+  - `src/badc/aggregate.py` provides Parquet helpers and extended detection schema.
+- Documentation refreshed to cover the new monitor command, telemetry behavior, and Parquet option.
+- Tests added for telemetry monitor CLI, aggregate parsing, Parquet export, and GPU metric parsing.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+
+# 2025-12-07 — Inference telemetry + GPU metrics
+- `badc infer run` now writes run-specific telemetry logs (defaulting to
+  `data/telemetry/infer/<manifest>_<timestamp>.jsonl` or `<dataset>/artifacts/telemetry/…`) and
+  surfaces the path in CLI output plus `--print-datalad-run`. A new `--telemetry-log` option allows
+  overriding the location.
+- Telemetry records now include per-GPU utilization/memory snapshots collected via `nvidia-smi`,
+  and `hawkears_runner` forwards these metrics for both success/failure events.
+- Added regression tests for telemetry path helpers, GPU metric parsing, and CLI output updates,
+  plus documentation/README notes covering the new behavior.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+
+# 2025-12-07 — Data disconnect uses datalad drop
+- `badc data disconnect --drop-content` now invokes `datalad drop --recursive --reckless auto`
+  whenever the dataset has `.datalad` metadata and DataLad is on PATH, ensuring annexed content is
+  removed cleanly before deleting the directory.
+- Added regression tests covering both the DataLad-aware path and the fallback `shutil.rmtree`
+  path, plus documentation updates describing the behavior.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+
 # 2025-12-07 — Data CLI status details
 - Enriched `badc data status` with `--details` and `--show-siblings`, including filesystem checks,
   detection of DataLad datasets, and sibling listings pulled from `datalad siblings` when available.

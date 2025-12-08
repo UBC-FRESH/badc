@@ -14,8 +14,9 @@ Overview
 * Input is always a chunk manifest CSV produced by ``badc chunk``.
 * Outputs default to ``artifacts/infer`` (or ``<dataset>/artifacts/infer`` when the manifest lives
   inside a DataLad dataset).
-* Telemetry is logged under ``data/telemetry/infer/log.jsonl`` so long runs can be monitored with
-  ``badc telemetry``.
+* Telemetry is logged per run (default ``data/telemetry/infer/<manifest>_<timestamp>.jsonl`` or
+  ``<dataset>/artifacts/telemetry/…`` when the manifest lives inside a dataset) and the CLI prints
+  the path so ``badc infer monitor`` / ``badc telemetry`` can tail it.
 * ``--print-datalad-run`` exposes a ready-to-use command for provenance-friendly workflows.
 
 ``badc infer run``
@@ -49,6 +50,12 @@ Key options:
 ``--output-dir``
    Override the destination for JSON outputs. When omitted *and* chunks live in a DataLad dataset,
    BADC writes under ``<dataset>/artifacts/infer`` so the files remain inside the dataset boundary.
+``--telemetry-log``
+   Override the telemetry log path (JSONL) that records scheduler events. Defaults to a unique file
+   per manifest/timestamp under ``data/telemetry/infer`` or ``<dataset>/artifacts/telemetry``.
+``--telemetry-log``
+   Override the telemetry log path (JSONL) that records scheduler events. Defaults to a unique file
+   per manifest/timestamp under ``data/telemetry/infer`` or ``<dataset>/artifacts/telemetry``.
 ``--print-datalad-run``
    Instead of running inference, emit a ``datalad run`` command tailored to the manifest/output pair.
 
@@ -85,6 +92,9 @@ Option reference
    * - ``--output-dir PATH``
      - Destination folder for JSON detections.
      - ``artifacts/infer`` (dataset-aware)
+   * - ``--telemetry-log PATH``
+     - Telemetry log file capturing scheduler events.
+     - Derived from manifest name
    * - ``--print-datalad-run``
      - Emit provenance-friendly command instead of executing jobs.
      - Disabled
@@ -107,6 +117,7 @@ Help excerpt
      --use-hawkears / --stub-runner  Invoke the embedded HawkEars analyzer.
      --hawkears-arg TEXT      Extra argument to pass to HawkEars (repeatable).
      --max-retries INTEGER    Maximum retries per chunk.
+     --telemetry-log PATH     Telemetry log path (JSONL).
      --print-datalad-run      Show a ready-to-run `datalad run` command.
      --help                   Show this message and exit.
 
@@ -114,8 +125,10 @@ Workflow notes:
 
 * Worker pool: BADC pairs each chunk with a ``GPUWorker`` (index + UUID) derived from ``nvidia-smi``.
   When no GPUs are detected, a CPU thread pool drives the runner.
-* Telemetry: every chunk emits a JSON record with timestamps, runtime, status, GPU index, and output
-  folder. Monitor progress via ``badc telemetry --log <file>``.
+* Telemetry: every chunk emits a JSON record with timestamps, runtime, GPU index/name, and (when
+  available) GPU utilization/memory snapshots. The CLI prints the log path; monitor progress via
+  ``badc infer monitor --log <file>`` (rich GPU summary) or ``badc telemetry --log <file>`` (plain
+  tail).
 * Failure handling: if any worker raises an exception, the scheduler stops submitting new jobs and
   re-raises the first error after threads finish.
 
@@ -133,13 +146,18 @@ Summarize detection JSON into a CSV that analysts can ingest into notebooks, Duc
 
 Usage::
 
-   badc infer aggregate artifacts/infer --output artifacts/aggregate/summary.csv
+   badc infer aggregate artifacts/infer --output artifacts/aggregate/summary.csv \
+       --parquet artifacts/aggregate/detections.parquet
 
 Behavior:
 
 * Walks the ``detections_dir`` and parses each JSON file via ``badc.aggregate`` helpers.
-* Emits a CSV with one row per detection event (columns include chunk_id, call label, start/end, and
-  HawkEars score).
+* When ``--manifest`` is supplied, missing chunk metadata (start/end offsets, hashes, recording IDs)
+  is filled from the manifest so custom runners that omit chunk metadata still aggregate cleanly.
+* Emits a CSV with canonical detection columns (chunk start/end offsets, recording-relative
+  timestamp, label, confidence, runner metadata).
+* Optionally writes a Parquet file (requires the ``duckdb`` package) suitable for DuckDB queries or
+  downstream analytics notebooks.
 * Skips empty directories with a warning so it is safe to run even before inference completes.
 
 Option reference
@@ -157,6 +175,12 @@ Option reference
    * - ``--output PATH``
      - Summary CSV destination.
      - ``artifacts/aggregate/summary.csv``
+   * - ``--manifest PATH``
+     - Optional chunk manifest CSV for metadata enrichment.
+     - Disabled
+   * - ``--parquet PATH``
+     - Optional Parquet export (requires ``duckdb``).
+     - Disabled
 
 Help excerpt
 ^^^^^^^^^^^^
@@ -165,16 +189,47 @@ Help excerpt
 
    $ badc infer aggregate --help
    Usage: badc infer aggregate [OPTIONS] DETECTIONS_DIR
-     Aggregate per-chunk detection JSON files into a summary CSV.
+     Aggregate per-chunk detection JSON files into canonical summaries.
    Arguments:
      DETECTIONS_DIR  Directory containing inference outputs (JSON).  [required]
    Options:
-     --output PATH  Summary CSV path.
-     --help         Show this message and exit.
+     --output PATH   Summary CSV path.
+     --parquet PATH  Optional Parquet export (requires duckdb).
+     --help          Show this message and exit.
 
 Common pattern::
 
    badc infer aggregate <dataset>/artifacts/infer --output <dataset>/artifacts/aggregate/summary.csv
 
-Combine with ``datalad run`` or ``git annex`` metadata to track how raw detections feed downstream
-reports.
+Combine with ``--manifest`` so chunk metadata survives even when custom runners omit per-chunk JSON
+fields. Pair the command with ``datalad run`` or ``git annex`` metadata to track how raw detections feed downstream
+reports. When ``--parquet`` is enabled you can open the file directly in DuckDB::
+
+   duckdb -c "SELECT label, count(*) FROM 'artifacts/aggregate/detections.parquet' GROUP BY 1"
+
+Hand the Parquet export to :doc:`/cli/report` for richer console summaries (group-by label,
+recording, or both) or to the :doc:`/howto/aggregate-results` workflow for notebook analysis.
+
+``badc infer monitor``
+----------------------
+
+Stream GPU utilization and per-chunk telemetry directly from the JSONL logs produced by
+``badc infer run``.
+
+Usage::
+
+   badc infer monitor --log data/telemetry/infer/GNWT-290_20251207T080000Z.jsonl --tail 20
+
+Options:
+
+``--log``
+   Telemetry log path. Defaults to ``data/telemetry/infer/log.jsonl`` but the run command prints the
+   exact location for each manifest/timestamp.
+``--tail``
+   Number of recent events to display in the lower table.
+``--follow``
+   Refresh the tables every ``--interval`` seconds (Ctrl+C to stop).
+
+Output includes a GPU summary (events processed, latest status, utilization/memory snapshots) and a
+tail of recent chunk events. Use this view during long HawkEars jobs to confirm GPUs remain busy and
+to spot failing chunks immediately.

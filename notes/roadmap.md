@@ -35,11 +35,15 @@ execution notes live alongside task-specific files under `notes/`.
       now shells out to the embedded analyzer with one thread per GPU/CPU worker and a shared job
       queue. Still need multi-process/HPC orchestration and richer JSON parsing for full label
       coverage.)*
-- [ ] Parse HawkEars JSON outputs into canonical detection schema and wire DuckDB aggregation (`notes/pipeline-plan.md`).
+- [ ] Parse HawkEars JSON outputs into canonical detection schema and wire DuckDB aggregation
+      (`notes/pipeline-plan.md`). *(Manifest metadata now flows through `badc infer aggregate --manifest`;
+      next milestone is ingesting real HawkEars detections + notebooks.)*
 - [ ] Wire `badc data connect` to the bogus dataset submodule once published (`notes/bogus-datalad.md`).
 - [ ] Build `badc chunk run` per `notes/chunk-files.md` (real chunk WAV writer + manifest linking).
 - [ ] Design the aggregated “bird call events” datastore (likely DuckDB/Parquet) and expose query
-      helpers for down-stream stats/figures.
+      helpers for down-stream stats/figures. *(Canonical Parquet export +
+      ``badc report summary`` now provide grouped counts/avg confidence; next up is richer
+      aggregation notebooks.)*
 - [ ] Wire Typer CLI commands for end-to-end runs (`badc chunk`, `badc infer`, `badc aggregate`,
       `badc report`). *(Scaffolded chunk/infer commands exist; `notes/pipeline-plan.md` now captures
       the full flow.)*
