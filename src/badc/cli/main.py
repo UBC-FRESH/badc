@@ -602,6 +602,13 @@ def chunk_orchestrate(
             help="Show per-recording `datalad run` commands instead of just the summary table.",
         ),
     ] = False,
+    apply: Annotated[
+        bool,
+        typer.Option(
+            "--apply/--plan-only",
+            help="Execute badc chunk run for every plan instead of printing only.",
+        ),
+    ] = False,
 ) -> None:
     """Plan chunk jobs across an entire dataset without touching audio files."""
 
@@ -644,6 +651,18 @@ def chunk_orchestrate(
         for plan in plans:
             command = chunk_orchestrator.render_datalad_run(plan, dataset)
             console.print(f" - {command}")
+    if apply:
+        console.print("\nApplying chunk plan…", style="bold")
+        for plan in plans:
+            console.print(f"[cyan]Chunking {plan.recording_id}[/]")
+            chunk_run(
+                file=plan.audio_path,
+                chunk_duration=plan.chunk_duration,
+                overlap=plan.overlap,
+                output_dir=plan.chunk_output_dir,
+                manifest=plan.manifest_path,
+                dry_run=False,
+            )
 
 
 @app.command("gpus")

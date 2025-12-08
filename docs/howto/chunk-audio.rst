@@ -43,7 +43,8 @@ entire DataLad dataset.
    Run each command from the dataset root to keep provenance in Git/annex.
 
 3. **Write chunks + manifests** using ``badc chunk run`` (either manually or by reusing the command
-   emitted above).
+   emitted above). If you trust the plan, append ``--apply`` to ``badc chunk orchestrate`` to run
+   every chunk job automatically.
 
    .. code-block:: console
 

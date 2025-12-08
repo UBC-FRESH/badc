@@ -1,7 +1,7 @@
 # 2025-12-09 — Chunk orchestrator scaffold
 - Added ``src/badc/chunk_orchestrator.py`` plus the ``badc chunk orchestrate`` CLI command to scan a
-  dataset's ``audio/`` tree, skip recordings that already have manifests, and emit per-recording
-  chunk plans along with ready-to-run ``datalad run`` commands.
+  dataset's ``audio/`` tree, skip recordings that already have manifests, emit per-recording chunk
+  plans, and (with ``--apply``) run ``badc chunk run`` directly.
 - Documented the workflow in ``docs/cli/chunk.rst`` and expanded ``docs/howto/chunk-audio.rst`` +
   README to explain how to use the planner for Phase 2 automation. Added
   ``notes/chunk-orchestrator.md`` and updated ``notes/pipeline-plan.md`` / roadmap context.

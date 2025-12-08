@@ -304,5 +304,5 @@ Highlights:
             --overlap 0 --output-dir artifacts/chunks/REC \
             --manifest manifests/REC.csv
 
-This command currently focuses on planning; future iterations will grow an ``--apply`` flag to
-invoke ``badc chunk run`` directly when desired.
+* ``--apply`` immediately invokes :command:`badc chunk run` for every listed recording, writing
+  manifests/chunks exactly as shown in the plan (combine with ``datalad run`` to capture provenance).

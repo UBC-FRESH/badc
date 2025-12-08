@@ -27,7 +27,6 @@ command + helpers in ``badc.chunk_orchestrator`` provide the first slice of that
          --overlap 0 --output-dir artifacts/chunks/XXXX --manifest manifests/XXXX.csv
 
 ## Next steps
-- Integrate directly with ``badc chunk run`` (optionally invoking it when ``--apply`` is supplied).
 - Persist plan metadata (CSV/JSON) so HPC submit scripts can chunk recordings in batches.
 - Extend to emit ``badc infer run-config`` scaffolding once chunking completes (closing the loop
   from audio -> manifest -> inference plan).

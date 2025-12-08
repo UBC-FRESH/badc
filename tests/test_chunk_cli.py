@@ -12,6 +12,7 @@ runner = CliRunner()
 
 
 def _write_wav(path: Path, duration_s: float = 2.0, sample_rate: int = 8000) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     frames = int(sample_rate * duration_s)
     with wave.open(str(path), "wb") as wav_file:
         wav_file.setnchannels(1)
@@ -80,3 +81,27 @@ def test_chunk_orchestrate_lists_plan(tmp_path: Path) -> None:
     assert "Chunk plan" in result.stdout
     assert "rec.wav" in result.stdout
     assert "--chunk-duration 45.0" in result.stdout
+
+
+def test_chunk_orchestrate_apply_runs_chunk(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset"
+    audio = dataset / "audio" / "rec.wav"
+    _write_wav(audio, duration_s=1.0)
+    result = runner.invoke(
+        app,
+        [
+            "chunk",
+            "orchestrate",
+            str(dataset),
+            "--chunk-duration",
+            "0.25",
+            "--overlap",
+            "0",
+            "--apply",
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    manifest = dataset / "manifests" / "rec.csv"
+    chunks_dir = dataset / "artifacts" / "chunks" / "rec"
+    assert manifest.exists()
+    assert chunks_dir.exists()

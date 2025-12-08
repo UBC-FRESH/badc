@@ -245,6 +245,7 @@ def write_manifest(
                 ]
             )
         )
+    output_csv.parent.mkdir(parents=True, exist_ok=True)
     output_csv.write_text("\n".join(lines) + "\n")
     return output_csv
 
