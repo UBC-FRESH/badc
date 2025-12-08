@@ -88,7 +88,8 @@ def test_infer_monitor_outputs_tables(tmp_path: Path) -> None:
     log_telemetry(record, log_path)
     result = runner.invoke(app, ["infer", "monitor", "--log", str(log_path)])
     assert result.exit_code == 0
-    assert "GPU Summary" in result.stdout
+    assert "GPU Utilization" in result.stdout
+    assert "Last 15 Events" in result.stdout
 
 
 def test_report_summary_cli(tmp_path: Path) -> None:

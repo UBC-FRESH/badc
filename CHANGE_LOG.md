@@ -1,3 +1,20 @@
+# 2025-12-08 — Telemetry monitor per-GPU stats
+- Redesigned ``badc infer monitor`` so the GPU table now shows per-device event counts,
+  success/failure tallies, average runtimes, utilization trends (min/avg/max), and peak VRAM usage
+  derived from the recorded ``gpu_metrics`` blocks. Added helper utilities to aggregate telemetry
+  entries and updated the CLI tests to cover the richer output.
+- The monitor tail continues to show recent chunk events but now shares the same metric extractor,
+  ensuring utilization/memory snapshots match the summary view across both tables.
+- Documentation (README, usage guide, CLI reference) now calls out the per-GPU stats so operators
+  know what to expect during long HawkEars runs.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `.venv/bin/pip install pre-commit`
+  - `.venv/bin/pre-commit run --all-files`
+
 # 2025-12-08 — Bogus dataset HawkEars smoke run
 - Debugged GPU visibility in the new container: confirmed `badc gpus` after checking `nvidia-smi`
   (plain + `sudo`) so CUDA-backed inference can run on the two Quadro RTX 4000 cards.

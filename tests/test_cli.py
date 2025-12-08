@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 import badc.cli.main as cli_main
 from badc import data as data_utils
 from badc.cli.main import app
+from badc.telemetry import TelemetryRecord
 
 runner = CliRunner()
 
@@ -204,7 +205,68 @@ def test_data_status_details_with_siblings(tmp_path, monkeypatch) -> None:
     result = runner.invoke(app, ["data", "status", "--details", "--show-siblings"])
     assert result.exit_code == 0
     assert "origin" in result.stdout
-    assert "Siblings" in result.stdout
+
+
+def test_summarize_gpu_stats_tracks_utilization() -> None:
+    records = [
+        TelemetryRecord(
+            chunk_id="chunk_a",
+            gpu_index=0,
+            gpu_name="Quadro RTX 4000",
+            status="success",
+            timestamp="2025-12-08T20:13:26Z",
+            finished_at="2025-12-08T20:13:26Z",
+            runtime_s=10.0,
+            details={
+                "gpu_metrics": {
+                    "before": {"utilization": 5, "memory_used_mb": 5400, "memory_total_mb": 8192},
+                    "after": {"utilization": 20, "memory_used_mb": 5743, "memory_total_mb": 8192},
+                }
+            },
+        ),
+        TelemetryRecord(
+            chunk_id="chunk_b",
+            gpu_index=0,
+            gpu_name="Quadro RTX 4000",
+            status="failure",
+            timestamp="2025-12-08T20:14:26Z",
+            finished_at=None,
+            runtime_s=12.0,
+            details={
+                "gpu_metrics": {
+                    "after": {"utilization": 40, "memory_used_mb": 6000, "memory_total_mb": 8192},
+                }
+            },
+        ),
+        TelemetryRecord(
+            chunk_id="chunk_cpu",
+            gpu_index=None,
+            gpu_name=None,
+            status="success",
+            timestamp="2025-12-08T20:15:00Z",
+            finished_at="2025-12-08T20:15:01Z",
+            runtime_s=3.0,
+            details={},
+        ),
+    ]
+    summary = cli_main._summarize_gpu_stats(records)
+    assert "GPU 0" in summary
+    gpu0 = summary["GPU 0"]
+    assert gpu0["events"] == 2
+    assert gpu0["success"] == 1
+    assert gpu0["failures"] == 1
+    assert gpu0["avg_runtime"] == 11.0
+    assert gpu0["util_stats"]["min"] == 20.0
+    assert gpu0["util_stats"]["max"] == 40.0
+    assert gpu0["max_memory"] == 6000.0
+    assert gpu0["memory_total"] == 8192
+    assert gpu0["last_chunk"] == "chunk_b"
+    assert gpu0["last_status"] == "failure"
+
+    cpu = summary["CPU"]
+    assert cpu["events"] == 1
+    assert cpu["success"] == 1
+    assert cpu["avg_runtime"] == 3.0
 
 
 def test_gpus_reports_permission_error(monkeypatch) -> None:

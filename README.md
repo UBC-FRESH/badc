@@ -89,7 +89,8 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
   Parquet detections export via DuckDB, prints grouped counts/average confidence, and optionally
   writes another CSV for downstream notebooks.
 - `badc infer monitor --log data/telemetry/infer/<manifest>_<timestamp>.jsonl` — stream per-GPU
-  telemetry tables (utilization, memory, chunk status) for a specific run.
+  telemetry tables with events/success/failure counts, trending utilization (min/avg/max), peak VRAM
+  usage, and a live tail of recent chunk status updates.
 - `badc telemetry --log data/telemetry/infer/<manifest>_<timestamp>.jsonl` — plain tail of telemetry
   events (the run command prints the exact log path).
 - `badc gpus` — lists detected GPUs via `nvidia-smi` so we can size the HawkEars worker pool.

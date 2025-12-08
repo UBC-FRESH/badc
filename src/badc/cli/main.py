@@ -25,7 +25,7 @@ from badc.chunk_writer import ChunkMetadata, iter_chunk_metadata
 from badc.gpu import detect_gpus
 from badc.hawkears_runner import run_job
 from badc.infer_scheduler import GPUWorker, InferenceJob, load_jobs, plan_workers
-from badc.telemetry import default_log_path, load_telemetry
+from badc.telemetry import TelemetryRecord, default_log_path, load_telemetry
 
 console = Console()
 app = typer.Typer(help="Utilities for chunking and processing large bird audio corpora.")
@@ -909,42 +909,151 @@ def _format_metrics(entry: dict | None) -> str:
     return " ".join(parts) if parts else "-"
 
 
-def _build_monitor_renderable(records: list, tail: int) -> Group | Panel:
-    if not records:
-        return Panel("No telemetry entries found.", title="Telemetry")
-    gpu_summary: dict[str, dict] = defaultdict(
-        lambda: {"events": 0, "status": "-", "chunk": "-", "timestamp": "-", "metrics": "-"}
+def _select_metric_entry(details: dict | None) -> dict | None:
+    """Return the preferred GPU metric block for a telemetry record."""
+
+    if not isinstance(details, dict):
+        return None
+    gpu_metrics = details.get("gpu_metrics")
+    if not isinstance(gpu_metrics, dict):
+        return None
+    after = gpu_metrics.get("after")
+    if isinstance(after, dict):
+        return after
+    before = gpu_metrics.get("before")
+    if isinstance(before, dict):
+        return before
+    return None
+
+
+def _summarize_gpu_stats(records: list[TelemetryRecord]) -> dict[str, dict]:
+    """Aggregate telemetry entries per GPU for dashboard display."""
+
+    summaries: dict[str, dict] = defaultdict(
+        lambda: {
+            "name": None,
+            "events": 0,
+            "success": 0,
+            "failures": 0,
+            "runtime_sum": 0.0,
+            "runtime_samples": 0,
+            "util_samples": [],
+            "memory_samples": [],
+            "memory_total": None,
+            "last_status": "-",
+            "last_chunk": "-",
+            "last_timestamp": "-",
+            "last_metrics": None,
+        }
     )
     for rec in records:
         key = f"GPU {rec.gpu_index}" if rec.gpu_index is not None else "CPU"
-        gpu_summary[key]["events"] += 1
-        gpu_summary[key]["status"] = rec.status
-        gpu_summary[key]["chunk"] = rec.chunk_id
-        gpu_summary[key]["timestamp"] = rec.timestamp
-        metrics_block = None
-        if isinstance(rec.details, dict):
-            gm = rec.details.get("gpu_metrics")
-            if isinstance(gm, dict):
-                metrics_block = gm.get("after") or gm.get("before")
-        gpu_summary[key]["metrics"] = _format_metrics(metrics_block)
-        gpu_summary[key]["runtime"] = rec.runtime_s or 0.0
-    gpu_table = Table(title="GPU Summary", expand=True)
+        summary = summaries[key]
+        summary["name"] = rec.gpu_name or summary["name"] or key
+        summary["events"] += 1
+        if rec.status.lower() == "success":
+            summary["success"] += 1
+        elif rec.status.lower() == "failure":
+            summary["failures"] += 1
+        if rec.runtime_s is not None:
+            summary["runtime_sum"] += rec.runtime_s
+            summary["runtime_samples"] += 1
+        metric_entry = _select_metric_entry(rec.details)
+        if metric_entry:
+            summary["last_metrics"] = metric_entry
+            util = metric_entry.get("utilization")
+            if isinstance(util, (int, float)):
+                summary["util_samples"].append(float(util))
+            mem_used = metric_entry.get("memory_used_mb")
+            if isinstance(mem_used, (int, float)):
+                summary["memory_samples"].append(float(mem_used))
+            mem_total = metric_entry.get("memory_total_mb")
+            if isinstance(mem_total, (int, float)):
+                summary["memory_total"] = int(mem_total)
+        summary["last_status"] = rec.status
+        summary["last_chunk"] = rec.chunk_id
+        summary["last_timestamp"] = rec.timestamp or summary["last_timestamp"]
+    finalized: dict[str, dict] = {}
+    for key, data in summaries.items():
+        avg_runtime = (
+            data["runtime_sum"] / data["runtime_samples"] if data["runtime_samples"] else None
+        )
+        util_samples = data["util_samples"]
+        if util_samples:
+            util_stats = {
+                "min": min(util_samples),
+                "avg": sum(util_samples) / len(util_samples),
+                "max": max(util_samples),
+            }
+        else:
+            util_stats = None
+        mem_samples = data["memory_samples"]
+        max_memory = max(mem_samples) if mem_samples else None
+        finalized[key] = {
+            "name": data["name"] or key,
+            "events": data["events"],
+            "success": data["success"],
+            "failures": data["failures"],
+            "avg_runtime": avg_runtime,
+            "util_stats": util_stats,
+            "max_memory": max_memory,
+            "memory_total": data["memory_total"],
+            "last_status": data["last_status"],
+            "last_chunk": data["last_chunk"],
+            "last_timestamp": data["last_timestamp"],
+            "last_metrics": data["last_metrics"],
+        }
+    return finalized
+
+
+def _build_monitor_renderable(records: list, tail: int) -> Group | Panel:
+    if not records:
+        return Panel("No telemetry entries found.", title="Telemetry")
+    summary = _summarize_gpu_stats(records)
+    gpu_table = Table(title="GPU Utilization", expand=True)
     gpu_table.add_column("GPU")
     gpu_table.add_column("Events", justify="right")
-    gpu_table.add_column("Status")
-    gpu_table.add_column("Chunk")
-    gpu_table.add_column("Runtime (s)", justify="right")
-    gpu_table.add_column("Metrics")
-    for gpu_name in sorted(gpu_summary):
-        entry = gpu_summary[gpu_name]
-        runtime_display = f"{entry.get('runtime', 0.0):.1f}" if entry.get("runtime") else "-"
+    gpu_table.add_column("Success", justify="right")
+    gpu_table.add_column("Fail", justify="right")
+    gpu_table.add_column("Avg Runtime (s)", justify="right")
+    gpu_table.add_column("Util% (min/avg/max)", justify="right")
+    gpu_table.add_column("VRAM max (MiB)", justify="right")
+    gpu_table.add_column("Last Status")
+    gpu_table.add_column("Last Chunk")
+    gpu_table.add_column("Updated")
+    for gpu_name in sorted(summary):
+        entry = summary[gpu_name]
+        label = gpu_name
+        if entry["name"] and entry["name"] != gpu_name:
+            label = f"{gpu_name} — {entry['name']}"
+        avg_runtime = entry["avg_runtime"]
+        runtime_display = f"{avg_runtime:.1f}" if avg_runtime is not None else "-"
+        util_stats = entry["util_stats"]
+        if util_stats:
+            util_display = (
+                f"{util_stats['min']:.0f}/{util_stats['avg']:.0f}/{util_stats['max']:.0f}"
+            )
+        else:
+            util_display = "-"
+        if entry["max_memory"] is not None:
+            if entry["memory_total"]:
+                mem_display = f"{entry['max_memory']:.0f}/{entry['memory_total']} "
+            else:
+                mem_display = f"{entry['max_memory']:.0f} "
+            mem_display += "MiB"
+        else:
+            mem_display = "-"
         gpu_table.add_row(
-            gpu_name,
+            label,
             str(entry["events"]),
-            entry["status"],
-            entry["chunk"],
+            str(entry["success"]),
+            str(entry["failures"]),
             runtime_display,
-            entry["metrics"],
+            util_display,
+            mem_display,
+            entry["last_status"],
+            entry["last_chunk"],
+            entry["last_timestamp"] or "-",
         )
     tail_table = Table(title=f"Last {tail} Events", expand=True)
     tail_table.add_column("Time")
@@ -954,18 +1063,13 @@ def _build_monitor_renderable(records: list, tail: int) -> Group | Panel:
     tail_table.add_column("Runtime (s)")
     tail_table.add_column("Metrics")
     for rec in records[-tail:]:
-        metrics_block = None
-        if isinstance(rec.details, dict):
-            gm = rec.details.get("gpu_metrics")
-            if isinstance(gm, dict):
-                metrics_block = gm.get("after") or gm.get("before")
         tail_table.add_row(
             rec.timestamp,
             rec.status,
             rec.chunk_id,
             f"{rec.gpu_index}" if rec.gpu_index is not None else "CPU",
             "-" if rec.runtime_s is None else f"{rec.runtime_s:.1f}",
-            _format_metrics(metrics_block),
+            _format_metrics(_select_metric_entry(rec.details)),
         )
     return Group(gpu_table, tail_table)
 
