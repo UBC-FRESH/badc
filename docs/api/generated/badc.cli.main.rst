@@ -18,6 +18,7 @@
       infer_aggregate
       infer_monitor
       infer_run
+      infer_run_config
       list_gpus
       main
       report_quicklook

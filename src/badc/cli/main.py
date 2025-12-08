@@ -7,9 +7,10 @@ import shlex
 import subprocess
 import threading
 import time
+import tomllib
 from collections import defaultdict
 from pathlib import Path
-from typing import Annotated, Optional, Sequence
+from typing import Annotated, Any, Optional, Sequence
 
 import typer
 from rich.console import Console, Group
@@ -44,6 +45,57 @@ app.add_typer(report_app, name="report")
 
 def _print_header() -> None:
     console.rule("Bird Acoustic Data Compiler")
+
+
+def _load_infer_config(config_path: Path) -> dict[str, Any]:
+    """Parse a TOML config describing a HawkEars inference run."""
+
+    try:
+        raw = config_path.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:  # pragma: no cover - defensive
+        raise typer.BadParameter(
+            f"Config file {config_path} does not exist.", param_hint="config"
+        ) from exc
+    try:
+        config = tomllib.loads(raw)
+    except tomllib.TOMLDecodeError as exc:
+        raise typer.BadParameter(f"Failed to parse {config_path}: {exc}") from exc
+
+    runner_cfg = config.get("runner")
+    if not isinstance(runner_cfg, dict):
+        raise typer.BadParameter(
+            "Config must define a [runner] table.", param_hint="[runner]"
+        ) from None
+    manifest = runner_cfg.get("manifest")
+    if not manifest:
+        raise typer.BadParameter(
+            "Config [runner] section requires 'manifest'.", param_hint="runner.manifest"
+        ) from None
+    telemetry_log = runner_cfg.get("telemetry_log")
+    hawkears_cfg = config.get("hawkears") or {}
+    extra_args = hawkears_cfg.get("extra_args", [])
+    if isinstance(extra_args, str):
+        extra_args_list = [extra_args]
+    elif isinstance(extra_args, list):
+        extra_args_list = [str(arg) for arg in extra_args]
+    elif extra_args in (None, {}):
+        extra_args_list = []
+    else:
+        raise typer.BadParameter(
+            "hawkears.extra_args must be a list of strings.",
+            param_hint="hawkears.extra_args",
+        ) from None
+    return {
+        "manifest": Path(manifest),
+        "max_gpus": runner_cfg.get("max_gpus"),
+        "output_dir": Path(runner_cfg.get("output_dir", DEFAULT_INFER_OUTPUT)),
+        "runner_cmd": runner_cfg.get("runner_cmd"),
+        "telemetry_log": Path(telemetry_log) if telemetry_log else None,
+        "max_retries": runner_cfg.get("max_retries", 2),
+        "use_hawkears": runner_cfg.get("use_hawkears", False),
+        "hawkears_args": extra_args_list,
+        "cpu_workers": runner_cfg.get("cpu_workers", 1),
+    }
 
 
 @app.command()
@@ -673,6 +725,36 @@ def infer_run(
             display += ", ..."
         location_msg = display
     console.print(f"Processed {len(jobs)} jobs; outputs stored in {location_msg}")
+
+
+@infer_app.command("run-config")
+def infer_run_config(
+    config: Annotated[
+        Path, typer.Argument(help="Path to a TOML config (see configs/hawkears-*.toml).")
+    ],
+    print_datalad_run: Annotated[
+        bool,
+        typer.Option(
+            "--print-datalad-run",
+            help="Show the underlying `datalad run` command instead of executing inference.",
+        ),
+    ] = False,
+) -> None:
+    """Execute ``badc infer run`` using a TOML configuration file."""
+
+    settings = _load_infer_config(config)
+    infer_run(
+        manifest=settings["manifest"],
+        max_gpus=settings["max_gpus"],
+        output_dir=settings["output_dir"],
+        runner_cmd=settings["runner_cmd"],
+        telemetry_log=settings["telemetry_log"],
+        max_retries=settings["max_retries"],
+        use_hawkears=settings["use_hawkears"],
+        hawkears_arg=settings["hawkears_args"],
+        cpu_workers=settings["cpu_workers"],
+        print_datalad_run=print_datalad_run,
+    )
 
 
 def _run_scheduler(

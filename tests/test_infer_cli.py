@@ -24,6 +24,38 @@ def test_infer_run_placeholder(tmp_path: Path) -> None:
     assert "Telemetry log" in result.stdout
 
 
+def test_infer_run_config(tmp_path: Path) -> None:
+    manifest = tmp_path / "manifest.csv"
+    manifest.write_text(
+        "recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes\n"
+        f"rec1,chunk_a,{tmp_path / 'chunk.wav'},0,1000,0,hash,\n",
+        encoding="utf-8",
+    )
+    config = tmp_path / "hawkears-local.toml"
+    output_dir = tmp_path / "artifacts" / "infer"
+    telemetry_log = tmp_path / "telemetry.jsonl"
+    config.write_text(
+        "\n".join(
+            [
+                "[runner]",
+                f'manifest = "{manifest}"',
+                'runner_cmd = "echo stub"',
+                f'output_dir = "{output_dir}"',
+                f'telemetry_log = "{telemetry_log}"',
+                "use_hawkears = false",
+                "cpu_workers = 1",
+                "",
+                "[hawkears]",
+                'extra_args = ["--min_score", "0.5"]',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    result = runner.invoke(app, ["infer", "run-config", str(config)])
+    assert result.exit_code == 0, result.stdout
+    assert "Processed 1 jobs" in result.stdout
+
+
 def test_infer_aggregate_placeholder() -> None:
     detections_dir = Path("artifacts/infer_test")
     detections_dir.mkdir(parents=True, exist_ok=True)

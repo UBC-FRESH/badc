@@ -79,15 +79,22 @@ Sample configuration (``configs/hawkears-local.toml``):
    [paths]
    dataset_root = "data/datalad/bogus"
 
-Invoke via ``badc infer run`` by interpolating the config values manually or via a small helper
-script (future work: Typer subcommand that reads the file directly). Each key mirrors the surface
-documented in ``notes/pipeline-plan.md`` so ops notes and user docs stay aligned.
+Invoke via ``badc infer run`` by interpolating the config values manually or call the helper
+command:
+
+.. code-block:: console
+
+   $ badc infer run-config configs/hawkears-local.toml
+
+Each key mirrors the surface documented in ``notes/pipeline-plan.md`` so ops notes and user docs
+stay aligned. If you need further customization (e.g., injecting environment-specific defaults),
+use a short Python helper:
 
 Config-file driven runs
 -----------------------
 ``configs/hawkears-local.toml`` ships with the repo so you can reuse the same schema across
-environments. A tiny launcher script (or notebook cell) can read the file, translate it to CLI flags,
-and execute ``badc infer run``:
+environments. A tiny launcher script (or notebook cell) can read the file, translate it to CLI
+flags, and execute ``badc infer run`` when you need to patch values on the fly:
 
 .. code-block:: console
 
@@ -123,6 +130,7 @@ and execute ``badc infer run``:
    PY
 
 Tips:
+
 * Keep dataset-relative paths (`data/datalad/...`) so ``datalad run`` captures provenance.
 * `extra_args` map 1:1 to HawkEars' ``analyze.py`` arguments (e.g., ``--min_score``).
 * Store per-host overrides (GPU count, telemetry path) in separate TOML files, then pass the right

@@ -1,3 +1,12 @@
+# 2025-12-09 — Config-driven `badc infer run-config`
+- Added ``badc infer run-config`` so teams can point at TOML presets (e.g.,
+  ``configs/hawkears-local.toml``) instead of retyping long CLI invocations; the command reuses the
+  existing scheduler, supports ``--print-datalad-run``, and validates HawkEars extra args.
+- Documented the workflow across the CLI reference, usage guide, and local inference how-to; added a
+  regression test covering the new command.
+- Commands executed:
+  - `mkdir -p configs`
+
 # 2025-12-09 — HawkEars config schema + docs
 - Added ``configs/hawkears-local.toml`` as the canonical HawkEars runner template covering manifest
   paths, GPU/CPU limits, telemetry, and passthrough HawkEars arguments so local scripts/notebooks

@@ -139,6 +139,35 @@ Example::
 
 See :ref:`usage-infer-examples` for more end-to-end command snippets (stub, GPU, and datalad-run).
 
+``badc infer run-config``
+-------------------------
+
+Load a TOML configuration (see :file:`configs/hawkears-local.toml`) and delegate to ``badc infer
+run`` so teams can share presets without copying long command lines.
+
+Usage::
+
+   badc infer run-config configs/hawkears-local.toml
+
+Behavior:
+
+* Parses the ``[runner]`` table for manifest path, GPU/CPU limits, telemetry log, and optional
+  ``runner_cmd`` overrides.
+* Forwards ``[hawkears].extra_args`` directly to ``vendor/HawkEars/analyze.py`` when
+  ``runner.use_hawkears`` is ``true``.
+* Supports ``--print-datalad-run`` to preview the exact command that would be executed from inside
+  the dataset.
+
+Options:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Option
+     - Description
+   * - ``--print-datalad-run``
+     - Show the generated ``datalad run`` command instead of executing inference.
+
 ``badc infer aggregate``
 ------------------------
 
