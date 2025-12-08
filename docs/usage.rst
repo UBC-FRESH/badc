@@ -74,7 +74,7 @@ Stub/local runs (no HawkEars, great for CI)::
 
 Leverage HawkEars directly (requires CUDA + vendor checkout)::
 
-   $ badc infer run manifests/XXXX-000_20251001_093000.csv        --use-hawkears        --hawkears-arg --confidence        --hawkears-arg 0.7
+   $ badc infer run manifests/XXXX-000_20251001_093000.csv        --use-hawkears        --hawkears-arg --min_score        --hawkears-arg 0.7
    Processed 3 jobs; outputs stored in artifacts/infer
 
 CPU-only fallback (e.g., developers without GPUs)::

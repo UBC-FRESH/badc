@@ -1,3 +1,31 @@
+# 2025-12-09 — HawkEars validation + parser fix
+- Validated ``badc infer run --use-hawkears`` end-to-end on the bogus manifest with a fresh output
+  root (``data/datalad/bogus/artifacts/infer_validation``) so we could bypass existing git-annex
+  symlinks, capture telemetry
+  (``data/telemetry/infer/XXXX-000_20251001_093000_20251208T215527Z.jsonl``), and confirm GPU 0
+  sustains ~9.5 s per 30 s chunk without CUDA errors.
+- Fixed `_parse_hawkears_labels` to treat both the chunk filename and the resolved annex object
+  name as valid so HawkEars detections (Ruffed Grouse, WTSP, Magnolia Warbler, etc.) finally flow
+  into the per-chunk JSON and canonical Parquet export.
+- Updated ``notes/chunking.md`` with the validation run details + telemetry path and corrected the
+  CLI/docs (usage guide, how-to, HPC recipes, CLI reference) to reference the actual HawkEars flags
+  (`--min_score`, `--band 0|1`) so future runs do not fail with ``unrecognized arguments``.
+- Aggregated the new JSON outputs into
+  ``data/datalad/bogus/artifacts/aggregate/XXXX-000_20251001_093000_validation_summary.csv`` and
+  ``..._validation_detections.parquet`` for Phase 2 analytics.
+- Commands executed:
+  - `.venv/bin/python vendor/HawkEars/analyze.py -h`
+  - `.venv/bin/badc infer run data/datalad/bogus/manifests/XXXX-000_20251001_093000.csv --use-hawkears --max-gpus 1`
+  - `.venv/bin/badc infer run data/datalad/bogus/manifests/XXXX-000_20251001_093000.csv --use-hawkears --max-gpus 1 --output-dir data/datalad/bogus/artifacts/infer_validation`
+  - `rm -rf data/datalad/bogus/artifacts/infer_validation`
+  - `.venv/bin/badc infer run data/datalad/bogus/manifests/XXXX-000_20251001_093000.csv --use-hawkears --max-gpus 1 --output-dir data/datalad/bogus/artifacts/infer_validation`
+  - `.venv/bin/badc infer aggregate data/datalad/bogus/artifacts/infer_validation --manifest data/datalad/bogus/manifests/XXXX-000_20251001_093000.csv --output data/datalad/bogus/artifacts/aggregate/XXXX-000_20251001_093000_validation_summary.csv --parquet data/datalad/bogus/artifacts/aggregate/XXXX-000_20251001_093000_validation_detections.parquet`
+  - `.venv/bin/ruff format src tests`
+  - `.venv/bin/ruff check src tests`
+  - `.venv/bin/pytest`
+  - `.venv/bin/sphinx-build -b html docs _build/html -W`
+  - `.venv/bin/pre-commit run --all-files`
+
 # 2025-12-09 — DataLad plan update
 - Documented the current bogus dataset workflow (submodule attach instructions, `badc data connect`
   flow, Arbutus S3 sync) and outlined the Chinook production dataset strategy (special remote setup,

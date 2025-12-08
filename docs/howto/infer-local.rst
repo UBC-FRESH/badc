@@ -27,26 +27,39 @@ expects flags.
 
 ``badc infer run`` key options:
 
-====================  ==================  ========================================================
-Flag                  Default             Purpose
-====================  ==================  ========================================================
-``--use-hawkears``    ``False``           Switch from stub runner to the embedded
-                                          ``vendor/HawkEars/analyze.py`` script.
-``--max-gpus``        auto-detect         Cap number of GPUs used (one worker per GPU).
-``--cpu-workers``     ``1``               Worker count when no GPUs are available.
-``--hawkears-arg``    ``[]``              Extra args forwarded verbatim to `analyze.py`
-                                          (repeat for each flag, e.g. ``--hawkears-arg --confidence``).
-``--runner-cmd``      ``None``            Custom command executed per chunk. Mutually exclusive with
-                                          ``--use-hawkears``.
-``--output-dir``      ``artifacts/infer`` Output root for JSON/CSV; relocates automatically when the
-                                          manifest lives inside a DataLad dataset.
-``--telemetry-log``   auto-generated      JSONL log path; defaults to
-                                          ``data/telemetry/infer/<manifest>_<timestamp>.jsonl`` or
-                                          ``<dataset>/artifacts/telemetry/…`` when the manifest
-                                          resides in a DataLad dataset.
-``--max-retries``     ``2``               Per-chunk retry budget.
-``--print-datalad-run`` ``False``         Print a ready-to-use ``datalad run`` command (no jobs run).
-====================  ==================  ========================================================
+.. list-table::
+   :header-rows: 1
+
+   * - Flag
+     - Default
+     - Purpose
+   * - ``--use-hawkears``
+     - ``False``
+     - Switch from the stub runner to ``vendor/HawkEars/analyze.py``.
+   * - ``--max-gpus``
+     - auto-detect
+     - Cap number of GPUs used (one worker per GPU).
+   * - ``--cpu-workers``
+     - ``1``
+     - Worker count when no GPUs are available.
+   * - ``--hawkears-arg``
+     - ``[]``
+     - Extra args forwarded verbatim to ``analyze.py`` (repeat per flag, e.g. ``--hawkears-arg --min_score``).
+   * - ``--runner-cmd``
+     - ``None``
+     - Custom command executed per chunk (mutually exclusive with ``--use-hawkears``).
+   * - ``--output-dir``
+     - ``artifacts/infer``
+     - Output root for JSON/CSV; relocates automatically when the manifest lives inside a DataLad dataset.
+   * - ``--telemetry-log``
+     - auto-generated
+     - JSONL log path; defaults to ``data/telemetry/infer/<manifest>_<timestamp>.jsonl`` or ``<dataset>/artifacts/telemetry/…`` inside DataLad datasets.
+   * - ``--max-retries``
+     - ``2``
+     - Per-chunk retry budget.
+   * - ``--print-datalad-run``
+     - ``False``
+     - Print a ready-to-use ``datalad run`` command (no jobs run).
 
 Sample configuration (``configs/hawkears-local.toml``):
 
@@ -56,7 +69,7 @@ Sample configuration (``configs/hawkears-local.toml``):
    use_hawkears = true
    manifest = "data/datalad/bogus/manifests/XXXX-000_20251001_093000.csv"
    max_gpus = 1
-   hawkears_args = ["--confidence", "0.75", "--batch-size", "4"]
+   hawkears_args = ["--min_score", "0.75", "--batch-size", "4"]
    output_dir = "data/datalad/bogus/artifacts/infer"
    telemetry_log = "data/datalad/bogus/artifacts/telemetry/XXXX-000_20251001_093000_local.jsonl"
 
@@ -84,7 +97,7 @@ Step 2 — Run HawkEars locally
    $ badc infer run data/datalad/bogus/manifests/XXXX-000_20251001_093000.csv \
        --use-hawkears \
        --max-gpus 1 \
-       --hawkears-arg --confidence \
+       --hawkears-arg --min_score \
        --hawkears-arg 0.75
 
 Expected outputs:

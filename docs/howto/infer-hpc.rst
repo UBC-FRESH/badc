@@ -70,8 +70,8 @@ Notebook hand-off
      --input "$MANIFEST" \
      --output artifacts/infer \
      -- \
-     apptainer exec --nv "$IMG" badc infer run "$MANIFEST" \
-       --use-hawkears --max-gpus 4 --hawkears-arg --confidence --hawkears-arg 0.7
+    apptainer exec --nv "$IMG" badc infer run "$MANIFEST" \
+      --use-hawkears --max-gpus 4 --hawkears-arg --min_score --hawkears-arg 0.7
 
 4. Submit + monitor
 -------------------

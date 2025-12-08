@@ -69,6 +69,15 @@ Observations:
   DataLad dataset). Copy or reference these logs when preparing chunk-size justification for future
   dev boxes.
 
+### Validation run — 2025-12-08
+
+- Command: `.venv/bin/badc infer run data/datalad/bogus/manifests/XXXX-000_20251001_093000.csv --use-hawkears --max-gpus 1 --output-dir data/datalad/bogus/artifacts/infer_validation`
+- Telemetry log: `data/telemetry/infer/XXXX-000_20251001_093000_20251208T215527Z.jsonl`
+- Results: all 15 × 30 s chunks completed on GPU 0 with ~9.5 s runtimes and ~5.6 GB VRAM resident. HawkEars reported real detections (e.g., Ruffed Grouse, White-throated Sparrow, Magnolia Warbler) that now flow into the canonical Parquet export at `data/datalad/bogus/artifacts/aggregate/XXXX-000_20251001_093000_validation_detections.parquet`.
+- Notes:
+  - HawkEars expects `--min_score` for confidence thresholds (not `--confidence`) and only accepts `--band 0|1`. Documentation now reflects the supported flags so probes do not fail on startup.
+  - When chunk WAVs live inside git-annex/DataLad datasets, HawkEars writes the resolved MD5 filenames into `HawkEars_labels.csv`. `_parse_hawkears_labels` now treats both the chunk filename and the resolved annex object name as valid so detections are retained.
+
 ## Open questions
 - Does HawkEars expose a Python API we can call directly, or do we shell out to its CLI?
 - How do we incorporate overlapping windows (to avoid clipping detections near boundaries)?

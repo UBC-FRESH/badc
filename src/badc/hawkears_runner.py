@@ -117,11 +117,18 @@ def _parse_hawkears_labels(
 ) -> dict:
     detections: list[dict[str, object]] = []
     if csv_path.exists():
+        expected_names = {job.chunk_path.name}
+        try:
+            resolved_name = job.chunk_path.resolve().name
+        except FileNotFoundError:
+            resolved_name = None
+        if resolved_name:
+            expected_names.add(resolved_name)
         with csv_path.open() as fh:
             reader = csv.DictReader(fh)
             for row in reader:
                 filename = Path(row.get("filename", "")).name
-                if filename and filename != job.chunk_path.name:
+                if filename and filename not in expected_names:
                     continue
                 label_code = row.get("class_code") or None
                 label_name = row.get("class_name") or None

@@ -135,7 +135,7 @@ Workflow notes:
 Example::
 
    badc infer run data/datalad/bogus/manifests/GNWT-290.csv \
-       --use-hawkears --max-gpus 2 --hawkears-arg --confidence --hawkears-arg 0.7
+       --use-hawkears --max-gpus 2 --hawkears-arg --min_score --hawkears-arg 0.7
 
 See :ref:`usage-infer-examples` for more end-to-end command snippets (stub, GPU, and datalad-run).
 
