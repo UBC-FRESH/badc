@@ -1,3 +1,15 @@
+# 2025-12-09 — HawkEars smoke test
+- Added `tests/smoke/test_hawkears_smoke.py`, a gated end-to-end test that runs `badc infer
+  run-config` against a single bogus chunk when `BADC_RUN_HAWKEARS_SMOKE=1`; ensures JSON and
+  telemetry artifacts are produced without dirtying the DataLad dataset.
+- Documented how to trigger the smoke test in `docs/howto/infer-local.rst`.
+- Commands executed:
+  - `pytest` (smoke test skipped unless the env flag is set)
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `sphinx-build -b html docs _build/html -W`
+  - `pre-commit run --all-files`
+
 # 2025-12-09 — Phase 1 chunk-size validation closure
 - Marked the roadmap chunk-size discovery task complete now that `badc chunk probe` + the HawkEars
   validation run (telemetry log `data/telemetry/infer/XXXX-000_20251001_093000_20251208T215527Z.jsonl`)

@@ -210,3 +210,15 @@ Configuration tips
 * Set `CUDA_VISIBLE_DEVICES` when testing multi-GPU scenarios.
 * Use `.venv/bin/badc infer run …` so telemetry references the correct interpreter in virtualenv
   setups.
+
+Smoke tests
+-----------
+When you need extra assurance that HawkEars still runs end-to-end, enable the gated smoke test:
+
+.. code-block:: console
+
+   $ BADC_RUN_HAWKEARS_SMOKE=1 pytest tests/smoke/test_hawkears_smoke.py
+
+The test trims the bogus manifest to a single chunk, runs ``badc infer run-config`` (real HawkEars),
+and checks that JSON/telemetry artifacts appear under a temporary path. By default the test is
+skipped so regular CI does not require GPUs or HawkEars assets.
