@@ -21,8 +21,10 @@ execution notes live alongside task-specific files under `notes/`.
       telemetry output locations) and document defaults.
 - [ ] Prototype chunk-size discovery routine that probes for the largest CUDA-safe window on the
       dev server (Quadro RTX 4000s) and records findings in `notes/chunking.md`.
-- [ ] Build local temp-dir workflow: chunk staging, HawkEars inference, raw-output collection,
-      JSON/CSV/Parquet parsing into a canonical events table.
+- [x] Build local temp-dir workflow: chunk staging, HawkEars inference, raw-output collection,
+      JSON/CSV/Parquet parsing into a canonical events table. *(Verified 2025-12-08 on the bogus
+      dataset: `badc infer run --use-hawkears` now produces manifest-driven chunks, HawkEars JSON,
+      telemetry, and canonical CSV/Parquet artifacts under `data/datalad/bogus/artifacts/`.)*
 - [ ] Provide smoke tests using the short audio sample plus CLI how-to docs.
 - [ ] Implement GPU utilization monitoring/profiling (see `notes/gpu-monitoring.md`) so we can
       verify HawkEars saturates available CUDA cores on 2-GPU dev boxes and 4-GPU Sockeye nodes.
@@ -31,13 +33,13 @@ execution notes live alongside task-specific files under `notes/`.
 - [ ] Implement chunker orchestrator that walks large datasets, schedules HawkEars jobs, and tracks
       provenance for each output segment.
 - [ ] Implement HawkEars inference scheduler per `notes/inference-plan.md` (manifest loader, GPU
-      worker pool, telemetry, output persistence). *(Manifest loader + telemetry exist; `--use-hawkears`
-      now shells out to the embedded analyzer with one thread per GPU/CPU worker and a shared job
-      queue. Still need multi-process/HPC orchestration and richer JSON parsing for full label
-      coverage.)*
+      worker pool, telemetry, output persistence). *(Manifest loader + telemetry exist; the bogus
+      dataset run exercised the GPU worker path with per-chunk utilization snapshots. Still need
+      multi-process/HPC orchestration and configurable chunk sizing per host.)*
 - [ ] Parse HawkEars JSON outputs into canonical detection schema and wire DuckDB aggregation
-      (`notes/pipeline-plan.md`). *(Manifest metadata now flows through `badc infer aggregate --manifest`;
-      next milestone is ingesting real HawkEars detections + notebooks.)*
+      (`notes/pipeline-plan.md`). *(Real HawkEars detections from the bogus dataset now serialize to
+      canonical CSV/Parquet with model metadata + chunk hashes; next milestone is packaging DuckDB
+      helpers/notebooks for Phase 2 analytics.)*
 - [ ] Wire `badc data connect` to the bogus dataset submodule once published (`notes/bogus-datalad.md`).
 - [ ] Build `badc chunk run` per `notes/chunk-files.md` (real chunk WAV writer + manifest linking).
 - [ ] Design the aggregated “bird call events” datastore (likely DuckDB/Parquet) and expose query
@@ -81,17 +83,18 @@ execution notes live alongside task-specific files under `notes/`.
 - [ ] Prep outreach materials (README story, example notebook, thesis-aligned figures).
 
 ## Detailed Next Steps
-1. **HawkEars submodule onboarding** — add the fork as a submodule, document how to sync it, and
-   draft the wrapper API that normalises configs/logging.
-2. **Chunk-size probe utility** — script the automated GPU-memory probing routine, log results for
+1. **Telemetry monitor uplift** — feed the recorded per-GPU utilization/memory snapshots into
+   `badc infer monitor` so long HawkEars runs surface live GPU usage trends (`notes/gpu-monitoring.md`).
+2. **Canonical detection serialization** — finish the HawkEars parsing story by locking down the
+   manifest-aware Parquet schema (chunk offsets, model metadata) and exposing helpers that pipe the
+   outputs straight into DuckDB for Phase 2 aggregation tooling (`notes/pipeline-plan.md`).
+3. **DuckDB aggregation helper** — automate Parquet consumption via a `badc aggregate parquet`/report
+   helper or notebook that loads the bogus detections and produces summary tables/plots for Erin to
+   review (`docs/howto/aggregate-results.rst` + notebook gallery).
+4. **Chunk-size probe utility** — script the automated GPU-memory probing routine, log results for
    the 1 min / 7 min / 60 min samples, and store telemetry in `notes/chunking.md`.
-3. **Data pipeline sketch** — outline the chunking → inference → aggregation temp-dir structure and
-   define the canonical events schema before coding.
-4. **Data management plan** — flesh out `notes/datalad-plan.md`, scaffold the bogus dataset, and
+5. **Data management plan** — flesh out `notes/datalad-plan.md`, scaffold the bogus dataset, and
    draft the Chinook special-remote workflow ahead of the 60 TB ingest.
-5. **GPU monitoring plan** — implement the telemetry helper from `notes/gpu-monitoring.md` so
-   chunking/inference runs capture CUDA utilization across both the 2-GPU dev server and 4-GPU
-   Sockeye nodes.
 
 ## Backlog & Ideas
 - GPU-aware scheduling heuristics that prioritise short chunks when VRAM is scarce.

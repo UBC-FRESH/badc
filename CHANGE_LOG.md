@@ -1,3 +1,27 @@
+# 2025-12-08 — Bogus dataset HawkEars smoke run
+- Debugged GPU visibility in the new container: confirmed `badc gpus` after checking `nvidia-smi`
+  (plain + `sudo`) so CUDA-backed inference can run on the two Quadro RTX 4000 cards.
+- Initialised the data submodules, reconnected the bogus DataLad dataset, and hydrated the annexed
+  audio so bogus fixtures are available locally; telemetry now records GPU utilization/memory for
+  every chunk in `data/datalad/bogus/artifacts/telemetry/`.
+- Ran a full end-to-end pass (`badc infer run --use-hawkears --manifest
+  data/datalad/bogus/manifests/XXXX-000_20251001_093000.csv --max-gpus 1`) to generate chunk WAVs,
+  HawkEars JSON detections, canonical CSV/Parquet outputs, and aggregate summaries that show real
+  species hits (WTSP, BAWW, BTNWs, etc.).
+- Validated the Parquet/CSV via `badc report summary
+  data/datalad/bogus/artifacts/aggregate/XXXX-000_20251001_093000_detections.parquet`, confirming
+  the manifest-aware aggregation schema and telemetry plumbing behave as designed.
+- Commands executed:
+  - `badc gpus`
+  - `nvidia-smi`
+  - `sudo nvidia-smi`
+  - `git submodule update --init --recursive`
+  - `badc data connect bogus --pull`
+  - `git annex sync origin`
+  - `datalad get -r .`
+  - `badc infer run --use-hawkears --manifest data/datalad/bogus/manifests/XXXX-000_20251001_093000.csv --max-gpus 1`
+  - `badc report summary data/datalad/bogus/artifacts/aggregate/XXXX-000_20251001_093000_detections.parquet`
+
 # 2025-12-08 — HawkEars detection metadata
 - Hooked `badc infer run --use-hawkears` into the real HawkEars output format: `_parse_hawkears_labels`
   now captures label codes/names, detection end offsets, and the HawkEars `model_version` so every
