@@ -11,3 +11,4 @@ examples, and cross-links to related how-tos.
    chunk
    infer
    misc
+   report

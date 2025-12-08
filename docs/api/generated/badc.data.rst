@@ -4,16 +4,12 @@
 .. automodule:: badc.data
 
    
-   
-   
-
-   
-   
    .. rubric:: Functions
 
    .. autosummary::
    
       available_method
+      collect_dataset_statuses
       connect_dataset
       disconnect_dataset
       find_dataset_root
@@ -25,21 +21,11 @@
       resolve_dataset_path
       save_data_config
    
-   
-
-   
-   
    .. rubric:: Classes
 
    .. autosummary::
    
       DatasetSpec
+      DatasetStatus
+      SiblingInfo
    
-   
-
-   
-   
-   
-
-
-

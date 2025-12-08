@@ -4,11 +4,6 @@
 .. automodule:: badc.cli.main
 
    
-   
-   
-
-   
-   
    .. rubric:: Functions
 
    .. autosummary::
@@ -21,21 +16,11 @@
       data_disconnect
       data_status
       infer_aggregate
+      infer_monitor
       infer_run
       list_gpus
       main
+      report_summary
       telemetry_monitor
       version
    
-   
-
-   
-   
-   
-
-   
-   
-   
-
-
-

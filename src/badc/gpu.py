@@ -21,14 +21,51 @@ class GPUInfo:
     """Total memory capacity (MiB)."""
 
 
-def detect_gpus() -> List[GPUInfo]:
+@dataclass
+class GPUMetrics:
+    """Snapshot of GPU utilization and memory usage."""
+
+    index: int
+    utilization: int | None
+    memory_used_mb: int | None
+    memory_total_mb: int | None
+
+
+@dataclass
+class GPUDetectionResult:
+    """Structured output from :func:`detect_gpus`."""
+
+    gpus: List[GPUInfo]
+    """List of detected GPUs (empty when detection fails)."""
+
+    diagnostic: str | None = None
+    """Human-readable explanation when detection fails."""
+
+
+def _diagnostic_from_error(message: str | None, exception: Exception | None = None) -> str:
+    """Return a friendly diagnostic string for GPU detection failures."""
+
+    msg = (message or "").strip()
+    if "Insufficient Permissions" in msg:
+        return (
+            "nvidia-smi reported 'Insufficient Permissions'. GPU inventory usually requires "
+            "NVML access—try running `sudo nvidia-smi` to confirm the driver works or ask the "
+            "cluster admin to grant your user access to the NVIDIA devices."
+        )
+    if msg:
+        return msg
+    if exception:
+        return f"Failed to run nvidia-smi: {exception}"
+    return "Failed to run nvidia-smi (unknown error)."
+
+
+def detect_gpus() -> GPUDetectionResult:
     """Detect GPUs using ``nvidia-smi`` and return structured metadata.
 
     Returns
     -------
-    list of GPUInfo
-        One entry per GPU reported by ``nvidia-smi``. Returns an empty list when
-        the command is unavailable or fails.
+    GPUDetectionResult
+        The inventory plus an optional diagnostic message describing why detection failed.
     """
 
     try:
@@ -38,8 +75,19 @@ def detect_gpus() -> List[GPUInfo]:
             text=True,
             check=True,
         )
-    except (OSError, subprocess.CalledProcessError):
-        return []
+    except FileNotFoundError:
+        diagnostic = (
+            "nvidia-smi is not available on PATH. Install the NVIDIA drivers or ensure "
+            "CUDA utilities are accessible."
+        )
+        return GPUDetectionResult(gpus=[], diagnostic=diagnostic)
+    except subprocess.CalledProcessError as exc:
+        diagnostic = _diagnostic_from_error(exc.stderr, exc)
+        return GPUDetectionResult(gpus=[], diagnostic=diagnostic)
+    except OSError as exc:
+        diagnostic = _diagnostic_from_error(None, exc)
+        return GPUDetectionResult(gpus=[], diagnostic=diagnostic)
+
     infos: List[GPUInfo] = []
     for line in result.stdout.strip().splitlines():
         if not line:
@@ -55,4 +103,47 @@ def detect_gpus() -> List[GPUInfo]:
         except ValueError:
             memory_total_mb = 0
         infos.append(GPUInfo(index=index, name=name, memory_total_mb=memory_total_mb))
-    return infos
+    return GPUDetectionResult(gpus=infos)
+
+
+def query_gpu_metrics(index: int) -> GPUMetrics | None:
+    """Return utilization + memory stats for ``index`` via ``nvidia-smi``."""
+
+    try:
+        result = subprocess.run(
+            [
+                "nvidia-smi",
+                f"--id={index}",
+                "--query-gpu=utilization.gpu,memory.used,memory.total",
+                "--format=csv,noheader,nounits",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError, OSError):
+        return None
+    line = result.stdout.strip().splitlines()
+    if not line:
+        return None
+    parts = [p.strip() for p in line[0].split(",")]
+    if len(parts) != 3:
+        return None
+    try:
+        util = int(parts[0])
+    except ValueError:
+        util = None
+    try:
+        mem_used = int(parts[1])
+    except ValueError:
+        mem_used = None
+    try:
+        mem_total = int(parts[2])
+    except ValueError:
+        mem_total = None
+    return GPUMetrics(
+        index=index,
+        utilization=util,
+        memory_used_mb=mem_used,
+        memory_total_mb=mem_total,
+    )

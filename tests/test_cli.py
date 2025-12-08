@@ -141,6 +141,7 @@ def test_infer_print_datalad_run(tmp_path) -> None:
     result = runner.invoke(app, ["infer", "run", str(manifest), "--print-datalad-run"])
     assert result.exit_code == 0
     assert "datalad run" in result.stdout
+    assert "--telemetry-log" in result.stdout
 
 
 def test_data_status_summary(tmp_path, monkeypatch) -> None:

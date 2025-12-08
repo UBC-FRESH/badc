@@ -4,11 +4,6 @@
 .. automodule:: badc.chunking
 
    
-   
-   
-
-   
-   
    .. rubric:: Functions
 
    .. autosummary::
@@ -20,21 +15,9 @@
       run_inference_on_chunks
       write_manifest
    
-   
-
-   
-   
    .. rubric:: Classes
 
    .. autosummary::
    
       ChunkProbeResult
    
-   
-
-   
-   
-   
-
-
-

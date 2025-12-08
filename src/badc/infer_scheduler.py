@@ -10,7 +10,7 @@ from __future__ import annotations
 import csv
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 from badc.gpu import detect_gpus
 from badc.telemetry import TelemetryRecord, log_telemetry, now_iso
@@ -28,6 +28,21 @@ class InferenceJob:
 
     recording_id: str
     """Recording identifier used to group outputs and telemetry."""
+
+    start_ms: int | None = None
+    """Chunk start offset relative to the original recording."""
+
+    end_ms: int | None = None
+    """Chunk end offset relative to the original recording."""
+
+    overlap_ms: int | None = None
+    """Overlap applied between chunks."""
+
+    sha256: str | None = None
+    """Optional checksum for the chunk contents."""
+
+    notes: str | None = None
+    """Optional notes column from the manifest."""
 
 
 @dataclass
@@ -59,18 +74,26 @@ def load_jobs(manifest: Path) -> List[InferenceJob]:
         reader = csv.DictReader(fh)
         jobs: List[InferenceJob] = []
         for row in reader:
+            start_ms = _parse_optional_int(row.get("start_ms"))
+            end_ms = _parse_optional_int(row.get("end_ms"))
+            overlap_ms = _parse_optional_int(row.get("overlap_ms"))
             jobs.append(
                 InferenceJob(
                     chunk_id=row["chunk_id"],
                     chunk_path=Path(row["source_path"]),
                     recording_id=row["recording_id"],
+                    start_ms=start_ms,
+                    end_ms=end_ms,
+                    overlap_ms=overlap_ms,
+                    sha256=row.get("sha256") or None,
+                    notes=row.get("notes") or None,
                 )
             )
     return jobs
 
 
-def plan_workers(max_gpus: int | None = None) -> List[GPUWorker]:
-    """Detect GPUs and return worker descriptors.
+def plan_workers(max_gpus: int | None = None) -> Tuple[List[GPUWorker], str | None]:
+    """Detect GPUs and return worker descriptors plus diagnostics.
 
     Parameters
     ----------
@@ -79,17 +102,28 @@ def plan_workers(max_gpus: int | None = None) -> List[GPUWorker]:
 
     Returns
     -------
-    list of GPUWorker
-        GPU indices/names suitable for binding to worker threads.
+    tuple
+        ``(workers, diagnostic)`` where ``workers`` is a list of GPU descriptors and
+        ``diagnostic`` is a message explaining why detection failed (``None`` on success).
     """
 
-    infos = detect_gpus()
+    detection = detect_gpus()
+    infos = detection.gpus
     if not infos:
-        return []
+        return [], detection.diagnostic
     workers = [GPUWorker(index=info.index, name=info.name) for info in infos]
     if max_gpus is not None:
         workers = workers[:max_gpus]
-    return workers
+    return workers, detection.diagnostic
+
+
+def _parse_optional_int(value: str | None) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        return int(float(value))
+    except ValueError:
+        return None
 
 
 def log_scheduler_event(
@@ -99,6 +133,7 @@ def log_scheduler_event(
     details: dict,
     runtime_s: float | None = None,
     finished_at: str | None = None,
+    telemetry_path: Path | None = None,
 ) -> None:
     """Persist a telemetry record to ``data/telemetry/infer/log.jsonl``.
 
@@ -128,4 +163,5 @@ def log_scheduler_event(
         runtime_s=runtime_s,
         details=details,
     )
-    log_telemetry(record, Path("data/telemetry/infer/log.jsonl"))
+    log_path = telemetry_path or Path("data/telemetry/infer/log.jsonl")
+    log_telemetry(record, log_path)

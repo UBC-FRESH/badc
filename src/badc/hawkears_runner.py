@@ -20,11 +20,33 @@ from typing import Sequence
 
 from badc import hawkears
 from badc.data import find_dataset_root
+from badc.gpu import GPUMetrics, query_gpu_metrics
 from badc.infer_scheduler import GPUWorker, InferenceJob, log_scheduler_event
 from badc.telemetry import now_iso
 
 RAW_OUTPUT_SUFFIX = "_hawkears"
 LABELS_FILENAME = "HawkEars_labels.csv"
+
+
+def _metrics_payload(metrics: GPUMetrics | None) -> dict[str, int | None] | None:
+    if not metrics:
+        return None
+    return {
+        "index": metrics.index,
+        "utilization": metrics.utilization,
+        "memory_used_mb": metrics.memory_used_mb,
+        "memory_total_mb": metrics.memory_total_mb,
+    }
+
+
+def _chunk_metadata(job: InferenceJob) -> dict[str, int | str | None]:
+    return {
+        "start_ms": job.start_ms,
+        "end_ms": job.end_ms,
+        "overlap_ms": job.overlap_ms,
+        "sha256": job.sha256,
+        "notes": job.notes,
+    }
 
 
 def _build_command(
@@ -68,6 +90,8 @@ def _write_stub_output(
         "status": "stub",
         "detections": [],
         "meta": {"attempt": attempt},
+        "chunk": _chunk_metadata(job),
+        "runner": "stub",
     }
     if dataset_root:
         payload["dataset_root"] = str(dataset_root)
@@ -83,7 +107,13 @@ def _seconds_to_ms(value: str | None) -> int | None:
         return None
 
 
-def _parse_hawkears_labels(csv_path: Path, job: InferenceJob) -> dict:
+def _parse_hawkears_labels(
+    csv_path: Path,
+    job: InferenceJob,
+    *,
+    dataset_root: Path | None,
+    runner: str,
+) -> dict:
     detections: list[dict[str, object]] = []
     if csv_path.exists():
         with csv_path.open() as fh:
@@ -102,13 +132,18 @@ def _parse_hawkears_labels(csv_path: Path, job: InferenceJob) -> dict:
                     }
                 )
     status = "ok" if detections else "no_detections" if csv_path.exists() else "no_output"
-    return {
+    payload = {
         "chunk_id": job.chunk_id,
         "recording_id": job.recording_id,
         "source_path": str(job.chunk_path),
         "status": status,
         "detections": detections,
+        "chunk": _chunk_metadata(job),
+        "runner": runner,
     }
+    if dataset_root:
+        payload["dataset_root"] = str(dataset_root)
+    return payload
 
 
 def run_job(
@@ -120,6 +155,7 @@ def run_job(
     use_hawkears: bool = False,
     hawkears_args: Sequence[str] | None = None,
     dataset_root: Path | None = None,
+    telemetry_path: Path | None = None,
 ) -> Path:
     """Execute a single inference job and return the JSON output path.
 
@@ -166,6 +202,7 @@ def run_job(
     output_path = recording_dir / f"{job.chunk_id}.json"
     hawkears_output_dir = recording_dir / f"{job.chunk_id}{RAW_OUTPUT_SUFFIX}"
     dataset_root = dataset_root or find_dataset_root(job.chunk_path)
+    runner_label = "hawkears" if use_hawkears else ("custom" if runner_cmd else "stub")
 
     attempts = 0
     while attempts <= max_retries:
@@ -176,6 +213,7 @@ def run_job(
             worker,
             "start",
             {"attempt": attempts},
+            telemetry_path=telemetry_path,
         )
         try:
             cmd: list[str] | None = None
@@ -205,9 +243,11 @@ def run_job(
                     },
                     runtime_s=runtime,
                     finished_at=now_iso(),
+                    telemetry_path=telemetry_path,
                 )
                 return output_path
 
+            gpu_before = query_gpu_metrics(worker.index) if worker else None
             result = subprocess.run(
                 cmd,
                 env=env,
@@ -216,20 +256,43 @@ def run_job(
                 text=True,
                 check=True,
             )
+            gpu_after = query_gpu_metrics(worker.index) if worker else None
 
             if use_hawkears:
                 labels_path = hawkears_output_dir / LABELS_FILENAME
-                payload = _parse_hawkears_labels(labels_path, job)
+                payload = _parse_hawkears_labels(
+                    labels_path,
+                    job,
+                    dataset_root=dataset_root,
+                    runner=runner_label,
+                )
                 payload["hawkears_output"] = str(hawkears_output_dir)
+                output_path.write_text(json.dumps(payload))
+            elif runner_cmd:
+                payload = {
+                    "chunk_id": job.chunk_id,
+                    "recording_id": job.recording_id,
+                    "source_path": str(job.chunk_path),
+                    "status": "ok",
+                    "detections": [],
+                    "chunk": _chunk_metadata(job),
+                    "runner": runner_label,
+                }
                 if dataset_root:
                     payload["dataset_root"] = str(dataset_root)
                 output_path.write_text(json.dumps(payload))
             details = {
                 "attempt": attempts,
                 "output": str(output_path),
-                "runner": "hawkears" if use_hawkears else "custom",
+                "runner": runner_label,
                 "stdout": (result.stdout or "")[-500:],
             }
+            metrics_summary = {
+                "before": _metrics_payload(gpu_before),
+                "after": _metrics_payload(gpu_after),
+            }
+            if metrics_summary["before"] or metrics_summary["after"]:
+                details["gpu_metrics"] = metrics_summary
             runtime = time.time() - start
             log_scheduler_event(
                 job.chunk_id,
@@ -238,10 +301,16 @@ def run_job(
                 details,
                 runtime_s=runtime,
                 finished_at=now_iso(),
+                telemetry_path=telemetry_path,
             )
             return output_path
         except subprocess.CalledProcessError as exc:
             runtime = time.time() - start
+            gpu_after = query_gpu_metrics(worker.index) if worker else None
+            metrics_summary = {
+                "before": _metrics_payload(gpu_before),
+                "after": _metrics_payload(gpu_after),
+            }
             log_scheduler_event(
                 job.chunk_id,
                 worker,
@@ -250,9 +319,11 @@ def run_job(
                     "attempt": attempts,
                     "returncode": exc.returncode,
                     "stderr": (exc.stderr or "")[-500:],
+                    "gpu_metrics": metrics_summary,
                 },
                 runtime_s=runtime,
                 finished_at=now_iso(),
+                telemetry_path=telemetry_path,
             )
             if attempts > max_retries:
                 raise RuntimeError(f"HawkEars failed for {job.chunk_id}") from exc

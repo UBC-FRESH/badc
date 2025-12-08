@@ -51,6 +51,30 @@ def now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def default_log_path(
+    manifest: Path,
+    *,
+    base_dir: Path | None = None,
+    timestamp: str | None = None,
+) -> Path:
+    """Return a run-specific telemetry log path derived from ``manifest``.
+
+    Parameters
+    ----------
+    manifest
+        Manifest driving the inference run.
+    base_dir
+        Override for the telemetry directory (defaults to ``data/telemetry/infer``).
+    timestamp
+        Optional timestamp slug for deterministic tests.
+    """
+
+    slug = manifest.stem.replace(" ", "_")
+    stamp = timestamp or datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    directory = base_dir or Path("data/telemetry/infer")
+    return directory / f"{slug}_{stamp}.jsonl"
+
+
 def load_telemetry(path: Path) -> list[TelemetryRecord]:
     """Load telemetry records from ``path`` (if it exists).
 
