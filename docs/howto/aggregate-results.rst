@@ -26,8 +26,10 @@ Step 1 — Aggregate JSON to CSV/Parquet
 
 2. The command crawls all JSON files, injects chunk metadata (start/end offsets, hashes, dataset
    root). When the manifest path is supplied, any missing chunk metadata is retrieved directly from
-   the CSV so custom runners do not need to embed it into their JSON payloads. The command writes the
-   canonical schema described in :mod:`badc.aggregate`.
+   the CSV so custom runners do not need to embed it into their JSON payloads. Each detection row
+   now carries both relative/absolute start **and** end timestamps, HawkEars label codes/names,
+   confidence, runner label, and the HawkEars ``model_version`` extracted from the submodule. The
+   command writes the canonical schema described in :mod:`badc.aggregate`.
 3. Commit outputs with ``datalad save`` or ``git add`` as appropriate so the provenance of each
    inference batch is preserved.
 

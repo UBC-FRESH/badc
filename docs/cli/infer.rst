@@ -154,8 +154,8 @@ Behavior:
 * Walks the ``detections_dir`` and parses each JSON file via ``badc.aggregate`` helpers.
 * When ``--manifest`` is supplied, missing chunk metadata (start/end offsets, hashes, recording IDs)
   is filled from the manifest so custom runners that omit chunk metadata still aggregate cleanly.
-* Emits a CSV with canonical detection columns (chunk start/end offsets, recording-relative
-  timestamp, label, confidence, runner metadata).
+* Emits a CSV with canonical detection columns (chunk start/end offsets, detection start/end
+  relative to the chunk, absolute timestamps, label code/name, confidence, runner + model metadata).
 * Optionally writes a Parquet file (requires the ``duckdb`` package) suitable for DuckDB queries or
   downstream analytics notebooks.
 * Skips empty directories with a warning so it is safe to run even before inference completes.
@@ -202,7 +202,9 @@ Common pattern::
    badc infer aggregate <dataset>/artifacts/infer --output <dataset>/artifacts/aggregate/summary.csv
 
 Combine with ``--manifest`` so chunk metadata survives even when custom runners omit per-chunk JSON
-fields. Pair the command with ``datalad run`` or ``git annex`` metadata to track how raw detections feed downstream
+fields. Each detection row now includes chunk-relative start/end times, absolute timestamps, label
+codes/names, confidence, runner, and ``model_version`` whenever ``--use-hawkears`` is active. Pair
+the command with ``datalad run`` or ``git annex`` metadata to track how raw detections feed downstream
 reports. When ``--parquet`` is enabled you can open the file directly in DuckDB::
 
    duckdb -c "SELECT label, count(*) FROM 'artifacts/aggregate/detections.parquet' GROUP BY 1"

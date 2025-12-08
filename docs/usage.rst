@@ -108,7 +108,10 @@ chunk metadata from the original manifest::
    Wrote detection summary to artifacts/aggregate/summary.csv
    Wrote Parquet export to artifacts/aggregate/detections.parquet
 
-Hand the Parquet file to :doc:`cli/report` for quick pivots::
+Hand the Parquet file to :doc:`cli/report` for quick pivots. Each row now carries the chunk-relative
+start/end offsets, absolute timestamps, HawkEars label code/name pairs, confidence, runner label, and
+the detected HawkEars ``model_version`` so downstream DuckDB queries have everything needed for Phase 2
+aggregation::
 
    $ badc report summary --parquet artifacts/aggregate/detections.parquet --group-by label
    +---------+------------+----------------+

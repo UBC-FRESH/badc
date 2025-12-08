@@ -29,8 +29,16 @@ def test_load_detections_with_chunk_metadata(tmp_path: Path) -> None:
         },
         "runner": "hawkears",
         "dataset_root": str(tmp_path),
+        "model_version": "HawkEars-1.2.3",
         "detections": [
-            {"timestamp_ms": 500, "label": "grouse", "confidence": 0.9},
+            {
+                "timestamp_ms": 500,
+                "end_ms": 900,
+                "label": "RUGR",
+                "label_code": "RUGR",
+                "label_name": "Ruffed Grouse",
+                "confidence": 0.9,
+            },
         ],
     }
     (detections_dir / "chunk_a.json").write_text(json.dumps(payload))
@@ -39,6 +47,11 @@ def test_load_detections_with_chunk_metadata(tmp_path: Path) -> None:
     rec = records[0]
     assert rec.absolute_time_ms == 1500
     assert rec.chunk_sha256 == "abc123"
+    assert rec.detection_end_ms == 900
+    assert rec.absolute_end_ms == 1900
+    assert rec.label_code == "RUGR"
+    assert rec.label_name == "Ruffed Grouse"
+    assert rec.model_version == "HawkEars-1.2.3"
 
 
 def test_load_detections_uses_manifest_metadata(tmp_path: Path) -> None:
@@ -81,10 +94,15 @@ def test_write_summary_and_parquet(tmp_path: Path) -> None:
             chunk_end_ms=1000,
             timestamp_ms=100,
             absolute_time_ms=100,
+            detection_end_ms=200,
+            absolute_end_ms=300,
             label="grouse",
+            label_code="RUGR",
+            label_name="Ruffed Grouse",
             confidence=0.8,
             status="ok",
             runner="hawkears",
+            model_version="HawkEars-1.2.3",
             chunk_sha256="abc123",
             source_path=tmp_path / "chunk_a.json",
             dataset_root=tmp_path,
@@ -92,12 +110,17 @@ def test_write_summary_and_parquet(tmp_path: Path) -> None:
     ]
     csv_path = write_summary_csv(records, tmp_path / "summary.csv")
     assert csv_path.exists()
+    header, row = csv_path.read_text().strip().splitlines()
+    assert "label_code" in header
+    assert "model_version" in header
+    assert "RUGR" in row
     duckdb = pytest.importorskip("duckdb")
     parquet_path = write_parquet(records, tmp_path / "detections.parquet")
     assert parquet_path.exists()
     con = duckdb.connect()
     rows = con.execute(f"SELECT * FROM '{parquet_path}'").fetchall()
     assert len(rows) == 1
+    assert len(rows[0]) == 18
     con.close()
 
 

@@ -113,6 +113,7 @@ def _parse_hawkears_labels(
     *,
     dataset_root: Path | None,
     runner: str,
+    model_version: str | None = None,
 ) -> dict:
     detections: list[dict[str, object]] = []
     if csv_path.exists():
@@ -122,11 +123,15 @@ def _parse_hawkears_labels(
                 filename = Path(row.get("filename", "")).name
                 if filename and filename != job.chunk_path.name:
                     continue
-                label = row.get("class_code") or row.get("class_name") or "unknown"
+                label_code = row.get("class_code") or None
+                label_name = row.get("class_name") or None
+                label = label_code or label_name or "unknown"
                 detections.append(
                     {
                         "timestamp_ms": _seconds_to_ms(row.get("start_time")),
                         "end_ms": _seconds_to_ms(row.get("end_time")),
+                        "label_code": label_code,
+                        "label_name": label_name,
                         "label": label,
                         "confidence": float(row["score"]) if row.get("score") else None,
                     }
@@ -143,6 +148,8 @@ def _parse_hawkears_labels(
     }
     if dataset_root:
         payload["dataset_root"] = str(dataset_root)
+    if model_version:
+        payload["model_version"] = model_version
     return payload
 
 
@@ -204,6 +211,7 @@ def run_job(
     dataset_root = dataset_root or find_dataset_root(job.chunk_path)
     runner_label = "hawkears" if use_hawkears else ("custom" if runner_cmd else "stub")
 
+    model_version = hawkears.get_hawkears_version() if use_hawkears else None
     attempts = 0
     while attempts <= max_retries:
         attempts += 1
@@ -265,6 +273,7 @@ def run_job(
                     job,
                     dataset_root=dataset_root,
                     runner=runner_label,
+                    model_version=model_version,
                 )
                 payload["hawkears_output"] = str(hawkears_output_dir)
                 output_path.write_text(json.dumps(payload))
@@ -280,6 +289,8 @@ def run_job(
                 }
                 if dataset_root:
                     payload["dataset_root"] = str(dataset_root)
+                if model_version:
+                    payload["model_version"] = model_version
                 output_path.write_text(json.dumps(payload))
             details = {
                 "attempt": attempts,

@@ -26,3 +26,20 @@ def get_hawkears_root() -> Path:
             "HawkEars submodule not found. Run 'git submodule update --init --recursive'."
         )
     return HAWKEARS_ROOT
+
+
+def get_hawkears_version() -> str | None:
+    """Return the HawkEars version string when available.
+
+    Returns
+    -------
+    str or None
+        Contents of ``vendor/HawkEars/version.txt`` or ``None`` when the file is
+        missing/empty.
+    """
+
+    version_file = get_hawkears_root() / "version.txt"
+    if not version_file.exists():
+        return None
+    text = version_file.read_text(encoding="utf-8").strip()
+    return text or None

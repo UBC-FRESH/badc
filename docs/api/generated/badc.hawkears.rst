@@ -9,4 +9,5 @@
    .. autosummary::
    
       get_hawkears_root
+      get_hawkears_version
    

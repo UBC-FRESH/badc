@@ -20,7 +20,9 @@ def test_parse_hawkears_labels_filters_filenames(tmp_path: Path) -> None:
         "other.wav,0.0,1.0,Other,OTHR,0.5\n"
     )
     job = make_job(tmp_path)
-    payload = _parse_hawkears_labels(csv_path, job, dataset_root=None, runner="hawkears")
+    payload = _parse_hawkears_labels(
+        csv_path, job, dataset_root=None, runner="hawkears", model_version="hawkears-main"
+    )
     assert payload["status"] == "ok"
     assert len(payload["detections"]) == 1
     detection = payload["detections"][0]
@@ -28,6 +30,9 @@ def test_parse_hawkears_labels_filters_filenames(tmp_path: Path) -> None:
     assert detection["timestamp_ms"] == 500
     assert detection["end_ms"] == 1500
     assert detection["confidence"] == 0.87
+    assert detection["label_code"] == "RUGR"
+    assert detection["label_name"] == "Ruffed Grouse"
+    assert payload["model_version"] == "hawkears-main"
 
 
 def test_parse_hawkears_labels_handles_missing_file(tmp_path: Path) -> None:

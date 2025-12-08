@@ -17,17 +17,22 @@ class DetectionRecord:
 
     recording_id: str
     chunk_id: str
-    chunk_start_ms: int | None
-    chunk_end_ms: int | None
-    timestamp_ms: int | None
-    absolute_time_ms: int | None
     label: str
-    confidence: float | None
     status: str
-    runner: str | None
-    chunk_sha256: str | None
     source_path: Path
-    dataset_root: Path | None
+    chunk_start_ms: int | None = None
+    chunk_end_ms: int | None = None
+    timestamp_ms: int | None = None
+    absolute_time_ms: int | None = None
+    detection_end_ms: int | None = None
+    absolute_end_ms: int | None = None
+    label_code: str | None = None
+    label_name: str | None = None
+    confidence: float | None = None
+    runner: str | None = None
+    model_version: str | None = None
+    chunk_sha256: str | None = None
+    dataset_root: Path | None = None
 
 
 @dataclass
@@ -68,12 +73,17 @@ def _parse_detection_entries(
     if dataset_root is None and chunk_source:
         dataset_root = find_dataset_root(Path(chunk_source))
     detections = data.get("detections")
+    model_version = data.get("model_version")
     if isinstance(detections, list) and detections:
         for det in detections:
             rel_ts = _to_int(det.get("timestamp_ms"))
+            rel_end = _to_int(det.get("end_ms"))
             abs_ts = None
             if chunk_start is not None and rel_ts is not None:
                 abs_ts = chunk_start + rel_ts
+            abs_end = None
+            if chunk_start is not None and rel_end is not None:
+                abs_end = chunk_start + rel_end
             records.append(
                 DetectionRecord(
                     recording_id=recording_id,
@@ -82,12 +92,17 @@ def _parse_detection_entries(
                     chunk_end_ms=chunk_end,
                     timestamp_ms=rel_ts,
                     absolute_time_ms=abs_ts,
+                    detection_end_ms=rel_end,
+                    absolute_end_ms=abs_end,
                     label=str(det.get("label", "unknown")),
+                    label_code=det.get("label_code"),
+                    label_name=det.get("label_name"),
                     confidence=float(det.get("confidence", 0.0))
                     if det.get("confidence") is not None
                     else None,
                     status="ok",
                     runner=runner,
+                    model_version=model_version,
                     chunk_sha256=sha256,
                     source_path=source_path,
                     dataset_root=dataset_root,
@@ -102,10 +117,15 @@ def _parse_detection_entries(
                 chunk_end_ms=chunk_end,
                 timestamp_ms=None,
                 absolute_time_ms=None,
+                detection_end_ms=None,
+                absolute_end_ms=None,
                 label="none",
+                label_code=None,
+                label_name=None,
                 confidence=None,
                 status=data.get("status", "unknown"),
                 runner=runner,
+                model_version=model_version,
                 chunk_sha256=sha256,
                 source_path=source_path,
                 dataset_root=dataset_root,
@@ -166,18 +186,28 @@ def write_summary_csv(records: Iterable[DetectionRecord], out_path: Path) -> Pat
 
     lines = [
         "recording_id,chunk_id,chunk_start_ms,chunk_end_ms,"
-        "timestamp_ms,absolute_time_ms,label,confidence,status,runner,source_path"
+        "timestamp_ms,absolute_time_ms,end_ms,absolute_end_ms,"
+        "label,label_code,label_name,confidence,status,runner,model_version,"
+        "chunk_sha256,source_path,dataset_root"
     ]
     for rec in records:
         ts = "" if rec.timestamp_ms is None else rec.timestamp_ms
         abs_ts = "" if rec.absolute_time_ms is None else rec.absolute_time_ms
+        end_ts = "" if rec.detection_end_ms is None else rec.detection_end_ms
+        abs_end = "" if rec.absolute_end_ms is None else rec.absolute_end_ms
         conf = "" if rec.confidence is None else rec.confidence
         chunk_start = "" if rec.chunk_start_ms is None else rec.chunk_start_ms
         chunk_end = "" if rec.chunk_end_ms is None else rec.chunk_end_ms
         runner = rec.runner or ""
+        label_code = rec.label_code or ""
+        label_name = rec.label_name or ""
+        model_version = rec.model_version or ""
+        chunk_sha = rec.chunk_sha256 or ""
+        dataset_root = "" if rec.dataset_root is None else str(rec.dataset_root)
         lines.append(
             f"{rec.recording_id},{rec.chunk_id},{chunk_start},{chunk_end},"
-            f"{ts},{abs_ts},{rec.label},{conf},{rec.status},{runner},{rec.source_path}"
+            f"{ts},{abs_ts},{end_ts},{abs_end},{rec.label},{label_code},{label_name},"
+            f"{conf},{rec.status},{runner},{model_version},{chunk_sha},{rec.source_path},{dataset_root}"
         )
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text("\n".join(lines) + "\n")
@@ -205,10 +235,15 @@ def write_parquet(records: Sequence[DetectionRecord], out_path: Path) -> Path:
             chunk_end_ms BIGINT,
             timestamp_ms BIGINT,
             absolute_time_ms BIGINT,
+            end_ms BIGINT,
+            absolute_end_ms BIGINT,
             label TEXT,
+            label_code TEXT,
+            label_name TEXT,
             confidence DOUBLE,
             status TEXT,
             runner TEXT,
+            model_version TEXT,
             chunk_sha256 TEXT,
             source_path TEXT,
             dataset_root TEXT
@@ -223,10 +258,15 @@ def write_parquet(records: Sequence[DetectionRecord], out_path: Path) -> Path:
             rec.chunk_end_ms,
             rec.timestamp_ms,
             rec.absolute_time_ms,
+            rec.detection_end_ms,
+            rec.absolute_end_ms,
             rec.label,
+            rec.label_code,
+            rec.label_name,
             rec.confidence,
             rec.status,
             rec.runner,
+            rec.model_version,
             rec.chunk_sha256,
             str(rec.source_path),
             str(rec.dataset_root) if rec.dataset_root else None,
@@ -236,7 +276,9 @@ def write_parquet(records: Sequence[DetectionRecord], out_path: Path) -> Path:
     if rows:
         con.executemany(
             """
-            INSERT INTO detections VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO detections VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            )
             """,
             rows,
         )

@@ -1,3 +1,19 @@
+# 2025-12-08 — HawkEars detection metadata
+- Hooked `badc infer run --use-hawkears` into the real HawkEars output format: `_parse_hawkears_labels`
+  now captures label codes/names, detection end offsets, and the HawkEars `model_version` so every
+  per-chunk JSON contains the true detections with confidences.
+- Extended the canonical detection schema (`badc.aggregate.DetectionRecord`) to include detection
+  end times, label metadata, model version, chunk hashes, and dataset roots. CSV/Parquet writers now
+  serialize these fields and manifest-aware enrichment fills gaps when custom runners omit metadata.
+- Docs (README, CLI reference, usage/how-to) highlight the richer detection payload, and the
+  HawkEars helper exposes `get_hawkears_version` for provenance. Tests cover the new schema and CSV
+  header as well as the HawkEars parser updates.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+
 # 2025-12-08 — Manifest-aware aggregation
 - `badc infer aggregate` now accepts `--manifest` so chunk metadata (start/end offsets, hashes,
   recording IDs) can be recovered from the original manifest when custom runners omit it from their

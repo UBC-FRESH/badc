@@ -82,7 +82,8 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
   dataset so you can `datalad save` immediately.
 - `badc infer aggregate artifacts/infer --manifest chunk_manifest.csv --parquet artifacts/aggregate/detections.parquet`
   — reads detection JSON files, pulls in chunk metadata from the manifest when available (start/end
-  offsets, hashes), writes a summary CSV, and (optionally) persists the canonical Parquet export for
+  offsets, hashes), ingests the real HawkEars label output (label code/name, detection end offset,
+  model version), writes a summary CSV, and (optionally) persists the canonical Parquet export for
   DuckDB tooling.
 - `badc report summary --parquet artifacts/aggregate/detections.parquet --group-by label` — loads the
   Parquet detections export via DuckDB, prints grouped counts/average confidence, and optionally
