@@ -12,6 +12,10 @@ Stages:
 - Temp layout: `artifacts/chunk/<recording>/<chunk_id>.wav` plus `chunk_manifest.csv`.
 - CLI commands: `badc chunk probe`, `badc chunk split`, `badc chunk run` (future, orchestrates splitting + manifest writing).
 - Telemetry: chunk durations, GPU assignments, disk usage.
+- Orchestrator: `badc chunk orchestrate` scans a dataset's `audio/` tree, skips recordings that
+  already have manifests (unless `--include-existing`), prints a Rich summary, and can emit
+  ready-to-run `datalad run` commands via `badc.chunk_orchestrator.render_datalad_run`. This is the
+  Phase 2 starting point for end-to-end automation.
 - Manifest schema (CSV + JSON metadata):
   - `recording_id` (str)
   - `chunk_id` (str; `<recording>_<start_ms>_<end_ms>`)

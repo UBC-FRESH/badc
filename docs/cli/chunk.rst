@@ -273,3 +273,36 @@ Automation tips
   dataset-relative paths intact.
 * Large jobs: combine ``badc chunk run`` with GNU Parallel or SLURM array jobs by looping over
   source WAV files and writing per-file manifests under a shared folder.
+
+``badc chunk orchestrate``
+--------------------------
+
+Plan chunking across an entire dataset without touching the audio. Useful for Phase 2 automation and
+for producing reproducible ``datalad run`` commands.
+
+Usage::
+
+   badc chunk orchestrate data/datalad/bogus \
+       --pattern "*.wav" \
+       --chunk-duration 60 \
+       --manifest-dir manifests \
+       --chunks-dir artifacts/chunks \
+       --limit 5 \
+       --print-datalad-run
+
+Highlights:
+
+* Scans ``<dataset>/audio/`` using the provided glob.
+* Skips recordings whose manifest already exists (override with ``--include-existing``).
+* Prints a Rich table summarising the recording, audio path, manifest destination, and chunk output
+  directory.
+* ``--print-datalad-run`` emits commands such as::
+
+     datalad run -m "Chunk REC" --input audio/REC.wav \
+       --output artifacts/chunks/REC --output manifests/REC.csv \
+       -- badc chunk run audio/REC.wav --chunk-duration 60 \
+            --overlap 0 --output-dir artifacts/chunks/REC \
+            --manifest manifests/REC.csv
+
+This command currently focuses on planning; future iterations will grow an ``--apply`` flag to
+invoke ``badc chunk run`` directly when desired.

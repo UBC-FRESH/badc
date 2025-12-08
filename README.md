@@ -77,6 +77,9 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
 - `badc chunk manifest` — generates a chunk manifest CSV, optionally writing chunk files + hashes
   via `--hash-chunks`.
 - `badc chunk run` — splits audio into chunk WAVs and produces a manifest for inference.
+- `badc chunk orchestrate` — scans a dataset’s `audio/` tree, lists recordings that still need
+  manifests/chunk outputs, and prints ready-to-run `datalad run` commands for reproducible batch
+  processing.
 - `badc infer run --manifest manifest.csv` — loads chunk jobs, detects GPUs, and runs the HawkEars
   runner (pass `--use-hawkears` to invoke the embedded `vendor/HawkEars/analyze.py`, or `--runner-cmd`
   to supply a custom command; stub mode remains the default for local tests). Use `--cpu-workers N`

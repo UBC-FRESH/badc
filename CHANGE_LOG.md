@@ -1,3 +1,12 @@
+# 2025-12-09 — Chunk orchestrator scaffold
+- Added ``src/badc/chunk_orchestrator.py`` plus the ``badc chunk orchestrate`` CLI command to scan a
+  dataset's ``audio/`` tree, skip recordings that already have manifests, and emit per-recording
+  chunk plans along with ready-to-run ``datalad run`` commands.
+- Documented the workflow in ``docs/cli/chunk.rst`` and expanded ``docs/howto/chunk-audio.rst`` +
+  README to explain how to use the planner for Phase 2 automation. Added
+  ``notes/chunk-orchestrator.md`` and updated ``notes/pipeline-plan.md`` / roadmap context.
+- Tests cover the planner + CLI (`tests/test_chunk_orchestrator.py`, `tests/test_chunk_cli.py`).
+
 # 2025-12-09 — GPU monitoring roadmap closure
 - Marked the Phase 1 GPU monitoring task complete: ``badc infer monitor --follow`` already exposes
   per-GPU utilization + VRAM sparklines, and `notes/gpu-monitoring.md` now documents the baseline

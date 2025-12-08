@@ -54,3 +54,29 @@ def test_chunk_split_placeholder(tmp_path: Path) -> None:
     result = runner.invoke(app, ["chunk", "split", str(audio), "--chunk-duration", "30"])
     assert result.exit_code == 0
     assert "placeholder chunks" in result.stdout
+
+
+def test_chunk_orchestrate_lists_plan(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset"
+    audio = dataset / "audio" / "rec.wav"
+    audio.parent.mkdir(parents=True, exist_ok=True)
+    audio.write_bytes(b"\x00")
+    result = runner.invoke(
+        app,
+        [
+            "chunk",
+            "orchestrate",
+            str(dataset),
+            "--pattern",
+            "*.wav",
+            "--chunk-duration",
+            "45",
+            "--overlap",
+            "1.5",
+            "--print-datalad-run",
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    assert "Chunk plan" in result.stdout
+    assert "rec.wav" in result.stdout
+    assert "--chunk-duration 45.0" in result.stdout

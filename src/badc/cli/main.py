@@ -19,7 +19,7 @@ from rich.markup import escape
 from rich.panel import Panel
 from rich.table import Table
 
-from badc import __version__, chunking
+from badc import __version__, chunk_orchestrator, chunking
 from badc import data as data_utils
 from badc.audio import get_wav_duration
 from badc.chunk_writer import ChunkMetadata, iter_chunk_metadata
@@ -556,6 +556,94 @@ def chunk_run(
     console.print(
         f"Chunks {'skipped' if dry_run else f'written to {output_dir}'}; manifest at {manifest_path}"
     )
+
+
+@chunk_app.command("orchestrate")
+def chunk_orchestrate(
+    dataset: Annotated[
+        Path,
+        typer.Argument(help="DataLad dataset that contains audio/ recordings."),
+    ] = Path("data/datalad/bogus"),
+    pattern: Annotated[
+        str,
+        typer.Option("--pattern", help="Glob used to select source audio files."),
+    ] = "*.wav",
+    chunk_duration: Annotated[
+        float,
+        typer.Option("--chunk-duration", help="Chunk duration (seconds)."),
+    ] = 60.0,
+    overlap: Annotated[
+        float,
+        typer.Option("--overlap", help="Overlap between chunks (seconds)."),
+    ] = 0.0,
+    manifest_dir: Annotated[
+        Path,
+        typer.Option("--manifest-dir", help="Directory for manifest CSVs (relative to dataset)."),
+    ] = Path("manifests"),
+    chunks_dir: Annotated[
+        Path,
+        typer.Option("--chunks-dir", help="Directory for chunk WAVs (relative to dataset)."),
+    ] = Path("artifacts/chunks"),
+    include_existing: Annotated[
+        bool,
+        typer.Option(
+            "--include-existing/--skip-existing",
+            help="Include recordings that already have manifests.",
+        ),
+    ] = False,
+    limit: Annotated[
+        int,
+        typer.Option("--limit", help="Cap number of planned recordings."),
+    ] = 0,
+    print_datalad_run: Annotated[
+        bool,
+        typer.Option(
+            "--print-datalad-run",
+            help="Show per-recording `datalad run` commands instead of just the summary table.",
+        ),
+    ] = False,
+) -> None:
+    """Plan chunk jobs across an entire dataset without touching audio files."""
+
+    dataset = dataset.expanduser()
+    try:
+        plans = chunk_orchestrator.build_chunk_plan(
+            dataset,
+            pattern=pattern,
+            chunk_duration=chunk_duration,
+            overlap=overlap,
+            manifest_dir=manifest_dir,
+            chunks_dir=chunks_dir,
+            include_existing=include_existing,
+            limit=limit or None,
+        )
+    except FileNotFoundError as exc:
+        console.print(str(exc), style="red")
+        raise typer.Exit(code=1) from exc
+
+    if not plans:
+        console.print("No recordings matched the provided criteria.", style="yellow")
+        return
+
+    table = Table(title="Chunk plan", expand=True)
+    table.add_column("Recording")
+    table.add_column("Audio")
+    table.add_column("Manifest")
+    table.add_column("Chunks dir")
+    for plan in plans:
+        table.add_row(
+            plan.recording_id,
+            str(plan.audio_path),
+            str(plan.manifest_path),
+            str(plan.chunk_output_dir),
+        )
+    console.print(table)
+
+    if print_datalad_run:
+        console.print("\nDatalad commands (run from dataset root):", style="bold")
+        for plan in plans:
+            command = chunk_orchestrator.render_datalad_run(plan, dataset)
+            console.print(f" - {command}")
 
 
 @app.command("gpus")

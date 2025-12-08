@@ -9,6 +9,7 @@
    .. autosummary::
    
       chunk_manifest
+      chunk_orchestrate
       chunk_probe
       chunk_run
       chunk_split
