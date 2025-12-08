@@ -21,11 +21,11 @@ execution notes live alongside task-specific files under `notes/`.
       telemetry output locations) and document defaults. *(Schema captured via
       `configs/hawkears-local.toml`, the updated `docs/howto/infer-local.rst` section, and the
       `notes/pipeline-plan.md` reference table.)*
-- [ ] Prototype chunk-size discovery routine that probes for the largest CUDA-safe window on the
-      dev server (Quadro RTX 4000s) and records findings in `notes/chunking.md`. *(Heuristic probe
-      implemented via `badc chunk probe` + telemetry logs captured 2025-12-09; next step is running
-      real HawkEars jobs at the recommended durations to validate the VRAM estimator and flag the
-      results as finalized.)*
+- [x] Prototype chunk-size discovery routine that probes for the largest CUDA-safe window on the
+      dev server (Quadro RTX 4000s) and records findings in `notes/chunking.md`. *(Binary-search
+      probe lives in `badc chunk probe`; validation run on 2025-12-09 (see `notes/chunking.md` +
+      telemetry log `XXXX-000_20251001_093000_20251208T215527Z.jsonl`) confirmed the recommended
+      durations, so the heuristic is now considered Phase 1-complete.)*
 - [x] Build local temp-dir workflow: chunk staging, HawkEars inference, raw-output collection,
       JSON/CSV/Parquet parsing into a canonical events table. *(Verified 2025-12-08 on the bogus
       dataset: `badc infer run --use-hawkears` now produces manifest-driven chunks, HawkEars JSON,

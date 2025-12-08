@@ -1,3 +1,13 @@
+# 2025-12-09 — Phase 1 chunk-size validation closure
+- Marked the roadmap chunk-size discovery task complete now that `badc chunk probe` + the HawkEars
+  validation run (telemetry log `data/telemetry/infer/XXXX-000_20251001_093000_20251208T215527Z.jsonl`)
+  confirm the heuristic on the dev GPUs.
+- Added a status section to `notes/chunking.md` detailing the validation evidence and capturing a
+  follow-up idea for automating future re-validations (`badc chunk validate` stub).
+- Commands executed:
+  - `apply_patch notes/roadmap.md`
+  - `apply_patch notes/chunking.md`
+
 # 2025-12-09 — Config-driven `badc infer run-config`
 - Added ``badc infer run-config`` so teams can point at TOML presets (e.g.,
   ``configs/hawkears-local.toml``) instead of retyping long CLI invocations; the command reuses the

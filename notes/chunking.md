@@ -78,6 +78,11 @@ Observations:
   - HawkEars expects `--min_score` for confidence thresholds (not `--confidence`) and only accepts `--band 0|1`. Documentation now reflects the supported flags so probes do not fail on startup.
   - When chunk WAVs live inside git-annex/DataLad datasets, HawkEars writes the resolved MD5 filenames into `HawkEars_labels.csv`. `_parse_hawkears_labels` now treats both the chunk filename and the resolved annex object name as valid so detections are retained.
 
+### Status & follow-ups
+
+- ✅ Phase 1 requirement met: `badc chunk probe` (binary-search heuristic) + the HawkEars validation run give us the finalized chunk-size guidance for the dev Quadro RTX 4000 box, logged above.
+- 🔜 Automation idea: add a thin wrapper (e.g., `badc chunk validate`) that replays the validation run on fresh hardware, compares the observed VRAM usage to the probe estimate, and appends results to this note. Track under Phase 2 tooling once higher-priority work lands.
+
 ## Open questions
 - Does HawkEars expose a Python API we can call directly, or do we shell out to its CLI?
 - How do we incorporate overlapping windows (to avoid clipping detections near boundaries)?
