@@ -18,16 +18,28 @@ execution notes live alongside task-specific files under `notes/`.
 - [x] Embed the forked HawkEars repo as a git submodule plus wrapper package providing Typer CLI
       + Python API bindings.
 - [ ] Define configuration schema for HawkEars runs (GPU/CPU toggles, batch/chunk settings,
-      telemetry output locations) and document defaults.
+      telemetry output locations) and document defaults. *(CLI flags exist across `badc infer run`
+      but we still owe a consolidated schema doc + example config file; target: add a “HawkEars
+      configuration” section to `docs/howto/infer-local.rst` + `notes/pipeline-plan.md`.)*
 - [ ] Prototype chunk-size discovery routine that probes for the largest CUDA-safe window on the
-      dev server (Quadro RTX 4000s) and records findings in `notes/chunking.md`.
+      dev server (Quadro RTX 4000s) and records findings in `notes/chunking.md`. *(Heuristic probe
+      implemented via `badc chunk probe` + telemetry logs captured 2025-12-09; next step is running
+      real HawkEars jobs at the recommended durations to validate the VRAM estimator and flag the
+      results as finalized.)*
 - [x] Build local temp-dir workflow: chunk staging, HawkEars inference, raw-output collection,
       JSON/CSV/Parquet parsing into a canonical events table. *(Verified 2025-12-08 on the bogus
       dataset: `badc infer run --use-hawkears` now produces manifest-driven chunks, HawkEars JSON,
       telemetry, and canonical CSV/Parquet artifacts under `data/datalad/bogus/artifacts/`.)*
-- [ ] Provide smoke tests using the short audio sample plus CLI how-to docs.
+- [ ] Provide smoke tests using the short audio sample plus CLI how-to docs. *(Unit tests cover the
+      CLI plumbing, but we still need an automated “happy path” that runs `badc infer run
+      --use-hawkears` against the bogus chunk + asserts that CSV/Parquet artifacts exist. Plan:
+      add a lightweight smoke test under `tests/smoke/test_hawkears_bogus.py` gated behind an
+      environment variable so local dev boxes can run it before releases.)*
 - [ ] Implement GPU utilization monitoring/profiling (see `notes/gpu-monitoring.md`) so we can
       verify HawkEars saturates available CUDA cores on 2-GPU dev boxes and 4-GPU Sockeye nodes.
+      *(Telemetry logging + `badc infer monitor` UI are in place; remaining work is to feed the
+      metrics into `badc infer monitor --follow` dashboards for multi-GPU runs and capture a
+      baseline report in `notes/gpu-monitoring.md`.)*
 
 ## Phase 2 — Data Automation & Analysis Layer
 - [ ] Implement chunker orchestrator that walks large datasets, schedules HawkEars jobs, and tracks

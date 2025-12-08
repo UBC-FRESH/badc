@@ -26,18 +26,39 @@ Stages:
 - Execution: schedule HawkEars jobs; capture stdout/stderr, GPU telemetry, and exit codes.
 - Parallelism: auto-detect GPU count/type (NVML or `nvidia-smi`) and spin up one worker per GPU,
   respecting `CUDA_VISIBLE_DEVICES` on Sockeye; allow CLI overrides.
-- CLI should expose `--max-gpus` and `--worker-pool` options, defaulting to detected values.
-- Output schema: JSONL/Parquet with fields (chunk_id, species_label, confidence, timestamp, model_version).
-- Detection schema (Parquet):
-  - `recording_id`
-  - `chunk_id`
-  - `call_timestamp_ms`
-  - `species_label`
-  - `confidence`
-  - `probabilities` (JSON/dict)
-  - `model_version`
-  - `runtime_s`
-- CLI: `badc infer run` (per manifest), `badc infer monitor` (watch GPU usage using NVML hooks).
+- Configuration surface (also documented in `docs/howto/infer-local.rst`):
+
+  +-------------------------+-------------------------------+--------------------------------------------------+
+  | Flag                    | Default                       | Purpose                                          |
+  +=========================+===============================+==================================================+
+  | ``--use-hawkears``      | ``False``                     | Switch from stub runner to vendor/HawkEars       |
+  |                         |                               | ``analyze.py``.                                  |
+  +-------------------------+-------------------------------+--------------------------------------------------+
+  | ``--max-gpus``          | Auto-detect all GPUs          | Cap worker count when GPU inventory exceeds need.|
+  +-------------------------+-------------------------------+--------------------------------------------------+
+  | ``--cpu-workers``       | ``1``                         | Worker count when no GPUs are available.         |
+  +-------------------------+-------------------------------+--------------------------------------------------+
+  | ``--hawkears-arg``      | ``[]``                        | Extra CLI args forwarded to HawkEars.            |
+  +-------------------------+-------------------------------+--------------------------------------------------+
+  | ``--runner-cmd``        | ``None``                      | Custom command (mutually exclusive with          |
+  |                         |                               | ``--use-hawkears``).                             |
+  +-------------------------+-------------------------------+--------------------------------------------------+
+  | ``--output-dir``        | ``artifacts/infer``           | Output root (auto-relocated inside DataLad       |
+  |                         |                               | datasets).                                       |
+  +-------------------------+-------------------------------+--------------------------------------------------+
+  | ``--telemetry-log``     | Auto-generated (`data/telemetry/infer/...` or dataset-relative) | Control telemetry path.        |
+  +-------------------------+-------------------------------+--------------------------------------------------+
+  | ``--max-retries``       | ``2``                         | Retry budget per chunk.                          |
+  +-------------------------+-------------------------------+--------------------------------------------------+
+  | ``--print-datalad-run`` | ``False``                     | Print a ``datalad run`` command instead of       |
+  |                         |                               | executing inference.                             |
+  +-------------------------+-------------------------------+--------------------------------------------------+
+
+- Output schema: JSON + Parquet with fields (chunk metadata, label, confidence, timestamps,
+  `runner`, `model_version`, chunk SHA, dataset root). Aggregation helpers live in
+  `badc.aggregate` and tests mirror the canonical structure.
+- Telemetry: JSONL logs (one per run) with per-chunk/per-GPU metrics; analyzed via
+  ``badc infer monitor`` / ``badc telemetry``.
 
 ## Aggregate stage
 - Combine chunk-level detections, dedupe overlapping windows, and normalize timestamps relative to original recording.
