@@ -13,7 +13,8 @@ Layout overview
 ``infer_local.ipynb``
    Run ``badc infer run`` in stub mode, inspect dataset-aware outputs, and aggregate results.
 ``aggregate_analysis.ipynb``
-   Load detection JSON/CSV/Parquet into pandas or DuckDB and produce quick sanity plots.
+   Load detection JSON/CSV/Parquet plus ``badc report quicklook`` CSV exports into pandas/DuckDB,
+   then generate quick sanity plots (top labels, chunk timelines).
 
 Execution guidelines
 --------------------

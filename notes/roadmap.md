@@ -84,8 +84,8 @@ execution notes live alongside task-specific files under `notes/`.
 - [ ] Prep outreach materials (README story, example notebook, thesis-aligned figures).
 
 ## Detailed Next Steps
-1. **Quicklook notebook wiring** — integrate the ``badc report quicklook`` CSV exports into the
-   docs/notebook gallery so Erin can review real plots without running the CLI locally.
+1. **Quicklook notebook wiring** — *(Completed 2025-12-08: `docs/notebooks/aggregate_analysis.ipynb`
+   now loads the quicklook CSV exports and demonstrates pandas plots.)*
 2. **Chunk-size probe utility** — script the automated GPU-memory probing routine, log results for
    the 1 min / 7 min / 60 min samples, and store telemetry in `notes/chunking.md`.
 3. **Data management plan** — flesh out `notes/datalad-plan.md`, scaffold the bogus dataset, and

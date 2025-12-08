@@ -61,7 +61,8 @@ Step 3 — Quicklook dashboards via ``badc report quicklook``
 
 2. The CLI prints Rich tables and ASCII sparklines so you can scan activity bursts directly in the
    terminal. When ``--output-dir`` is set, CSV snapshots land alongside the detections and can be
-   imported into notebooks or attached to CHANGE_LOG entries for asynchronous reviews.
+   imported into notebooks or attached to CHANGE_LOG entries for asynchronous reviews. The
+   :doc:`/notebooks/aggregate_analysis` example shows how to load the CSVs with pandas to build plots.
 
 Step 4 — Notebook/SQL exploration
 ---------------------------------

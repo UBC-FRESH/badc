@@ -1,3 +1,22 @@
+# 2025-12-08 — Quicklook notebook wiring
+- Ran ``badc report quicklook --parquet ... --output-dir ...`` on the bogus dataset so label/
+  recording/chunk CSV exports exist under ``artifacts/aggregate/XXXX-000_20251001_093000_quicklook``
+  (tracked via ``datalad save`` in the submodule).
+- Extended ``docs/notebooks/aggregate_analysis.ipynb`` to load the quicklook CSVs, plot detections per
+  label, and visualize chunk timelines; updated the notebook index + how-to guide to reference the
+  new workflow so Erin can review analytics without touching DuckDB directly.
+- Roadmap now records that the quicklook notebook milestone is complete and shifts focus back to the
+  chunk-size probe and data-management tasks.
+- Commands executed:
+  - `.venv/bin/badc report quicklook --parquet data/datalad/bogus/artifacts/aggregate/XXXX-000_20251001_093000_detections.parquet --output-dir data/datalad/bogus/artifacts/aggregate/XXXX-000_20251001_093000_quicklook`
+  - `cd data/datalad/bogus && datalad save artifacts/aggregate/XXXX-000_20251001_093000_quicklook -m "Add quicklook exports"`
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `.venv/bin/pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `.venv/bin/pre-commit run --all-files`
+
 # 2025-12-08 — DuckDB quicklook helper
 - Added ``badc report quicklook`` plus the underlying ``aggregate.quicklook_metrics`` helper so
   canonical Parquet files can be turned into top-label tables, recording summaries, and per-chunk
