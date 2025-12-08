@@ -401,7 +401,7 @@ def disconnect_dataset(
     if drop_content and dataset_path.exists():
         action = "removed"
         if not dry_run:
-            shutil.rmtree(dataset_path)
+            _drop_dataset_content(dataset_path)
 
     if not dry_run:
         _record_status_only(
@@ -555,3 +555,12 @@ def _update_dataset(target: Path, method: str) -> None:
     else:
         cmd = ["git", "-C", str(target), "pull", "--ff-only"]
     _run(cmd)
+
+
+def _drop_dataset_content(path: Path) -> None:
+    """Remove dataset contents, preferring ``datalad drop`` when possible."""
+
+    use_datalad = _is_datalad_dataset(path) and shutil.which("datalad")
+    if use_datalad:
+        _run(["datalad", "drop", "-d", str(path), "--recursive", "--reckless", "auto"])
+    shutil.rmtree(path)

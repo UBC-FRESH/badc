@@ -139,8 +139,9 @@ See :ref:`usage-bootstrap` for a complete checkout walkthrough.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Remove a dataset from the active registry and optionally delete its contents.
-The command never deletes anything unless you pass ``--drop-content``—that flag
-is the moral equivalent of ``datalad drop --recursive``.
+The command never deletes anything unless you pass ``--drop-content``—with that flag
+enabled BADC first runs ``datalad drop --recursive --reckless auto`` (when available)
+so annexed content is removed cleanly before the directory tree is deleted.
 
 Usage::
 
