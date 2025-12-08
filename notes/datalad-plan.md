@@ -15,34 +15,42 @@ required for connecting/disconnecting datasets at runtime.
 ## Repository tiers
 ### 1. Bogus/test dataset (public)
 - **Purpose**: smoke-test chunking/inference flows, demo CLI usage, and run CI-friendly pipelines.
-- **Contents**: curated short clips (≤10 MB each) plus metadata manifest. May include downsampled
-  HawkEars outputs for deterministic tests.
-- **Location**: GitHub repo under UBC-FRESH (e.g., `bird-audio-bogus`) initialised as a DataLad
-  dataset. Storage can be plain Git (no special remotes) so contributors can clone without
-  credentials.
-- **Tasks**:
-  - Create dataset skeleton with README describing limitations.
-  - Add it as a subdataset under `data/datalad/bogus` in this repo.
-- Provide automation (`scripts/datalad/setup_bogus.sh`) to clone/update it.
-- Provide bootstrap script (`scripts/setup_bogus_datalad.sh`) that sources `setup/datalad_config.sh`,
-  runs `datalad create`, copies the tiny audio samples, configures the GitHub remote, and executes
-  `git annex initremote arbutus-s3 ...` (which creates the bucket automatically).
-  - Keep file sizes below GitHub’s 100 MB limit; rely on Datalad/Git LFS only if necessary.
-  - Script now understands two optional safeguards:
-    - `S3_EXISTING_REMOTE_UUID` for reusing an annex bucket that was provisioned previously.
-    - `S3_RESET_CONFLICTING_BUCKET=1` to instruct the script to delete/recreate buckets whose
-      `git-annex-uuid` object cannot be read (otherwise it aborts with guidance).
-  - **Status (2025-12-06)**: bootstrap completed successfully after clearing the conflicting
-    bucket; GitHub repo `UBC-FRESH/badc-bogus-data` now exists and the Arbutus bucket was created via
-    `git annex initremote`. Next step is wiring `badc data connect bogus` so contributors can clone
-    `tmp/badc-bogus-data` into `data/datalad/bogus`.
-  - **Submodule hook**: Added as `data/datalad/bogus` now that `UBC-FRESH/badc-bogus-data` has an
-    initial commit (pushed via `datalad push`). Contributors can run `git submodule update --init`
-    to fetch the bogus dataset skeleton.
-  - **Caveat**: the “reuse existing bucket” path still doesn’t work reliably when the script fails
-    midway (git-annex keeps seeing the orphaned `git-annex-uuid`). Until we fix the workflow, the
-    only workaround after a partial failure is to delete the bucket (or at least remove its
-    `git-annex-uuid` object) manually and rerun the script.
+- **Contents**: curated short clips (≤10 MB each), manifests, and a handful of HawkEars outputs
+  (`artifacts/` tree) so CLI commands can exercise the full pipeline.
+- **Location**: GitHub repo `UBC-FRESH/badc-bogus-data` initialised as a DataLad dataset. Large
+  content lives in an Arbutus S3 bucket registered as the `arbutus-s3` special remote. The dataset
+  is tracked as a submodule at `data/datalad/bogus` inside this repo.
+
+#### Current status (2025-12-09)
+- Submodule pointer lives at `data/datalad/bogus`, so `git submodule update --init --recursive`
+  bootstraps the metadata automatically after cloning `badc`.
+- `badc data connect bogus --pull` is now part of the documented bootstrap flow; it refreshes the
+  dataset and records the path in `~/.config/badc/data.toml`.
+- Audio/content retrieval is a single command: `datalad get -r data/datalad/bogus`.
+- HawkEars outputs, chunk manifests, telemetry, and quicklook CSVs are annexed and synced to the
+  `arbutus-s3` bucket via `datalad push --to origin` (metadata + git-annex branch) and
+  `datalad push --to arbutus-s3 --data auto` (content).
+
+#### Attaching in a new dev environment
+1. `git clone https://github.com/UBC-FRESH/badc.git && cd badc`
+2. `git submodule update --init --recursive`
+3. `badc data connect bogus --pull` (writes `~/.config/badc/data.toml`)
+4. `datalad get -r data/datalad/bogus` (optional; chunks/infer outputs download on demand)
+
+#### Publishing updates
+- Make changes inside `data/datalad/bogus`, then run
+  `datalad save -m "Describe bogus update"` followed by:
+  - `datalad push --to origin` (GitHub metadata)
+  - `datalad push --to arbutus-s3 --data auto` (Arbutus object storage)
+- Commit the updated submodule pointer in the parent repo (`git add data/datalad/bogus` +
+  `git commit`).
+
+#### Troubleshooting
+- If `git annex initremote` aborts because of a stale `git-annex-uuid` object, delete the offending
+  object from the Arbutus bucket (or remove the bucket entirely) before rerunning the bootstrap
+  script.
+- The helper script `setup/datalad_config.sh` still honours `S3_EXISTING_REMOTE_UUID` and
+  `S3_RESET_CONFLICTING_BUCKET=1`; use them when recreating the bogus dataset in a fresh account.
 
 ### 2. Production dataset (restricted)
 - **Purpose**: house the 60 TB archive and authoritative HawkEars outputs for Erin’s project.
@@ -50,14 +58,61 @@ required for connecting/disconnecting datasets at runtime.
 - **Location**: DataLad dataset backed by Chinook object storage (S3-compatible special remote).
 - **Access**: restricted to PI accounts; requires UBC ARC credentials + possibly VPN.
 - **Tasks**:
-  - Set up the DataLad dataset on Chinook VM with `datalad create` + `datalad siblings add-s3` to
-    register the special remote.
-  - Document credential bootstrap (ARC tokens, environment variables, or AWS-style config files) in
-    a secure note.
-  - Publish dataset metadata to a GitHub repo (without annexed files) so collaborators can clone the
-    structure and then `datalad get` from Chinook.
-  - Define naming convention for study areas / recordings (e.g., `GNWT-290/2023/…`).
+  - Set up the DataLad dataset on Chinook VM with `datalad create` + `git annex initremote` to
+    register a restricted S3 special remote (tentative name `chinook-s3`).
+  - Publish dataset metadata to a private GitHub repo (without annexed content) so collaborators can
+    clone the structure and then `datalad get` from Chinook after authenticating.
+  - Document credential bootstrap (ARC tokens, `aws configure --profile chinook-badc`, or
+    `~/.config/badc/chinook-aws`) in a secure note.
+  - Define naming convention for study areas / recordings (e.g., `GNWT-290/2023/...`) and replicate
+    the `artifacts/` layout used in the bogus dataset so tooling stays uniform.
   - Determine versioning cadence (per ingest vs. per processing milestone) and record it here.
+
+#### Proposed bootstrap flow
+```bash
+# On a Chinook login node with git-annex + DataLad installed
+datalad create -c text2git badc-prod-data
+cd badc-prod-data
+
+# Register the restricted S3 bucket
+git annex initremote chinook-s3 \
+  type=S3 \
+  encryption=none \
+  bucket=chinook-badc-prod \
+  host=s3.chinook.computecanada.ca \
+  protocol=https \
+  requeststyle=path \
+  autoenable=true \
+  public=no
+
+# Publish metadata to GitHub
+datalad create-sibling-github \
+  --github-organization UBC-FRESH \
+  --name origin \
+  --private \
+  --publish-depends chinook-s3 \
+  badc-prod-data
+
+datalad push --to origin          # metadata / git-annex refs
+datalad push --to chinook-s3      # annexed content
+```
+
+#### Attaching production data on a workstation
+1. Ensure ARC credentials are configured (`aws configure --profile chinook-badc` or source
+   `setup/datalad_config.sh` with the correct secrets).
+2. `badc data connect production --path data/datalad/production --method datalad`
+   - Under the hood the command will clone the GitHub skeleton and auto-enable the `chinook-s3`
+     special remote.
+3. `AWS_PROFILE=chinook-badc datalad get -r data/datalad/production` (or fetch selectively).
+4. Record the dataset in `~/.config/badc/data.toml` so downstream CLI commands can locate it.
+
+#### Credential & compliance notes
+- Store Chinook access/secret keys in a shell script outside Git (`setup/datalad_config.sh` template
+  already includes placeholder variables).
+- For shared environments (Sockeye, dev servers) prefer `aws-vault` or environment modules to avoid
+  leaving credentials in history.
+- The production S3 bucket must remain private (`public=no`) to meet data-sharing agreements; any
+  public releases will go through a separate curated dataset (GIN/FRDR).
 
 ## CLI integration (`badc data connect/disconnect`)
 - Implement Typer commands under the main CLI namespace:

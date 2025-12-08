@@ -1,3 +1,10 @@
+# 2025-12-09 — DataLad plan update
+- Documented the current bogus dataset workflow (submodule attach instructions, `badc data connect`
+  flow, Arbutus S3 sync) and outlined the Chinook production dataset strategy (special remote setup,
+  credential handling, and operator bootstrap steps) in `notes/datalad-plan.md`.
+- Commands executed:
+  - `apply_patch notes/datalad-plan.md`
+
 # 2025-12-09 — Chunk probe telemetry utility
 - Replaced the placeholder ``badc chunk probe`` logic with a real WAV-aware estimator: it now reads
   sample rate / channels / bit depth, detects GPUs, performs a binary search to find the largest
