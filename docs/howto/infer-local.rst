@@ -65,16 +65,68 @@ Sample configuration (``configs/hawkears-local.toml``):
 
 .. code-block:: toml
 
-   [hawkears]
-   use_hawkears = true
+   [runner]
    manifest = "data/datalad/bogus/manifests/XXXX-000_20251001_093000.csv"
+   use_hawkears = true
    max_gpus = 1
-   hawkears_args = ["--min_score", "0.75", "--batch-size", "4"]
+   cpu_workers = 1
    output_dir = "data/datalad/bogus/artifacts/infer"
    telemetry_log = "data/datalad/bogus/artifacts/telemetry/XXXX-000_20251001_093000_local.jsonl"
 
+   [hawkears]
+   extra_args = ["--min_score", "0.75", "--band", "1"]
+
+   [paths]
+   dataset_root = "data/datalad/bogus"
+
 Invoke via ``badc infer run`` by interpolating the config values manually or via a small helper
-script (future work: Typer subcommand that reads the file directly).
+script (future work: Typer subcommand that reads the file directly). Each key mirrors the surface
+documented in ``notes/pipeline-plan.md`` so ops notes and user docs stay aligned.
+
+Config-file driven runs
+-----------------------
+``configs/hawkears-local.toml`` ships with the repo so you can reuse the same schema across
+environments. A tiny launcher script (or notebook cell) can read the file, translate it to CLI flags,
+and execute ``badc infer run``:
+
+.. code-block:: console
+
+   $ python - <<'PY'
+   import tomllib, shlex, subprocess
+   from pathlib import Path
+
+   config = tomllib.loads(Path("configs/hawkears-local.toml").read_text())
+   runner = config["runner"]
+   hawkears_cfg = config.get("hawkears", {})
+
+   cmd = [
+       "badc",
+       "infer",
+       "run",
+       runner["manifest"],
+       "--output-dir",
+       runner["output_dir"],
+       "--max-gpus",
+       str(runner["max_gpus"]),
+       "--cpu-workers",
+       str(runner.get("cpu_workers", 1)),
+   ]
+   if runner.get("use_hawkears", False):
+       cmd.append("--use-hawkears")
+   for arg in hawkears_cfg.get("extra_args", []):
+       cmd.extend(["--hawkears-arg", arg])
+   if telemetry := runner.get("telemetry_log"):
+       cmd.extend(["--telemetry-log", telemetry])
+
+   print("Running:", " ".join(shlex.quote(part) for part in cmd))
+   subprocess.run(cmd, check=True)
+   PY
+
+Tips:
+* Keep dataset-relative paths (`data/datalad/...`) so ``datalad run`` captures provenance.
+* `extra_args` map 1:1 to HawkEars' ``analyze.py`` arguments (e.g., ``--min_score``).
+* Store per-host overrides (GPU count, telemetry path) in separate TOML files, then pass the right
+  file to the snippet above.
 
 Step 1 — Chunk selection
 ------------------------

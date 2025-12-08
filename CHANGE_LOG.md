@@ -1,3 +1,14 @@
+# 2025-12-09 — HawkEars config schema + docs
+- Added ``configs/hawkears-local.toml`` as the canonical HawkEars runner template covering manifest
+  paths, GPU/CPU limits, telemetry, and passthrough HawkEars arguments so local scripts/notebooks
+  can launch ``badc infer run`` without repeating flags.
+- Expanded ``docs/howto/infer-local.rst`` with a config-driven workflow (TOML example + launcher
+  snippet) and cross-linked the schema back to ``notes/pipeline-plan.md``.
+- Updated ``notes/pipeline-plan.md`` and ``notes/roadmap.md`` to record the finalized configuration
+  surface and mark the Phase 1 task complete.
+- Commands executed:
+  - `mkdir -p configs`
+
 # 2025-12-09 — DataLad push to origin + arbutus-s3
 - Re-sourced `setup/datalad_config.sh` to populate AWS credentials and reran dataset pushes so the
   bogus DataLad dataset mirrors the validation artifacts on both GitHub and the Chinook S3 remote.

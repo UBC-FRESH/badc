@@ -59,6 +59,8 @@ Stages:
   `badc.aggregate` and tests mirror the canonical structure.
 - Telemetry: JSONL logs (one per run) with per-chunk/per-GPU metrics; analyzed via
   ``badc infer monitor`` / ``badc telemetry``.
+- Config template: ``configs/hawkears-local.toml`` captures the shared runner/HawkEars settings so
+  helper scripts can materialize ``badc infer run`` commands without repeating CLI flags.
 
 ## Aggregate stage
 - Combine chunk-level detections, dedupe overlapping windows, and normalize timestamps relative to original recording.

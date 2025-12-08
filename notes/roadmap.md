@@ -17,10 +17,10 @@ execution notes live alongside task-specific files under `notes/`.
 ## Phase 1 — HawkEars Integration & Local Workflow
 - [x] Embed the forked HawkEars repo as a git submodule plus wrapper package providing Typer CLI
       + Python API bindings.
-- [ ] Define configuration schema for HawkEars runs (GPU/CPU toggles, batch/chunk settings,
-      telemetry output locations) and document defaults. *(CLI flags exist across `badc infer run`
-      but we still owe a consolidated schema doc + example config file; target: add a “HawkEars
-      configuration” section to `docs/howto/infer-local.rst` + `notes/pipeline-plan.md`.)*
+- [x] Define configuration schema for HawkEars runs (GPU/CPU toggles, batch/chunk settings,
+      telemetry output locations) and document defaults. *(Schema captured via
+      `configs/hawkears-local.toml`, the updated `docs/howto/infer-local.rst` section, and the
+      `notes/pipeline-plan.md` reference table.)*
 - [ ] Prototype chunk-size discovery routine that probes for the largest CUDA-safe window on the
       dev server (Quadro RTX 4000s) and records findings in `notes/chunking.md`. *(Heuristic probe
       implemented via `badc chunk probe` + telemetry logs captured 2025-12-09; next step is running

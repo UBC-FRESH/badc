@@ -1,0 +1,28 @@
+# Example HawkEars run configuration consumed by helper scripts / notebooks.
+# These keys map directly onto `badc infer run` CLI options. Adjust paths to
+# match the DataLad dataset you are targeting.
+
+[runner]
+# Manifest generated via `badc chunk manifest` or `badc chunk run`
+manifest = "data/datalad/bogus/manifests/XXXX-000_20251001_093000.csv"
+
+# Toggle HawkEars vs. the stub/custom runner.
+use_hawkears = true
+
+# GPU/CPU worker constraints
+max_gpus = 1
+cpu_workers = 1
+
+# Where HawkEars JSON + raw CSV artifacts land (kept inside the dataset)
+output_dir = "data/datalad/bogus/artifacts/infer"
+
+# Optional telemetry log path. When omitted, BADC auto-generates a timestamped file.
+telemetry_log = "data/datalad/bogus/artifacts/telemetry/XXXX-000_20251001_093000_local.jsonl"
+
+[hawkears]
+# CLI flags forwarded verbatim to vendor/HawkEars/analyze.py
+extra_args = ["--min_score", "0.75", "--band", "1"]
+
+[paths]
+# DataLad dataset root that holds manifests/chunks (used by helper scripts)
+dataset_root = "data/datalad/bogus"
