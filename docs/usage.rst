@@ -120,8 +120,9 @@ aggregation::
    +---------+------------+----------------+
 
 Telemetry logs are unique per manifest/timestamp (default path printed by ``badc infer run``). Tail
-them with :doc:`cli/infer`'s monitor view (per-GPU utilization/memory trends, success/failure counts,
-and a live event tail) or the lightweight :doc:`cli/misc` command::
+them with :doc:`cli/infer`'s monitor view (per-GPU utilization/memory trends, rolling ASCII
+sparklines, success/failure counts, and a live event tail) or the lightweight :doc:`cli/misc`
+command::
 
    $ badc infer monitor --log data/telemetry/infer/GNWT-290_20251207T080000Z.jsonl
    $ badc telemetry --log data/telemetry/infer/GNWT-290_20251207T080000Z.jsonl

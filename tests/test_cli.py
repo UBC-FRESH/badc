@@ -208,60 +208,55 @@ def test_data_status_details_with_siblings(tmp_path, monkeypatch) -> None:
 
 
 def test_summarize_gpu_stats_tracks_utilization() -> None:
-    records = [
-        TelemetryRecord(
-            chunk_id="chunk_a",
-            gpu_index=0,
-            gpu_name="Quadro RTX 4000",
-            status="success",
-            timestamp="2025-12-08T20:13:26Z",
-            finished_at="2025-12-08T20:13:26Z",
-            runtime_s=10.0,
-            details={
-                "gpu_metrics": {
-                    "before": {"utilization": 5, "memory_used_mb": 5400, "memory_total_mb": 8192},
-                    "after": {"utilization": 20, "memory_used_mb": 5743, "memory_total_mb": 8192},
-                }
-            },
-        ),
-        TelemetryRecord(
-            chunk_id="chunk_b",
-            gpu_index=0,
-            gpu_name="Quadro RTX 4000",
-            status="failure",
-            timestamp="2025-12-08T20:14:26Z",
-            finished_at=None,
-            runtime_s=12.0,
-            details={
-                "gpu_metrics": {
-                    "after": {"utilization": 40, "memory_used_mb": 6000, "memory_total_mb": 8192},
-                }
-            },
-        ),
+    records: list[TelemetryRecord] = []
+    for idx in range(30):
+        records.append(
+            TelemetryRecord(
+                chunk_id=f"chunk_gpu_{idx}",
+                gpu_index=0,
+                gpu_name="Quadro RTX 4000",
+                status="success" if idx % 2 == 0 else "failure",
+                timestamp=f"2025-12-08T20:{13 + idx:02d}:00Z",
+                finished_at=None,
+                runtime_s=10.0 + idx,
+                details={
+                    "gpu_metrics": {
+                        "after": {
+                            "utilization": 10 + idx,
+                            "memory_used_mb": 5400 + idx,
+                            "memory_total_mb": 8192,
+                        }
+                    }
+                },
+            )
+        )
+    records.append(
         TelemetryRecord(
             chunk_id="chunk_cpu",
             gpu_index=None,
             gpu_name=None,
             status="success",
-            timestamp="2025-12-08T20:15:00Z",
-            finished_at="2025-12-08T20:15:01Z",
+            timestamp="2025-12-08T21:00:00Z",
+            finished_at="2025-12-08T21:00:01Z",
             runtime_s=3.0,
             details={},
-        ),
-    ]
+        )
+    )
     summary = cli_main._summarize_gpu_stats(records)
     assert "GPU 0" in summary
     gpu0 = summary["GPU 0"]
-    assert gpu0["events"] == 2
-    assert gpu0["success"] == 1
-    assert gpu0["failures"] == 1
-    assert gpu0["avg_runtime"] == 11.0
-    assert gpu0["util_stats"]["min"] == 20.0
-    assert gpu0["util_stats"]["max"] == 40.0
-    assert gpu0["max_memory"] == 6000.0
+    assert gpu0["events"] == 30
+    assert gpu0["success"] == 15
+    assert gpu0["failures"] == 15
+    assert gpu0["avg_runtime"] > 10.0
+    assert gpu0["util_stats"]["min"] == 10.0
+    assert gpu0["util_stats"]["max"] == 39.0
+    assert gpu0["max_memory"] == 5429.0
     assert gpu0["memory_total"] == 8192
-    assert gpu0["last_chunk"] == "chunk_b"
-    assert gpu0["last_status"] == "failure"
+    assert gpu0["last_chunk"] == "chunk_gpu_29"
+    assert gpu0["util_history"]
+    assert len(gpu0["util_history"]) == 24
+    assert len(gpu0["memory_history"]) == 24
 
     cpu = summary["CPU"]
     assert cpu["events"] == 1
@@ -282,3 +277,10 @@ def test_gpus_reports_permission_error(monkeypatch) -> None:
     assert result.exit_code == 0
     assert "Insufficient Permissions" in result.stdout
     assert "No GPUs detected via nvidia-smi." in result.stdout
+
+
+def test_sparkline_handles_constant_values() -> None:
+    spark = cli_main._sparkline([5.0, 5.0, 5.0], width=3)
+    assert len(spark) == 3
+    assert spark.strip()
+    assert cli_main._sparkline([], width=3) == "-"

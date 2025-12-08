@@ -217,8 +217,9 @@ recording, or both) or to the :doc:`/howto/aggregate-results` workflow for noteb
 
 Stream GPU utilization and per-chunk telemetry directly from the JSONL logs produced by
 ``badc infer run``. The view renders two ``rich`` tables: a per-GPU summary with success/failure
-counts, average runtimes, utilization trends (min/avg/max), and peak VRAM usage, plus a live tail of
-recent chunk events (status, runtime, GPU, utilization/memory snapshot).
+counts, average runtimes, utilization trends (min/avg/max), peak VRAM usage, and ASCII sparklines
+showing rolling utilization/VRAM history, plus a live tail of recent chunk events (status, runtime,
+GPU, utilization/memory snapshot).
 
 Usage::
 
@@ -235,5 +236,5 @@ Options:
    Refresh the tables every ``--interval`` seconds (Ctrl+C to stop).
 
 Use this view during long HawkEars jobs to confirm GPUs remain busy (sustained utilization, stable
-VRAM headroom) and to spot failing chunks immediately via the event tail. Combine it with
-``--follow`` for real-time dashboards on shared clusters.
+VRAM headroom) and to spot failing chunks immediately via the event tail. The sparkline columns
+update every refresh when ``--follow`` is enabled, exposing rolling trends without leaving the CLI.

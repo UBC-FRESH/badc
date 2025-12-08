@@ -909,6 +909,37 @@ def _format_metrics(entry: dict | None) -> str:
     return " ".join(parts) if parts else "-"
 
 
+def _sparkline(
+    values: Sequence[float],
+    *,
+    width: int = 12,
+    palette: str = " .:-=+*#%@",
+) -> str:
+    """Return an ASCII sparkline for ``values``."""
+
+    if not values:
+        return "-"
+    if width < 1:
+        width = 1
+    if len(values) > width:
+        step = len(values) / width
+        sampled = [values[int(i * step)] for i in range(width)]
+    else:
+        sampled = list(values)
+    v_min = min(sampled)
+    v_max = max(sampled)
+    if v_max == v_min:
+        idx = max(0, min(len(palette) - 1, len(palette) // 2))
+        return palette[idx] * len(sampled)
+    out = []
+    span = v_max - v_min
+    for value in sampled:
+        norm = (value - v_min) / span
+        idx = min(len(palette) - 1, max(0, int(norm * (len(palette) - 1))))
+        out.append(palette[idx])
+    return "".join(out)
+
+
 def _select_metric_entry(details: dict | None) -> dict | None:
     """Return the preferred GPU metric block for a telemetry record."""
 
@@ -929,6 +960,7 @@ def _select_metric_entry(details: dict | None) -> dict | None:
 def _summarize_gpu_stats(records: list[TelemetryRecord]) -> dict[str, dict]:
     """Aggregate telemetry entries per GPU for dashboard display."""
 
+    trend_window = 24
     summaries: dict[str, dict] = defaultdict(
         lambda: {
             "name": None,
@@ -944,6 +976,8 @@ def _summarize_gpu_stats(records: list[TelemetryRecord]) -> dict[str, dict]:
             "last_chunk": "-",
             "last_timestamp": "-",
             "last_metrics": None,
+            "util_history": [],
+            "memory_history": [],
         }
     )
     for rec in records:
@@ -964,9 +998,11 @@ def _summarize_gpu_stats(records: list[TelemetryRecord]) -> dict[str, dict]:
             util = metric_entry.get("utilization")
             if isinstance(util, (int, float)):
                 summary["util_samples"].append(float(util))
+                summary["util_history"].append(float(util))
             mem_used = metric_entry.get("memory_used_mb")
             if isinstance(mem_used, (int, float)):
                 summary["memory_samples"].append(float(mem_used))
+                summary["memory_history"].append(float(mem_used))
             mem_total = metric_entry.get("memory_total_mb")
             if isinstance(mem_total, (int, float)):
                 summary["memory_total"] = int(mem_total)
@@ -1002,6 +1038,8 @@ def _summarize_gpu_stats(records: list[TelemetryRecord]) -> dict[str, dict]:
             "last_chunk": data["last_chunk"],
             "last_timestamp": data["last_timestamp"],
             "last_metrics": data["last_metrics"],
+            "util_history": data["util_history"][-trend_window:],
+            "memory_history": data["memory_history"][-trend_window:],
         }
     return finalized
 
@@ -1018,6 +1056,8 @@ def _build_monitor_renderable(records: list, tail: int) -> Group | Panel:
     gpu_table.add_column("Avg Runtime (s)", justify="right")
     gpu_table.add_column("Util% (min/avg/max)", justify="right")
     gpu_table.add_column("VRAM max (MiB)", justify="right")
+    gpu_table.add_column("Util trend")
+    gpu_table.add_column("VRAM trend (MiB)")
     gpu_table.add_column("Last Status")
     gpu_table.add_column("Last Chunk")
     gpu_table.add_column("Updated")
@@ -1043,6 +1083,8 @@ def _build_monitor_renderable(records: list, tail: int) -> Group | Panel:
             mem_display += "MiB"
         else:
             mem_display = "-"
+        util_trend = _sparkline(entry.get("util_history") or [], width=10)
+        mem_trend = _sparkline(entry.get("memory_history") or [], width=10)
         gpu_table.add_row(
             label,
             str(entry["events"]),
@@ -1051,6 +1093,8 @@ def _build_monitor_renderable(records: list, tail: int) -> Group | Panel:
             runtime_display,
             util_display,
             mem_display,
+            util_trend,
+            mem_trend,
             entry["last_status"],
             entry["last_chunk"],
             entry["last_timestamp"] or "-",

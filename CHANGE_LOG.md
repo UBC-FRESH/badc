@@ -1,3 +1,17 @@
+# 2025-12-08 — Telemetry monitor rolling trends
+- Extended ``badc infer monitor`` with rolling utilization/VRAM trends: new helper utilities build
+  ASCII sparklines over the last ~24 telemetry samples per GPU, exposing how busy each device stays
+  during ``--follow`` sessions. Summary rows now include utilization history, VRAM history, and
+  truncated averages alongside the existing success/failure counters.
+- Added unit tests for the sparkline generator + summary aggregator, refreshed the monitor CLI test,
+  and documented the new trends in README, CLI reference, and usage guide.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `.venv/bin/pre-commit run --all-files`
+
 # 2025-12-08 — Telemetry monitor per-GPU stats
 - Redesigned ``badc infer monitor`` so the GPU table now shows per-device event counts,
   success/failure tallies, average runtimes, utilization trends (min/avg/max), and peak VRAM usage
