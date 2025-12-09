@@ -42,9 +42,9 @@ execution notes live alongside task-specific files under `notes/`.
 
 ## Phase 2 — Data Automation & Analysis Layer
 - [ ] Implement chunker orchestrator that walks large datasets, schedules HawkEars jobs, and tracks
-      provenance for each output segment. *(Initial CLI scaffold `badc chunk orchestrate` now walks
-      `audio/`, builds manifest/output plans, and prints datalad-run commands; next step is wiring it
-      to actually invoke `badc chunk run`/HawkEars jobs.)*
+      provenance for each output segment. *(`badc chunk orchestrate --apply` now invokes `badc chunk run`
+      directly and, when `.datalad` + the CLI are available, wraps each plan in `datalad run` by default.
+      Future work: parallel execution + error-resume support.)*
 - [ ] Implement HawkEars inference scheduler per `notes/inference-plan.md` (manifest loader, GPU
       worker pool, telemetry, output persistence). *(Manifest loader + telemetry exist; Phase 2 now
       includes `badc infer orchestrate` for planning/`datalad run` output + optional `--apply`. Next
@@ -55,6 +55,8 @@ execution notes live alongside task-specific files under `notes/`.
       helpers/notebooks for Phase 2 analytics.)*
 - [ ] Wire `badc data connect` to the bogus dataset submodule once published (`notes/bogus-datalad.md`).
 - [ ] Build `badc chunk run` per `notes/chunk-files.md` (real chunk WAV writer + manifest linking).
+      *(Implemented dataset-aware defaults + manifest hashing; next steps include ffmpeg/FLAC
+      support and performance tuning for multi-hour recordings.)*
 - [ ] Design the aggregated “bird call events” datastore (likely DuckDB/Parquet) and expose query
       helpers for down-stream stats/figures. *(Canonical Parquet export + ``badc report summary``,
       ``badc report quicklook``, and the new ``badc report parquet`` command now surface grouped

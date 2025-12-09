@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import wave
 from pathlib import Path
 
@@ -85,8 +86,10 @@ def test_chunk_orchestrate_lists_plan(tmp_path: Path) -> None:
 
 def test_chunk_orchestrate_apply_runs_chunk(tmp_path: Path) -> None:
     dataset = tmp_path / "dataset"
+    (dataset / ".datalad").mkdir(parents=True)
     audio = dataset / "audio" / "rec.wav"
     _write_wav(audio, duration_s=1.0)
+    env = {**os.environ, "BADC_DISABLE_DATALAD": "1"}
     result = runner.invoke(
         app,
         [
@@ -98,7 +101,9 @@ def test_chunk_orchestrate_apply_runs_chunk(tmp_path: Path) -> None:
             "--overlap",
             "0",
             "--apply",
+            "--no-record-datalad",
         ],
+        env=env,
     )
     assert result.exit_code == 0, result.stdout
     manifest = dataset / "manifests" / "rec.csv"
@@ -121,7 +126,31 @@ def test_chunk_orchestrate_apply_runs_chunk(tmp_path: Path) -> None:
             "--plan-json",
             str(plan_json),
         ],
+        env=env,
     )
     assert result.exit_code == 0, result.stdout
     assert plan_csv.exists()
     assert plan_json.exists()
+
+
+def test_chunk_orchestrate_apply_warns_without_datalad(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset_warn"
+    (dataset / ".datalad").mkdir(parents=True)
+    audio = dataset / "audio" / "rec.wav"
+    _write_wav(audio, duration_s=0.5)
+    env = {**os.environ, "BADC_DISABLE_DATALAD": "1"}
+    result = runner.invoke(
+        app,
+        [
+            "chunk",
+            "orchestrate",
+            str(dataset),
+            "--chunk-duration",
+            "0.25",
+            "--apply",
+        ],
+        env=env,
+    )
+    assert result.exit_code == 0, result.stdout
+    assert "Falling back to direct chunk runs" in result.stdout
+    assert (dataset / "manifests" / "rec.csv").exists()

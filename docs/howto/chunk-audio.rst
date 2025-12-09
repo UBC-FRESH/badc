@@ -45,6 +45,10 @@ entire DataLad dataset.
 3. **Write chunks + manifests** using ``badc chunk run`` (either manually or by reusing the command
    emitted above). If you trust the plan, append ``--apply`` to ``badc chunk orchestrate`` to run
    every chunk job automatically and consider ``--plan-csv``/``--plan-json`` to capture provenance.
+   When the source resides inside a DataLad dataset you can omit ``--output-dir``/``--manifest`` and
+   BADC will place chunks under ``<dataset>/artifacts/chunks/<recording>`` and manifests under
+   ``<dataset>/manifests/<recording>.csv`` automatically. ``--record-datalad`` (default) wraps each
+   applied job in ``datalad run``; use ``--no-record-datalad`` when you just want raw filesystem writes.
 
    .. code-block:: console
 

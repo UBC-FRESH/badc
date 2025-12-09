@@ -10,6 +10,9 @@ and writes a manifest referencing the chunk file paths + hashes.
 - Ensure filenames are stable: `<recording>_chunk_<start_ms>_<end_ms>.wav`.
 - Compute SHA256 hash over each chunk file and store in manifest.
 - Record chunk start/end timestamps, overlap_ms, hash, chunk path (relative) in manifest.
+- Auto-detect DataLad dataset roots (``.datalad``) so default chunk + manifest paths land inside
+  the dataset (``<dataset>/artifacts/chunks/<recording>`` and ``<dataset>/manifests/<recording>.csv``);
+  outside datasets, place outputs alongside the source audio.
 
 ## Implementation sketch
 1. Use Python's `wave` module or `soundfile` to read frames streaming.

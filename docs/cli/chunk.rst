@@ -211,9 +211,10 @@ Key behaviors:
 
 * When ``--dry-run`` is set, no files are written; BADC still reports where chunks would land.
 * ``--overlap`` applies a sliding window overlap (in seconds) for edge-sensitive detectors.
-* ``--output-dir`` defaults to ``artifacts/chunks`` relative to the current working tree, but when
-  the source file lives in a DataLad dataset you should place this directory inside the dataset so
-  ``datalad run`` can track provenance.
+* When ``--output-dir``/``--manifest`` are omitted, BADC looks for the surrounding DataLad dataset
+  (``.datalad``). Chunks default to ``<dataset>/artifacts/chunks/<recording>`` and manifests to
+  ``<dataset>/manifests/<recording>.csv``; outside datasets both directories are created alongside the
+  source audio and namespaced by recording ID.
 
 After chunking, the command prints the manifest path plus whether chunks were written or skipped.
 
@@ -237,10 +238,10 @@ Option reference
      - ``0``
    * - ``--output-dir PATH``
      - Directory that will contain generated chunk WAVs.
-     - ``artifacts/chunks``
+     - Auto (``<dataset>/artifacts/chunks/<recording>``)
    * - ``--manifest PATH``
      - Manifest CSV destination.
-     - ``chunk_manifest.csv``
+     - Auto (``<dataset>/manifests/<recording>.csv``)
    * - ``--dry-run`` / ``--write-chunks``
      - Skip writing WAVs and emit mock metadata when ``--dry-run`` is set.
      - ``--write-chunks``
@@ -307,4 +308,6 @@ Highlights:
 * ``--plan-csv`` / ``--plan-json`` — write the computed plan to disk for future reference or to feed
   into batch submission scripts.
 * ``--apply`` immediately invokes :command:`badc chunk run` for every listed recording, writing
-  manifests/chunks exactly as shown in the plan (combine with ``datalad run`` to capture provenance).
+  manifests/chunks exactly as shown in the plan. When the dataset contains ``.datalad`` and the
+  ``datalad`` executable is available, runs are wrapped in ``datalad run`` automatically (disable via
+  ``--no-record-datalad``).

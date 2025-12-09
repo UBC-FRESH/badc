@@ -1011,3 +1011,21 @@
   - ``pytest``
   - ``sphinx-build -b html docs _build/html -W``
   - ``pre-commit run --all-files``
+
+# 2025-12-09 — Chunk run dataset-aware defaults
+- ``badc chunk run`` now auto-detects DataLad roots (``.datalad``) and, when present, defaults to
+  ``<dataset>/artifacts/chunks/<recording>`` for chunk WAVs and ``<dataset>/manifests/<recording>.csv``
+  for manifests; outside datasets, both directories are created next to the audio file.
+- Dry-run mode produces realistic metadata (one row per chunk with accurate start/end offsets) so
+  planners/datalad commands can preview outputs without writing files.
+- ``badc chunk orchestrate --apply`` now wraps executions in ``datalad run`` by default (with a
+  ``--no-record-datalad`` escape hatch) so dataset-scale chunking can be triggered from a single
+  command while capturing provenance.
+- Added regression coverage for the new defaults, refreshed the chunk CLI/how-to docs, and updated
+  the roadmap + chunk-file implementation note to reflect the Phase 2 progress.
+- Commands executed:
+  - ``ruff format src tests``
+  - ``ruff check src tests``
+  - ``pytest``
+  - ``sphinx-build -b html docs _build/html -W``
+  - ``pre-commit run --all-files``

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
 import queue
 import shlex
+import shutil
 import subprocess
 import threading
 import time
@@ -486,13 +488,25 @@ def chunk_run(
         typer.Option("--overlap", help="Overlap between chunks in seconds."),
     ] = 0.0,
     output_dir: Annotated[
-        Path,
-        typer.Option("--output-dir", help="Directory for chunk files."),
-    ] = Path("artifacts/chunks"),
+        Path | None,
+        typer.Option(
+            "--output-dir",
+            help=(
+                "Directory for chunk files. Defaults to <dataset>/artifacts/chunks/<recording> "
+                "when the source lives inside a DataLad dataset."
+            ),
+        ),
+    ] = None,
     manifest: Annotated[
-        Path,
-        typer.Option("--manifest", help="Manifest CSV path."),
-    ] = Path("chunk_manifest.csv"),
+        Path | None,
+        typer.Option(
+            "--manifest",
+            help=(
+                "Manifest CSV path. Defaults to <dataset>/manifests/<recording>.csv when the "
+                "source lives inside a DataLad dataset."
+            ),
+        ),
+    ] = None,
     dry_run: Annotated[
         bool,
         typer.Option("--dry-run/--write-chunks", help="Skip writing chunk files."),
@@ -509,9 +523,12 @@ def chunk_run(
     overlap : float
         Overlap between consecutive chunks in seconds.
     output_dir : Path
-        Directory where generated chunk WAVs should be stored.
+        Directory where generated chunk WAVs should be stored. When omitted, defaults
+        to ``<dataset>/artifacts/chunks/<recording>`` (or ``<audio_parent>/artifacts/chunks/<recording>``
+        outside of DataLad datasets).
     manifest : Path
-        Output manifest CSV path.
+        Output manifest CSV path. Defaults to ``<dataset>/manifests/<recording>.csv`` when a
+        DataLad dataset is detected or ``<audio_parent>/manifests/<recording>.csv`` otherwise.
     dry_run : bool
         When ``True``, skips writing chunk files and emits mock metadata for planning.
 
@@ -521,26 +538,35 @@ def chunk_run(
     output layouts without touching disk.
     """
 
+    file = file.expanduser().resolve()
+    dataset_root = data_utils.find_dataset_root(file)
     duration = get_wav_duration(file)
+    resolved_output_dir = (
+        _resolve_cli_path(output_dir, dataset_root)
+        if output_dir
+        else _default_chunk_output_dir(file, dataset_root)
+    )
+    resolved_manifest = (
+        _resolve_cli_path(manifest, dataset_root)
+        if manifest
+        else _default_manifest_path(file, dataset_root)
+    )
+    overlap_ms = int(max(overlap, 0.0) * 1000)
     if dry_run:
-        chunk_rows = [
-            ChunkMetadata(
-                chunk_id=f"{file.stem}_chunk_{i}",
-                path=file,
-                start_ms=0,
-                end_ms=0,
-                overlap_ms=int(overlap * 1000),
-                sha256="TODO_HASH",
-            )
-            for i in range(1)
-        ]
+        chunk_rows = _build_dry_run_metadata(
+            file=file,
+            chunk_duration=chunk_duration,
+            overlap_ms=overlap_ms,
+            duration_s=duration,
+            output_dir=resolved_output_dir,
+        )
     else:
         chunk_rows = list(
             iter_chunk_metadata(
                 audio_path=file,
                 chunk_duration_s=chunk_duration,
                 overlap_s=overlap,
-                output_dir=output_dir,
+                output_dir=resolved_output_dir,
             )
         )
     if not chunk_rows:
@@ -549,14 +575,77 @@ def chunk_run(
     manifest_path = chunking.write_manifest(
         file,
         chunk_duration,
-        manifest,
+        resolved_manifest,
         duration,
         compute_hashes=not dry_run,
         chunk_rows=chunk_rows,
     )
     console.print(
-        f"Chunks {'skipped' if dry_run else f'written to {output_dir}'}; manifest at {manifest_path}"
+        f"Chunks {'skipped' if dry_run else f'written to {resolved_output_dir}'}; "
+        f"manifest at {manifest_path}"
     )
+
+
+def _resolve_cli_path(path: Path, dataset_root: Path | None) -> Path:
+    """Return an absolute path, rebasing relative paths to the dataset root when available."""
+
+    expanded = path.expanduser()
+    if dataset_root and not expanded.is_absolute():
+        return (dataset_root / expanded).resolve()
+    if expanded.is_absolute():
+        return expanded
+    return (Path.cwd() / expanded).resolve()
+
+
+def _default_chunk_output_dir(file: Path, dataset_root: Path | None) -> Path:
+    """Compute the default chunk directory for ``file``."""
+
+    base = dataset_root or file.parent
+    return base / "artifacts" / "chunks" / file.stem
+
+
+def _default_manifest_path(file: Path, dataset_root: Path | None) -> Path:
+    """Compute the default manifest path for ``file``."""
+
+    base = dataset_root or file.parent
+    return base / "manifests" / f"{file.stem}.csv"
+
+
+def _build_dry_run_metadata(
+    *,
+    file: Path,
+    chunk_duration: float,
+    overlap_ms: int,
+    duration_s: float,
+    output_dir: Path,
+) -> list[ChunkMetadata]:
+    """Return deterministic chunk metadata without writing files."""
+
+    rows: list[ChunkMetadata] = []
+    for start, end in chunking.plan_chunk_ranges(duration_s, chunk_duration):
+        start_ms = int(start * 1000)
+        end_ms = int(end * 1000)
+        chunk_id = f"{file.stem}_chunk_{start_ms}_{end_ms}"
+        chunk_path = output_dir / f"{chunk_id}.wav"
+        rows.append(
+            ChunkMetadata(
+                chunk_id=chunk_id,
+                path=chunk_path,
+                start_ms=start_ms,
+                end_ms=end_ms,
+                overlap_ms=overlap_ms,
+                sha256="DRY_RUN",
+            )
+        )
+    return rows
+
+
+def _can_record_with_datalad(dataset_root: Path) -> bool:
+    """Return True when `datalad run` should be used for chunk application."""
+
+    if os.environ.get("BADC_DISABLE_DATALAD"):
+        return False
+    return (dataset_root / ".datalad").exists() and shutil.which("datalad") is not None
 
 
 @chunk_app.command("orchestrate")
@@ -618,6 +707,13 @@ def chunk_orchestrate(
         Path | None,
         typer.Option("--plan-json", help="Optional JSON path to save the generated plan."),
     ] = None,
+    record_datalad: Annotated[
+        bool,
+        typer.Option(
+            "--record-datalad/--no-record-datalad",
+            help="When applying, wrap each chunk in `datalad run` if possible.",
+        ),
+    ] = True,
 ) -> None:
     """Plan chunk jobs across an entire dataset without touching audio files."""
 
@@ -678,16 +774,34 @@ def chunk_orchestrate(
             console.print(f" - {command}")
     if apply:
         console.print("\nApplying chunk plan…", style="bold")
+        use_datalad = record_datalad and _can_record_with_datalad(dataset)
+        if record_datalad and not use_datalad:
+            console.print(
+                "Datalad execution requested but not available (missing `.datalad` or `datalad` executable). "
+                "Falling back to direct chunk runs.",
+                style="yellow",
+            )
         for plan in plans:
             console.print(f"[cyan]Chunking {plan.recording_id}[/]")
-            chunk_run(
-                file=plan.audio_path,
-                chunk_duration=plan.chunk_duration,
-                overlap=plan.overlap,
-                output_dir=plan.chunk_output_dir,
-                manifest=plan.manifest_path,
-                dry_run=False,
-            )
+            if use_datalad:
+                command = chunk_orchestrator.render_datalad_run(plan, dataset)
+                try:
+                    subprocess.run(shlex.split(command), cwd=dataset, check=True)
+                except subprocess.CalledProcessError as exc:
+                    console.print(
+                        f"Chunking failed for {plan.recording_id}: {exc}",
+                        style="red",
+                    )
+                    raise typer.Exit(code=exc.returncode) from exc
+            else:
+                chunk_run(
+                    file=plan.audio_path,
+                    chunk_duration=plan.chunk_duration,
+                    overlap=plan.overlap,
+                    output_dir=plan.chunk_output_dir,
+                    manifest=plan.manifest_path,
+                    dry_run=False,
+                )
 
 
 @app.command("gpus")
