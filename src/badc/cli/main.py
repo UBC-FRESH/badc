@@ -1047,6 +1047,13 @@ def infer_orchestrate(
         Path | None,
         typer.Option("--plan-json", help="Optional JSON path to save the inference plan."),
     ] = None,
+    record_datalad: Annotated[
+        bool,
+        typer.Option(
+            "--record-datalad/--no-record-datalad",
+            help="Wrap applied runs in `datalad run` when possible.",
+        ),
+    ] = True,
 ) -> None:
     """Plan inference runs across manifests without executing them."""
 
@@ -1079,7 +1086,7 @@ def infer_orchestrate(
         table.add_row(
             plan.recording_id,
             str(plan.manifest_path),
-            str(plan.output_dir),
+            str(plan.recording_output),
             str(plan.telemetry_log),
         )
     console.print(table)
@@ -1107,16 +1114,36 @@ def infer_orchestrate(
 
     if apply:
         console.print("\nExecuting inference plan…", style="bold")
-        for plan in plans:
-            plan.telemetry_log.parent.mkdir(parents=True, exist_ok=True)
-            infer_run(
-                manifest=plan.manifest_path,
-                max_gpus=plan.max_gpus,
-                output_dir=plan.output_dir,
-                telemetry_log=plan.telemetry_log,
-                use_hawkears=plan.use_hawkears,
-                hawkears_arg=list(plan.hawkears_args),
+        use_datalad = record_datalad and _can_record_with_datalad(dataset)
+        if record_datalad and not use_datalad:
+            console.print(
+                "Datalad execution requested but not available (missing `.datalad` or `datalad` executable). "
+                "Falling back to direct inference runs.",
+                style="yellow",
             )
+        for plan in plans:
+            console.print(f"[cyan]Inferring {plan.recording_id}[/]")
+            plan.telemetry_log.parent.mkdir(parents=True, exist_ok=True)
+            plan.output_dir.mkdir(parents=True, exist_ok=True)
+            if use_datalad:
+                command = infer_orchestrator.render_datalad_run(plan, dataset)
+                try:
+                    subprocess.run(shlex.split(command), cwd=dataset, check=True)
+                except subprocess.CalledProcessError as exc:
+                    console.print(
+                        f"Inference failed for {plan.recording_id}: {exc}",
+                        style="red",
+                    )
+                    raise typer.Exit(code=exc.returncode) from exc
+            else:
+                infer_run(
+                    manifest=plan.manifest_path,
+                    max_gpus=plan.max_gpus,
+                    output_dir=plan.output_dir,
+                    telemetry_log=plan.telemetry_log,
+                    use_hawkears=plan.use_hawkears,
+                    hawkears_arg=list(plan.hawkears_args),
+                )
 
 
 @infer_app.command("run-config")

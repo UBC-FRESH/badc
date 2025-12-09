@@ -29,11 +29,16 @@ class InferPlan:
             "recording_id": self.recording_id,
             "manifest_path": str(self.manifest_path),
             "output_dir": str(self.output_dir),
+            "recording_output_dir": str(self.output_dir / self.recording_id),
             "telemetry_log": str(self.telemetry_log),
             "use_hawkears": self.use_hawkears,
             "hawkears_args": list(self.hawkears_args),
             "max_gpus": self.max_gpus,
         }
+
+    @property
+    def recording_output(self) -> Path:
+        return self.output_dir / self.recording_id
 
 
 def _resolve(base: Path, value: Path) -> Path:
@@ -72,14 +77,13 @@ def build_infer_plan(
         if not manifest_path.exists():
             continue
         recording_id = manifest_path.stem
-        recording_output = output_root / recording_id
-        if not include_existing and recording_output.exists():
+        if not include_existing and (output_root / recording_id).exists():
             continue
         telemetry_log = telemetry_root / "infer" / f"{recording_id}.jsonl"
         plans.append(
             InferPlan(
                 manifest_path=manifest_path,
-                output_dir=recording_output,
+                output_dir=output_root,
                 telemetry_log=telemetry_log,
                 use_hawkears=use_hawkears,
                 hawkears_args=hawkears_args,
@@ -101,6 +105,7 @@ def render_datalad_run(plan: InferPlan, dataset_root: Path) -> str:
     try:
         manifest_rel = manifest_abs.relative_to(dataset_root)
         output_rel = output_abs.relative_to(dataset_root)
+        recording_output_rel = (output_abs / plan.recording_id).relative_to(dataset_root)
         telemetry_rel = telemetry_abs.relative_to(dataset_root)
     except ValueError as exc:  # pragma: no cover - defensive
         raise ValueError("Plan paths must live inside the dataset root.") from exc
@@ -125,7 +130,7 @@ def render_datalad_run(plan: InferPlan, dataset_root: Path) -> str:
     return (
         f'datalad run -m "Infer {plan.recording_id}" '
         f"--input {manifest_rel} "
-        f"--output {output_rel} "
+        f"--output {recording_output_rel} "
         f"-- badc infer run {manifest_rel} " + " ".join(cmd[4:])
     )
 

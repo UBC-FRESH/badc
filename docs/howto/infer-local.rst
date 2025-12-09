@@ -227,7 +227,9 @@ them:
        --apply
 
 The command prints a Rich table, saves CSV/JSON plans for later, and (with ``--apply``) runs
-``badc infer run`` for every manifest automatically.
+``badc infer run`` for every manifest automatically. When the dataset contains ``.datalad`` and the
+CLI is available, the applied runs are wrapped in ``datalad run`` by default (add
+``--no-record-datalad`` to perform plain executions).
 
 Smoke tests
 -----------

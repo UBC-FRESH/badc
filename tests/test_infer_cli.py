@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,11 @@ from badc.cli.main import app
 from badc.telemetry import TelemetryRecord, log_telemetry, now_iso
 
 runner = CliRunner()
+
+
+def _write_chunk(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"\x00\x00")
 
 
 def test_infer_run_placeholder(tmp_path: Path) -> None:
@@ -55,6 +61,71 @@ def test_infer_orchestrate_plan(tmp_path: Path) -> None:
     assert "Inference plan" in result.stdout
     assert (dataset / "plan.csv").exists()
     assert (dataset / "plan.json").exists()
+
+
+def test_infer_orchestrate_apply_runs_infer(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset_apply"
+    (dataset / ".datalad").mkdir(parents=True)
+    manifest_dir = dataset / "manifests"
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    chunk_path = dataset / "chunks" / "rec" / "chunk_a.wav"
+    _write_chunk(chunk_path)
+    manifest = manifest_dir / "rec.csv"
+    manifest.write_text(
+        "recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes\n"
+        f"rec,chunk_a,{chunk_path},0,1000,0,hash,\n",
+        encoding="utf-8",
+    )
+    result = runner.invoke(
+        app,
+        [
+            "infer",
+            "orchestrate",
+            str(dataset),
+            "--manifest-dir",
+            str(manifest_dir),
+            "--stub-runner",
+            "--apply",
+            "--no-record-datalad",
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    output_dir = dataset / "artifacts" / "infer" / "rec"
+    telemetry_log = dataset / "artifacts" / "telemetry" / "infer" / "rec.jsonl"
+    assert output_dir.exists()
+    assert any(output_dir.glob("*.json"))
+    assert telemetry_log.exists()
+
+
+def test_infer_orchestrate_apply_warns_without_datalad(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset_warn"
+    (dataset / ".datalad").mkdir(parents=True)
+    manifest_dir = dataset / "manifests"
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    chunk_path = dataset / "chunks" / "rec" / "chunk_a.wav"
+    _write_chunk(chunk_path)
+    manifest = manifest_dir / "rec.csv"
+    manifest.write_text(
+        "recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes\n"
+        f"rec,chunk_a,{chunk_path},0,1000,0,hash,\n",
+        encoding="utf-8",
+    )
+    env = {**os.environ, "BADC_DISABLE_DATALAD": "1"}
+    result = runner.invoke(
+        app,
+        [
+            "infer",
+            "orchestrate",
+            str(dataset),
+            "--manifest-dir",
+            str(manifest_dir),
+            "--stub-runner",
+            "--apply",
+        ],
+        env=env,
+    )
+    assert result.exit_code == 0, result.stdout
+    assert "Falling back to direct inference runs" in result.stdout
 
 
 def test_infer_run_config(tmp_path: Path) -> None:

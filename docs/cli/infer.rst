@@ -297,7 +297,9 @@ Highlights:
             --output-dir artifacts/infer/REC \
             --telemetry-log artifacts/telemetry/infer/REC.jsonl
 
-* ``--apply`` executes :command:`badc infer run` for each plan entry using the saved settings.
+* ``--apply`` executes :command:`badc infer run` for each plan entry using the saved settings. When
+  the dataset has ``.datalad`` and the CLI is available, runs are wrapped in ``datalad run`` by
+  default (disable via ``--no-record-datalad``) so provenance is captured automatically.
 
 Combine this with :command:`badc chunk orchestrate` to move from chunk plans to inference runs in a
 single workflow.

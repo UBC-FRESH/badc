@@ -38,9 +38,10 @@
 - Provide dry-run flag to simulate scheduling without invoking HawkEars. *(Implemented via stub
   mode; passing `--use-hawkears` now shells out to `vendor/HawkEars/analyze.py` and parses the
   generated `HawkEars_labels.csv` into the JSON payload used by `badc infer aggregate`.)*
-- `badc infer orchestrate` (new) scans manifests or chunk-plan files, prints an inference plan,
-  emits ready-to-run `datalad run` commands, persists CSV/JSON for HPC submission, and can execute
-  the full runlist via `--apply`.
+- `badc infer orchestrate` scans manifests or chunk-plan files, prints an inference plan, emits
+  ready-to-run `datalad run` commands, persists CSV/JSON for HPC submission, and now executes the full
+  run list via `--apply` (auto-wrapping each recording in `datalad run` when available; disable with
+  `--no-record-datalad`).
 
 ## Testing strategy
 - Mock HawkEars runner (fake script) to ensure scheduler distributes work across GPUs.

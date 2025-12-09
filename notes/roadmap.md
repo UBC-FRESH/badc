@@ -47,8 +47,9 @@ execution notes live alongside task-specific files under `notes/`.
       Future work: parallel execution + error-resume support.)*
 - [ ] Implement HawkEars inference scheduler per `notes/inference-plan.md` (manifest loader, GPU
       worker pool, telemetry, output persistence). *(Manifest loader + telemetry exist; Phase 2 now
-      includes `badc infer orchestrate` for planning/`datalad run` output + optional `--apply`. Next
-      steps: integrate with Sockeye arrays + multi-GPU scheduling.)*
+      includes `badc infer orchestrate` for planning, CSV/JSON plan exports, and `--apply` now runs
+      each manifest automatically (wrapping in `datalad run` when available). Next steps: integrate
+      with Sockeye arrays + multi-GPU scheduling/priority heuristics.)*
 - [ ] Parse HawkEars JSON outputs into canonical detection schema and wire DuckDB aggregation
       (`notes/pipeline-plan.md`). *(Real HawkEars detections from the bogus dataset now serialize to
       canonical CSV/Parquet with model metadata + chunk hashes; next milestone is packaging DuckDB

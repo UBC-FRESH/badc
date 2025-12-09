@@ -1021,6 +1021,10 @@
 - ``badc chunk orchestrate --apply`` now wraps executions in ``datalad run`` by default (with a
   ``--no-record-datalad`` escape hatch) so dataset-scale chunking can be triggered from a single
   command while capturing provenance.
+- ``badc infer orchestrate --apply`` mirrors the chunk behavior: it executes each manifest in the
+  plan immediately and, when `.datalad` plus the CLI are available, automatically wraps the runs in
+  `datalad run` (toggle via `--no-record-datalad`). CLI docs/how-tos now describe the workflow, and
+  tests cover both the direct and datalad-backed paths.
 - Added regression coverage for the new defaults, refreshed the chunk CLI/how-to docs, and updated
   the roadmap + chunk-file implementation note to reflect the Phase 2 progress.
 - Commands executed:
