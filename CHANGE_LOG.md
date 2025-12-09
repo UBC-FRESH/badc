@@ -1,3 +1,23 @@
+# 2025-12-09 — Inference scheduler CPU/worker summary uplift
+- Switched ``--cpu-workers`` defaults to ``0`` so GPU detection drives concurrency by default while
+  still guaranteeing at least one CPU worker when no GPUs are found; added optional CPU slots even
+  when GPUs are present and surfaced the new flag throughout ``badc infer run``, ``infer orchestrate``,
+  and the TOML config loader.
+- Taught ``_run_scheduler`` to track per-worker success/failure counts and return them so
+  ``badc infer run`` now prints a Rich summary table (GPU/CPU label, total jobs, failures) at the end
+  of every run; CLI docs/how-tos/usage notes now call out the summary behavior and the additive CPU
+  worker model.
+- Propagated ``--cpu-workers`` through ``badc infer orchestrate`` plans/JSON exports/datalad commands,
+  refreshed ``notes/inference-plan.md`` / ``notes/pipeline-plan.md`` / roadmap context, and tightened
+  tests for both the scheduler summary and the orchestrator flag plumbing.
+- Commands executed:
+  - `.venv/bin/ruff format src tests`
+  - `.venv/bin/ruff check src tests`
+  - `.venv/bin/pytest`
+  - `.venv/bin/sphinx-build -b html docs _build/html -W` *(failed: infer-local.rst indentation; fixed before rerun)*
+  - `.venv/bin/sphinx-build -b html docs _build/html -W`
+  - `.venv/bin/pre-commit run --all-files`
+
 # 2025-12-09 — Chunk orchestrator scaffold
 - Added ``src/badc/chunk_orchestrator.py`` plus the ``badc chunk orchestrate`` CLI command to scan a
   dataset's ``audio/`` tree, skip recordings that already have manifests, emit per-recording chunk

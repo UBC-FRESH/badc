@@ -82,7 +82,7 @@ Reuse the shared config file instead of hand-writing flags::
    $ badc infer run-config configs/hawkears-local.toml
    Processed 3 jobs; outputs stored in artifacts/infer
 
-CPU-only fallback (e.g., developers without GPUs)::
+CPU-heavy fallback (e.g., developers without GPUs or teams that want CPU assist threads)::
 
    $ badc infer run manifests/XXXX-000_20251001_093000.csv --cpu-workers 4
    Processed 3 jobs; outputs stored in artifacts/infer
@@ -102,9 +102,10 @@ GPU planning helpers::
    nvidia-smi reported 'Insufficient Permissions'. GPU inventory usually requires NVML access—try running `sudo nvidia-smi` to confirm the driver works or ask the cluster admin to grant your user access to the NVIDIA devices.
    No GPUs detected via nvidia-smi.
 
-Use ``--max-gpus`` to cap the worker pool or ``--cpu-workers`` to bypass GPU detection entirely.
-When detection succeeds the utility lists each GPU (index, name, memory). If you see a permissions
-warning, escalate to the system administrator; otherwise BADC will fall back to CPU workers.
+Use ``--max-gpus`` to cap the GPU pool or ``--cpu-workers`` to append CPU threads (BADC still adds
+one CPU worker automatically when no GPUs are detected). When detection succeeds the utility lists
+each GPU (index, name, memory). If you see a permissions warning, escalate to the system
+administrator; otherwise BADC will fall back to CPU workers.
 
 .. _usage-aggregate-telemetry:
 

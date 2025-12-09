@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -61,6 +62,38 @@ def test_infer_orchestrate_plan(tmp_path: Path) -> None:
     assert "Inference plan" in result.stdout
     assert (dataset / "plan.csv").exists()
     assert (dataset / "plan.json").exists()
+
+
+def test_infer_orchestrate_cpu_workers(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset_cpu"
+    manifest_dir = dataset / "manifests"
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    manifest = manifest_dir / "rec.csv"
+    manifest.write_text(
+        "recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes\n"
+        "rec,chunk_a,data/foo.wav,0,1000,0,hash,\n",
+        encoding="utf-8",
+    )
+    plan_json = dataset / "plan.json"
+    result = runner.invoke(
+        app,
+        [
+            "infer",
+            "orchestrate",
+            str(dataset),
+            "--manifest-dir",
+            str(manifest_dir),
+            "--plan-json",
+            str(plan_json),
+            "--cpu-workers",
+            "3",
+            "--print-datalad-run",
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    plan = json.loads(plan_json.read_text(encoding="utf-8"))
+    assert plan[0]["cpu_workers"] == 3
+    assert "--cpu-workers 3" in result.stdout
 
 
 def test_infer_orchestrate_apply_runs_infer(tmp_path: Path) -> None:

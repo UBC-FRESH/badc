@@ -40,7 +40,7 @@ Stages:
   +-------------------------+-------------------------------+--------------------------------------------------+
   | ``--max-gpus``          | Auto-detect all GPUs          | Cap worker count when GPU inventory exceeds need.|
   +-------------------------+-------------------------------+--------------------------------------------------+
-  | ``--cpu-workers``       | ``1``                         | Worker count when no GPUs are available.         |
+| ``--cpu-workers``       | ``0``                         | Additional CPU worker threads (at least one CPU worker is added automatically when GPUs are absent). |
   +-------------------------+-------------------------------+--------------------------------------------------+
   | ``--hawkears-arg``      | ``[]``                        | Extra CLI args forwarded to HawkEars.            |
   +-------------------------+-------------------------------+--------------------------------------------------+

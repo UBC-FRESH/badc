@@ -108,7 +108,8 @@ When scheduling many manifests, wrap Steps 2–4 in a loop::
        # Copy/paste the emitted command or tee it into a shell script
    done
 
-Alternatively, pass ``--max-gpus`` or ``--cpu-workers`` to fine-tune concurrency,
+Alternatively, pass ``--max-gpus`` or ``--cpu-workers`` to fine-tune concurrency
+(BADC still schedules at least one CPU worker automatically when GPUs are absent),
 and append ``--hawkears-arg`` repeatedly to forward custom switches to the
 HawkEars ``analyze.py`` entry point.
 

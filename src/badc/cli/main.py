@@ -97,7 +97,7 @@ def _load_infer_config(config_path: Path) -> dict[str, Any]:
         "max_retries": runner_cfg.get("max_retries", 2),
         "use_hawkears": runner_cfg.get("use_hawkears", False),
         "hawkears_args": extra_args_list,
-        "cpu_workers": runner_cfg.get("cpu_workers", 1),
+        "cpu_workers": runner_cfg.get("cpu_workers", 0),
     }
 
 
@@ -867,9 +867,9 @@ def infer_run(
         int,
         typer.Option(
             "--cpu-workers",
-            help="Number of concurrent workers when running without GPUs.",
+            help="Additional CPU worker threads (always at least one when GPUs are unavailable).",
         ),
-    ] = 1,
+    ] = 0,
     print_datalad_run: Annotated[
         bool,
         typer.Option(
@@ -898,7 +898,8 @@ def infer_run(
     hawkears_arg : list[str], optional
         Extra CLI flags forwarded verbatim to HawkEars.
     cpu_workers : int
-        Number of concurrent workers to use when no GPUs are detected.
+        Number of additional CPU worker threads to schedule alongside detected
+        GPUs. When no GPUs are detected, at least one CPU worker is added.
     print_datalad_run : bool
         Emits a ``datalad run`` command instead of executing inference.
 
@@ -922,11 +923,27 @@ def infer_run(
     if not jobs:
         console.print("No jobs found in manifest.", style="yellow")
         return
-    if not workers:
-        console.print("No GPUs detected; running without GPU affinity.", style="yellow")
-        worker_pool: list[GPUWorker | None] = [None] * max(cpu_workers, 1)
+
+    worker_slots: list[tuple[GPUWorker | None, str]] = []
+    for gpu_worker in workers:
+        worker_slots.append((gpu_worker, f"gpu-{gpu_worker.index}"))
+    if not worker_slots:
+        cpu_slot_count = max(cpu_workers, 1)
+        console.print(
+            f"No GPUs detected; running on CPU with {cpu_slot_count} worker(s).",
+            style="yellow",
+        )
     else:
-        worker_pool = workers
+        cpu_slot_count = max(0, cpu_workers)
+        if cpu_slot_count:
+            console.print(
+                f"Adding {cpu_slot_count} CPU worker(s) alongside {len(worker_slots)} GPU worker(s).",
+                style="yellow",
+            )
+    for idx in range(cpu_slot_count):
+        worker_slots.append((None, f"cpu-{idx}"))
+    if not worker_slots:
+        worker_slots = [(None, "cpu-0")]
     default_output = output_dir.expanduser()
     use_dataset_outputs = default_output == DEFAULT_INFER_OUTPUT
     job_contexts = _prepare_job_contexts(jobs, default_output, use_dataset_outputs)
@@ -953,9 +970,9 @@ def infer_run(
         return
 
     console.print(f"Telemetry log: {telemetry_path}")
-    _run_scheduler(
+    worker_summary = _run_scheduler(
         job_contexts=job_contexts,
-        worker_pool=worker_pool,
+        worker_pool=worker_slots,
         runner_cmd=runner_cmd,
         max_retries=max_retries,
         use_hawkears=use_hawkears,
@@ -971,6 +988,15 @@ def infer_run(
             display += ", ..."
         location_msg = display
     console.print(f"Processed {len(jobs)} jobs; outputs stored in {location_msg}")
+    if worker_summary:
+        summary_table = Table(title="Worker summary", expand=False)
+        summary_table.add_column("Worker")
+        summary_table.add_column("Jobs", justify="right")
+        summary_table.add_column("Failures", justify="right")
+        for label, counts in sorted(worker_summary.items()):
+            total = counts["success"] + counts["failure"]
+            summary_table.add_row(label, str(total), str(counts["failure"]))
+        console.print(summary_table)
 
 
 @infer_app.command("orchestrate")
@@ -1047,6 +1073,13 @@ def infer_orchestrate(
         Path | None,
         typer.Option("--plan-json", help="Optional JSON path to save the inference plan."),
     ] = None,
+    cpu_workers: Annotated[
+        int,
+        typer.Option(
+            "--cpu-workers",
+            help="Additional CPU worker threads to include in each run (in addition to GPUs).",
+        ),
+    ] = 0,
     record_datalad: Annotated[
         bool,
         typer.Option(
@@ -1072,6 +1105,7 @@ def infer_orchestrate(
         use_hawkears=use_hawkears,
         hawkears_args=hawkears_arg,
         max_gpus=max_gpus,
+        cpu_workers=cpu_workers,
         limit=limit or None,
     )
     if not plans:
@@ -1143,6 +1177,7 @@ def infer_orchestrate(
                     telemetry_log=plan.telemetry_log,
                     use_hawkears=plan.use_hawkears,
                     hawkears_arg=list(plan.hawkears_args),
+                    cpu_workers=plan.cpu_workers,
                 )
 
 
@@ -1178,13 +1213,13 @@ def infer_run_config(
 
 def _run_scheduler(
     job_contexts: Sequence[tuple[InferenceJob, Path, Path | None]],
-    worker_pool: list[GPUWorker | None],
+    worker_pool: Sequence[tuple[GPUWorker | None, str]],
     runner_cmd: str | None,
     max_retries: int,
     use_hawkears: bool,
     hawkears_args: Sequence[str],
     telemetry_path: Path,
-) -> None:
+) -> dict[str, dict[str, int]]:
     """Dispatch inference jobs to worker threads.
 
     Parameters
@@ -1192,8 +1227,9 @@ def _run_scheduler(
     job_contexts : Sequence[tuple[InferenceJob, Path, Path | None]]
         Each tuple contains the job metadata, the output directory, and the optional
         dataset root used for provenance tracking.
-    worker_pool : list[GPUWorker | None]
-        GPU-bound workers (``None`` entries represent CPU-only workers).
+    worker_pool : Sequence[tuple[GPUWorker | None, str]]
+        Worker definitions (``None`` entries represent CPU-only workers). Each
+        tuple pairs the worker with a label that is surfaced in the summary table.
     runner_cmd : str, optional
         Custom command to execute per chunk when ``use_hawkears`` is ``False``.
     max_retries : int
@@ -1203,6 +1239,11 @@ def _run_scheduler(
     hawkears_args : Sequence[str]
         Additional CLI arguments forwarded to HawkEars.
 
+    Returns
+    -------
+    dict
+        Mapping of worker labels to success/failure counts.
+
     Raises
     ------
     Exception
@@ -1210,7 +1251,7 @@ def _run_scheduler(
     """
 
     if not worker_pool:
-        worker_pool = [None]
+        worker_pool = [(None, "cpu-0")]
     job_queue: queue.Queue = queue.Queue()
     sentinel = object()
     for context in job_contexts:
@@ -1221,8 +1262,13 @@ def _run_scheduler(
     stop_event = threading.Event()
     errors: list[Exception] = []
     runner_args = list(hawkears_args)
+    stats: dict[str, dict[str, int]] = {
+        label: {"success": 0, "failure": 0} for _, label in worker_pool
+    }
+    stats_lock = threading.Lock()
 
-    def worker_loop(worker: GPUWorker | None) -> None:
+    def worker_loop(worker_entry: tuple[GPUWorker | None, str]) -> None:
+        worker, label = worker_entry
         while True:
             item = job_queue.get()
             try:
@@ -1242,9 +1288,13 @@ def _run_scheduler(
                     dataset_root=dataset_root,
                     telemetry_path=telemetry_path,
                 )
+                with stats_lock:
+                    stats[label]["success"] += 1
             except Exception as exc:  # pragma: no cover - propagated to main thread
                 errors.append(exc)
                 stop_event.set()
+                with stats_lock:
+                    stats[label]["failure"] += 1
             finally:
                 job_queue.task_done()
 
@@ -1258,6 +1308,7 @@ def _run_scheduler(
         thread.join()
     if errors:
         raise errors[0]
+    return stats
 
 
 def _prepare_job_contexts(
@@ -1401,7 +1452,7 @@ def _print_datalad_run_instructions(
         cmd.append("--use-hawkears")
     for arg in hawkears_args:
         cmd += ["--hawkears-arg", arg]
-    if cpu_workers != 1:
+    if cpu_workers > 0:
         cmd += ["--cpu-workers", str(cpu_workers)]
     datalad_cmd = [
         "datalad",

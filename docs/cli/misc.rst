@@ -43,7 +43,8 @@ Sample output::
 Troubleshooting:
 
 * If the list is empty, confirm ``nvidia-smi`` exists on ``PATH`` and the container/VM exposes GPUs.
-* On CPU-only nodes, use ``badc infer run --cpu-workers`` to bypass GPU detection entirely.
+* On CPU-only nodes, use ``badc infer run --cpu-workers N`` to request additional CPU threads (BADC
+  still runs at least one CPU worker automatically when GPUs are unavailable).
 
 Help excerpt
 ^^^^^^^^^^^^

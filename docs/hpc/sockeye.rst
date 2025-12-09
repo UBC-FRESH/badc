@@ -70,7 +70,8 @@ Automatic GPU detection
 --------------------------
 * Run ``badc gpus`` inside the allocation after loading modules to confirm the devices exposed via ``CUDA_VISIBLE_DEVICES`` match the ``--gres`` request.
 * Limit utilization with ``--max-gpus`` when you intentionally reserve more GPUs than needed (e.g., staging pipelines or throttling HawkEars concurrency).
-* CPU-only dry runs: supply ``--cpu-workers`` (>=1) and omit ``--max-gpus`` so the scheduler spins up threads even if no GPUs are detected.
+* CPU-only dry runs: supply ``--cpu-workers N`` (>=1) and omit ``--max-gpus`` to request additional CPU
+  threads; BADC will still add at least one CPU worker automatically when no GPUs are detected.
 
 Job arrays & manifests
 ----------------------

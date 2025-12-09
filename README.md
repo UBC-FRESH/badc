@@ -87,7 +87,8 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
 - `badc infer run --manifest manifest.csv` — loads chunk jobs, detects GPUs, and runs the HawkEars
   runner (pass `--use-hawkears` to invoke the embedded `vendor/HawkEars/analyze.py`, or `--runner-cmd`
   to supply a custom command; stub mode remains the default for local tests). Use `--cpu-workers N`
-  to process chunks concurrently when no GPUs are available. When chunks come from a DataLad dataset
+  to append CPU worker threads (at least one CPU worker is used automatically when no GPUs are
+  detected). When chunks come from a DataLad dataset
   (e.g., `data/datalad/bogus`), outputs automatically land under `artifacts/infer/` inside that same
   dataset so you can `datalad save` immediately.
 - `badc infer orchestrate` — scans a dataset’s manifests (or a saved chunk plan), prints an inference

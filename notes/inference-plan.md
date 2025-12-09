@@ -12,7 +12,8 @@
    - Detect GPUs via `badc.gpu.detect_gpus()`.
    - Allow CLI overrides (`--max-gpus`, `--workers`).
    - For each GPU, run a worker process that pops chunk jobs and invokes HawkEars.
-     *(Implemented via thread-per-worker; `--cpu-workers` provides concurrency when GPUs are absent.
+     *(Implemented via thread-per-worker; `--cpu-workers` can now supplement GPU workers or take over
+     when none exist, and worker labels surface in the CLI summary so hotspots are easy to spot.
      Future work: true async queue feeding HPC jobs).*
 3. **HawkEars runner**:
    - Shell out to `vendor/HawkEars` CLI (initially) with arguments for input WAV, config, and
@@ -27,6 +28,8 @@
    - Log start/end timestamps, GPU index/name, VRAM usage, runtime, exit code.
    - Persist to `data/telemetry/infer/<manifest_id>.jsonl` and summarise per worker.
    - Record HawkEars command, chunk id, retry counter, and failure reason for post-mortems.
+   - `badc infer run` prints a final worker summary (GPU/CPU label, successes, failures) using the
+     stats gathered during scheduling so retries/outliers are visible without opening the telemetry log.
 5. **Output storage**:
    - Store raw HawkEars CSV/JSON outputs in `artifacts/infer/<recording>/chunk_id.*`.
    - Convert to canonical detection schema (Parquet) for aggregation.

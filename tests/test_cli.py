@@ -109,6 +109,9 @@ def test_infer_run_stub_cpu_workers(tmp_path) -> None:
     assert (out_dir / "chunk_a.json").exists()
     assert (out_dir / "chunk_b.json").exists()
     assert (out_dir / "chunk_c.json").exists()
+    assert "Worker summary" in result.stdout
+    assert "cpu-0" in result.stdout
+    assert "cpu-1" in result.stdout
 
 
 def test_infer_run_defaults_to_dataset_output(tmp_path) -> None:

@@ -40,8 +40,8 @@ expects flags.
      - auto-detect
      - Cap number of GPUs used (one worker per GPU).
    * - ``--cpu-workers``
-     - ``1``
-     - Worker count when no GPUs are available.
+     - ``0``
+     - Additional CPU threads to run alongside GPUs (at least one CPU worker is added automatically when none are detected).
    * - ``--hawkears-arg``
      - ``[]``
      - Extra args forwarded verbatim to ``analyze.py`` (repeat per flag, e.g. ``--hawkears-arg --min_score``).
@@ -116,7 +116,7 @@ flags, and execute ``badc infer run`` when you need to patch values on the fly:
        "--max-gpus",
        str(runner["max_gpus"]),
        "--cpu-workers",
-       str(runner.get("cpu_workers", 1)),
+       str(runner.get("cpu_workers", 0)),
    ]
    if runner.get("use_hawkears", False):
        cmd.append("--use-hawkears")
@@ -161,9 +161,11 @@ Step 2 — Run HawkEars locally
        --hawkears-arg 0.75
 
 Expected outputs:
+
 * JSON detections under ``data/datalad/bogus/artifacts/infer/<recording>/``
 * Telemetry log inside ``data/datalad/bogus/artifacts/telemetry/…``
-* Console summary listing telemetry path + job counts
+* Console summary listing telemetry path + job counts, plus a per-worker success/failure table so
+  CPU vs. GPU bottlenecks stand out
 
 Step 3 — Monitor telemetry
 --------------------------

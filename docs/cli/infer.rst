@@ -36,7 +36,8 @@ Key options:
 ``--max-gpus``
    Limit how many detected GPUs are used. Defaults to "all GPUs reported by ``nvidia-smi``".
 ``--cpu-workers``
-   Worker count when no GPUs exist (or when a CPU-only run is desired). Minimum 1.
+   Additional CPU worker threads to append to the GPU pool. When no GPUs exist,
+   BADC still runs at least one CPU worker even if this is left at ``0``.
 ``--runner-cmd``
    Custom executable to run per chunk (e.g., a container wrapper). Mutually exclusive with
    ``--use-hawkears``.
@@ -50,9 +51,6 @@ Key options:
 ``--output-dir``
    Override the destination for JSON outputs. When omitted *and* chunks live in a DataLad dataset,
    BADC writes under ``<dataset>/artifacts/infer`` so the files remain inside the dataset boundary.
-``--telemetry-log``
-   Override the telemetry log path (JSONL) that records scheduler events. Defaults to a unique file
-   per manifest/timestamp under ``data/telemetry/infer`` or ``<dataset>/artifacts/telemetry``.
 ``--telemetry-log``
    Override the telemetry log path (JSONL) that records scheduler events. Defaults to a unique file
    per manifest/timestamp under ``data/telemetry/infer`` or ``<dataset>/artifacts/telemetry``.
@@ -75,8 +73,8 @@ Option reference
      - Upper bound on detected GPUs to enlist.
      - All GPUs
    * - ``--cpu-workers N``
-     - Worker threads when GPUs are unavailable.
-     - ``1``
+     - Additional CPU worker threads (at least one CPU worker is added automatically when no GPUs exist).
+     - ``0``
    * - ``--runner-cmd CMD``
      - Custom executable invoked per chunk.
      - Stub runner
@@ -111,7 +109,7 @@ Help excerpt
      MANIFEST  Path to chunk manifest CSV.  [required]
    Options:
      --max-gpus INTEGER       Limit number of GPUs to use.
-     --cpu-workers INTEGER    Number of concurrent workers when no GPUs exist.
+     --cpu-workers INTEGER    Extra CPU worker threads to append to the GPU pool.
      --output-dir PATH        Directory for inference outputs.
      --runner-cmd TEXT        Command used to invoke HawkEars (default stub).
      --use-hawkears / --stub-runner  Invoke the embedded HawkEars analyzer.
@@ -124,11 +122,14 @@ Help excerpt
 Workflow notes:
 
 * Worker pool: BADC pairs each chunk with a ``GPUWorker`` (index + UUID) derived from ``nvidia-smi``.
-  When no GPUs are detected, a CPU thread pool drives the runner.
+  ``--cpu-workers`` adds CPU threads on top of the GPU pool, and when no GPUs are found the CLI
+  still spins up at least one CPU worker.
 * Telemetry: every chunk emits a JSON record with timestamps, runtime, GPU index/name, and (when
   available) GPU utilization/memory snapshots. The CLI prints the log path; monitor progress via
   ``badc infer monitor --log <file>`` (rich GPU summary) or ``badc telemetry --log <file>`` (plain
   tail).
+* Worker summary: once all jobs finish, ``badc infer run`` prints a per-worker table (GPU/CPU label,
+  total jobs, failures) so long runs surface retry hot spots without diving into telemetry logs.
 * Failure handling: if any worker raises an exception, the scheduler stops submitting new jobs and
   re-raises the first error after threads finish.
 
@@ -285,8 +286,8 @@ Usage::
 Highlights:
 
 * Loads manifests from ``<dataset>/manifests`` (or a supplied chunk plan CSV/JSON).
-* Builds per-recording plans that capture manifest path, output directory, telemetry log, and
-  HawkEars settings.
+* Builds per-recording plans that capture manifest path, output directory, telemetry log, HawkEars
+  settings, and CPU/GPU worker overrides.
 * ``--plan-csv`` / ``--plan-json`` save the plan for HPC submission scripts or future re-runs.
 * ``--print-datalad-run`` emits commands such as::
 

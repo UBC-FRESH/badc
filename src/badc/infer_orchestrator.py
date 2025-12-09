@@ -19,6 +19,7 @@ class InferPlan:
     use_hawkears: bool = True
     hawkears_args: Sequence[str] = ()
     max_gpus: int | None = None
+    cpu_workers: int = 0
 
     @property
     def recording_id(self) -> str:
@@ -34,6 +35,7 @@ class InferPlan:
             "use_hawkears": self.use_hawkears,
             "hawkears_args": list(self.hawkears_args),
             "max_gpus": self.max_gpus,
+            "cpu_workers": self.cpu_workers,
         }
 
     @property
@@ -57,6 +59,7 @@ def build_infer_plan(
     use_hawkears: bool = True,
     hawkears_args: Sequence[str] | None = None,
     max_gpus: int | None = None,
+    cpu_workers: int = 0,
     limit: int | None = None,
 ) -> list[InferPlan]:
     """Return inference plans for manifests under ``dataset_root``."""
@@ -88,6 +91,7 @@ def build_infer_plan(
                 use_hawkears=use_hawkears,
                 hawkears_args=hawkears_args,
                 max_gpus=max_gpus,
+                cpu_workers=cpu_workers,
             )
         )
         if limit and len(plans) >= limit:
@@ -124,6 +128,8 @@ def render_datalad_run(plan: InferPlan, dataset_root: Path) -> str:
         cmd += ["--max-gpus", str(plan.max_gpus)]
     if plan.use_hawkears:
         cmd.append("--use-hawkears")
+    if plan.cpu_workers > 0:
+        cmd += ["--cpu-workers", str(plan.cpu_workers)]
     for arg in plan.hawkears_args:
         cmd += ["--hawkears-arg", arg]
 
