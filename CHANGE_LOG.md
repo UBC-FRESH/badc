@@ -996,3 +996,18 @@
   - ``pytest``
   - ``sphinx-build -b html docs _build/html -W``
   - ``pre-commit run --all-files``
+
+# 2025-12-09 — Parquet bundle notebook wiring
+- Updated ``docs/notebooks/aggregate_analysis.ipynb`` to load the new ``badc report parquet``
+  outputs (labels/recordings/timeline CSVs + ``summary.json``) so plots and tables now reflect the
+  CLI-generated artifacts that Erin reviews in Phase 2.
+- Added top-recording and bucketed timeline sections plus refreshed markdown narrative explaining
+  how to point the notebook at ``<run>_parquet_report`` directories.
+- Reintroduced the quicklook example section so the notebook can also visualize the lighter
+  ``badc report quicklook`` CSVs (labels + per-chunk timeline) when that workflow is preferred.
+- Commands executed:
+  - ``ruff format src tests``
+  - ``ruff check src tests``
+  - ``pytest``
+  - ``sphinx-build -b html docs _build/html -W``
+  - ``pre-commit run --all-files``
