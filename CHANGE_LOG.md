@@ -980,3 +980,19 @@
   (or saved chunk plans), print inference plans, save CSV/JSON summaries, emit ready-to-run
   ``datalad run`` commands, and even execute the entire run list via ``--apply``. README, CLI docs,
   and the infer how-to now document the workflow; tests cover the planner + CLI path.
+
+# 2025-12-09 — Phase 2 parquet report helper
+- Added ``badc report parquet`` plus ``badc.aggregate.parquet_report``/``ParquetReport`` so Erin can
+  turn canonical detections into CSV/JSON artifacts (labels, recordings, timeline buckets, summary)
+  without leaving the CLI.
+- Documented the new helper across README, ``docs/cli/report.rst``, and
+  ``docs/howto/aggregate-results.rst``; autosummary stubs now list the added APIs, and the pipeline
+  plan notes the Phase 2 reporting workflow.
+- Introduced ``tests/test_report_cli.py`` (skips if DuckDB is missing) to exercise the new command’s
+  export path and caught missing DuckDB gracefully in the CLI.
+- Commands executed:
+  - ``ruff format src tests``
+  - ``ruff check src tests``
+  - ``pytest``
+  - ``sphinx-build -b html docs _build/html -W``
+  - ``pre-commit run --all-files``

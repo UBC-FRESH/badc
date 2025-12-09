@@ -149,3 +149,37 @@ The command prints three Rich tables (labels, recordings, chunk timeline) and an
 representing detections-per-chunk so you can eyeball bursts of activity without launching a
 notebook. When ``--output-dir`` is set the same data lands in CSVs for downstream DuckDB/Pandas
 pipelines.
+
+``badc report parquet``
+-----------------------
+
+Run richer DuckDB summaries (labels, recordings, timeline buckets) against the canonical Parquet
+export. This command is tailored for Phase 2 analytics workflows that need CSV artifacts or JSON
+summaries without opening a notebook.
+
+Usage::
+
+   badc report parquet \
+       --parquet data/datalad/bogus/artifacts/aggregate/detections.parquet \
+       --top-labels 25 \
+       --top-recordings 10 \
+       --bucket-minutes 30 \
+       --output-dir data/datalad/bogus/artifacts/aggregate/parquet_report
+
+Key options
+^^^^^^^^^^^
+
+``--parquet``
+   Canonical detections Parquet file produced by ``badc infer aggregate --parquet``.
+``--top-labels`` / ``--top-recordings``
+   How many rows to display/export for each table (defaults: 20 labels, 10 recordings).
+``--bucket-minutes``
+   Timeline bucket size in minutes; detections are grouped by this window and printed in chronological
+   order.
+``--output-dir``
+   When provided, ``labels.csv``, ``recordings.csv``, ``timeline.csv``, and ``summary.json`` are
+   written alongside the console output.
+
+The command prints three Rich tables (labels, recordings, timeline) plus a summary panel with total
+detections, label/recording counts, and first/last chunk timestamps. Combine this with
+``badc infer orchestrate`` to generate ready-to-review analytics packages for Erin.

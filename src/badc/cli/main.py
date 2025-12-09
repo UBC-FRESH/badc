@@ -1780,6 +1780,114 @@ def report_quicklook(
         console.print(f"Wrote quicklook CSVs to {output_dir}")
 
 
+@report_app.command("parquet")
+def report_parquet(
+    parquet: Annotated[
+        Path,
+        typer.Option(
+            "--parquet", help="Canonical detections Parquet file.", exists=True, dir_okay=False
+        ),
+    ],
+    top_labels: Annotated[
+        int,
+        typer.Option("--top-labels", help="Number of label rows to display."),
+    ] = 20,
+    top_recordings: Annotated[
+        int,
+        typer.Option("--top-recordings", help="Number of recording rows to display."),
+    ] = 10,
+    bucket_minutes: Annotated[
+        int,
+        typer.Option("--bucket-minutes", help="Bucket size (minutes) for the timeline."),
+    ] = 60,
+    output_dir: Annotated[
+        Path | None,
+        typer.Option("--output-dir", help="Optional directory for CSV/JSON exports."),
+    ] = None,
+) -> None:
+    """Summarize canonical detections via DuckDB with optional exports."""
+
+    from badc.aggregate import parquet_report
+
+    try:
+        report = parquet_report(
+            parquet,
+            top_labels=top_labels,
+            top_recordings=top_recordings,
+            bucket_minutes=bucket_minutes,
+        )
+    except RuntimeError as exc:
+        console.print(str(exc), style="red")
+        raise typer.Exit(code=1) from exc
+    summary_table = Table(title="Detection summary", expand=True)
+    summary_table.add_column("Metric")
+    summary_table.add_column("Value", justify="right")
+    for key, value in report.summary.items():
+        summary_table.add_row(key.replace("_", " ").title(), "-" if value is None else str(value))
+    console.print(summary_table)
+
+    label_table = Table(title="Top labels", expand=True)
+    label_table.add_column("Label")
+    label_table.add_column("Name")
+    label_table.add_column("Detections", justify="right")
+    label_table.add_column("Avg conf", justify="right")
+    for label, name, detections, avg_conf in report.labels:
+        label_table.add_row(
+            label,
+            name or "",
+            str(detections),
+            "-" if avg_conf is None else f"{avg_conf:.3f}",
+        )
+    console.print(label_table)
+
+    recording_table = Table(title="Top recordings", expand=True)
+    recording_table.add_column("Recording")
+    recording_table.add_column("Detections", justify="right")
+    recording_table.add_column("Avg conf", justify="right")
+    for recording_id, detections, avg_conf in report.recordings:
+        recording_table.add_row(
+            recording_id,
+            str(detections),
+            "-" if avg_conf is None else f"{avg_conf:.3f}",
+        )
+    console.print(recording_table)
+
+    timeline_table = Table(title=f"Timeline (bucket={bucket_minutes}m)", expand=True)
+    timeline_table.add_column("Bucket")
+    timeline_table.add_column("Start (ms)", justify="right")
+    timeline_table.add_column("Detections", justify="right")
+    timeline_table.add_column("Avg conf", justify="right")
+    for bucket, start_ms, detections, avg_conf in report.timeline:
+        timeline_table.add_row(
+            bucket,
+            "-" if start_ms is None else str(start_ms),
+            str(detections),
+            "-" if avg_conf is None else f"{avg_conf:.3f}",
+        )
+    console.print(timeline_table)
+
+    if output_dir:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        _write_csv(
+            report.labels,
+            ["label", "label_name", "detections", "avg_confidence"],
+            output_dir / "labels.csv",
+        )
+        _write_csv(
+            report.recordings,
+            ["recording_id", "detections", "avg_confidence"],
+            output_dir / "recordings.csv",
+        )
+        _write_csv(
+            report.timeline,
+            ["bucket", "bucket_start_ms", "detections", "avg_confidence"],
+            output_dir / "timeline.csv",
+        )
+        summary_path = output_dir / "summary.json"
+        summary_path.write_text(json.dumps(report.summary, indent=2), encoding="utf-8")
+        console.print(f"Wrote parquet report artifacts to {output_dir}")
+
+
 def main() -> None:
     """Entrypoint invoked by the ``badc`` console script.
 

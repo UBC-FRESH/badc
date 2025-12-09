@@ -45,6 +45,16 @@ class QuicklookReport:
 
 
 @dataclass
+class ParquetReport:
+    """Structured summary produced by :func:`parquet_report`."""
+
+    labels: list[tuple[str, str | None, int, float | None]]
+    recordings: list[tuple[str, int, float | None]]
+    timeline: list[tuple[str, int | None, int, float | None]]
+    summary: dict[str, int | float | None]
+
+
+@dataclass
 class _ManifestRecord:
     """Subset of manifest metadata used to enrich detections."""
 
@@ -442,6 +452,121 @@ def quicklook_metrics(
         top_labels=label_cast,
         top_recordings=recording_cast,
         chunk_timeline=chunk_cast,
+    )
+
+
+def parquet_report(
+    parquet_path: Path,
+    *,
+    top_labels: int = 20,
+    top_recordings: int = 10,
+    bucket_minutes: int = 60,
+) -> ParquetReport:
+    """Summarize canonical detections using DuckDB."""
+
+    try:
+        import duckdb  # type: ignore
+    except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency
+        raise RuntimeError(
+            "duckdb is required for parquet reports. Install with `pip install duckdb`."
+        ) from exc
+
+    bucket_minutes = max(1, bucket_minutes)
+    bucket_ms = bucket_minutes * 60 * 1000
+    con = duckdb.connect()
+    label_rows = con.execute(
+        """
+        SELECT label,
+               COALESCE(label_name, '') AS label_name,
+               COUNT(*) AS detections,
+               AVG(confidence) AS avg_confidence
+        FROM read_parquet(?)
+        GROUP BY label, label_name
+        ORDER BY detections DESC
+        LIMIT ?
+        """,
+        [str(parquet_path), max(1, top_labels)],
+    ).fetchall()
+    recording_rows = con.execute(
+        """
+        SELECT recording_id,
+               COUNT(*) AS detections,
+               AVG(confidence) AS avg_confidence
+        FROM read_parquet(?)
+        GROUP BY recording_id
+        ORDER BY detections DESC
+        LIMIT ?
+        """,
+        [str(parquet_path), max(1, top_recordings)],
+    ).fetchall()
+    timeline_rows = con.execute(
+        """
+        WITH chunk_data AS (
+            SELECT chunk_id,
+                   COALESCE(chunk_start_ms, 0) AS chunk_start_ms,
+                   CAST(FLOOR(COALESCE(chunk_start_ms, 0) / ?) AS BIGINT) AS bucket_index,
+                   COUNT(*) AS detections,
+                   AVG(confidence) AS avg_confidence
+            FROM read_parquet(?)
+            GROUP BY chunk_id, chunk_start_ms, bucket_index
+        )
+        SELECT bucket_index,
+               MIN(chunk_start_ms) AS bucket_start_ms,
+               SUM(detections) AS detections,
+               AVG(avg_confidence) AS avg_confidence
+        FROM chunk_data
+        GROUP BY bucket_index
+        ORDER BY bucket_start_ms, bucket_index
+        """,
+        [bucket_ms, str(parquet_path)],
+    ).fetchall()
+    summary_row = con.execute(
+        """
+        SELECT COUNT(*) AS detections,
+               COUNT(DISTINCT label) AS label_count,
+               COUNT(DISTINCT recording_id) AS recording_count,
+               MIN(chunk_start_ms) AS first_chunk_ms,
+               MAX(chunk_start_ms) AS last_chunk_ms
+        FROM read_parquet(?)
+        """,
+        [str(parquet_path)],
+    ).fetchone()
+    con.close()
+
+    label_cast = [
+        (row[0], row[1] or None, int(row[2]), float(row[3]) if row[3] is not None else None)
+        for row in label_rows
+    ]
+    recording_cast = [
+        (row[0] or "unknown", int(row[1]), float(row[2]) if row[2] is not None else None)
+        for row in recording_rows
+    ]
+    timeline_cast = [
+        (
+            f"bucket_{row[0]}",
+            int(row[1]) if row[1] is not None else None,
+            int(row[2]),
+            float(row[3]) if row[3] is not None else None,
+        )
+        for row in timeline_rows
+    ]
+    summary = {
+        "detections": int(summary_row[0]) if summary_row and summary_row[0] is not None else 0,
+        "label_count": int(summary_row[1]) if summary_row and summary_row[1] is not None else 0,
+        "recording_count": int(summary_row[2]) if summary_row and summary_row[2] is not None else 0,
+        "first_chunk_ms": (
+            int(summary_row[3]) if summary_row and summary_row[3] is not None else None
+        ),
+        "last_chunk_ms": (
+            int(summary_row[4]) if summary_row and summary_row[4] is not None else None
+        ),
+        "bucket_minutes": bucket_minutes,
+    }
+    return ParquetReport(
+        labels=label_cast,
+        recordings=recording_cast,
+        timeline=timeline_cast,
+        summary=summary,
     )
 
 

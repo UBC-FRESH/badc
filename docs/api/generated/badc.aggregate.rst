@@ -9,6 +9,7 @@
    .. autosummary::
    
       load_detections
+      parquet_report
       quicklook_metrics
       summarize_parquet
       write_parquet
@@ -19,5 +20,6 @@
    .. autosummary::
    
       DetectionRecord
+      ParquetReport
       QuicklookReport
    

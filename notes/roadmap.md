@@ -56,10 +56,10 @@ execution notes live alongside task-specific files under `notes/`.
 - [ ] Wire `badc data connect` to the bogus dataset submodule once published (`notes/bogus-datalad.md`).
 - [ ] Build `badc chunk run` per `notes/chunk-files.md` (real chunk WAV writer + manifest linking).
 - [ ] Design the aggregated “bird call events” datastore (likely DuckDB/Parquet) and expose query
-      helpers for down-stream stats/figures. *(Canonical Parquet export +
-      ``badc report summary`` and the new ``badc report quicklook`` command now surface grouped
-      counts, per-recording tables, and chunk timelines. Next up is wiring these outputs into the
-      docs/notebook gallery.)*
+      helpers for down-stream stats/figures. *(Canonical Parquet export + ``badc report summary``,
+      ``badc report quicklook``, and the new ``badc report parquet`` command now surface grouped
+      counts, bucketed timelines, and CSV/JSON artifacts for Erin. Remaining work: richer notebook
+      gallery + DuckDB views for cross-project comparisons.)*
 - [ ] Wire Typer CLI commands for end-to-end runs (`badc chunk`, `badc infer`, `badc aggregate`,
       `badc report`). *(Scaffolded chunk/infer commands exist; `notes/pipeline-plan.md` now captures
       the full flow.)*

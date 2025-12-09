@@ -23,6 +23,7 @@
       infer_run_config
       list_gpus
       main
+      report_parquet
       report_quicklook
       report_summary
       telemetry_monitor

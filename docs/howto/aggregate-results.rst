@@ -64,7 +64,22 @@ Step 3 — Quicklook dashboards via ``badc report quicklook``
    imported into notebooks or attached to CHANGE_LOG entries for asynchronous reviews. The
    :doc:`/notebooks/aggregate_analysis` example shows how to load the CSVs with pandas to build plots.
 
-Step 4 — Notebook/SQL exploration
+Step 4 — Detailed parquet report
+--------------------------------
+
+1. Generate CSV/JSON artifacts for Erin using the new DuckDB-backed helper::
+
+      badc report parquet \
+          --parquet data/datalad/bogus/artifacts/aggregate/detections.parquet \
+          --bucket-minutes 30 \
+          --output-dir data/datalad/bogus/artifacts/aggregate/parquet_report
+
+2. The CLI prints overall stats, richer label/recording tables, and a bucketed timeline (detections
+   per N-minute window). The ``--output-dir`` captures ``labels.csv``, ``recordings.csv``,
+   ``timeline.csv``, and ``summary.json`` so Erin can drop them straight into her thesis figures or
+   notebooks without running DuckDB herself.
+
+Step 5 — Notebook/SQL exploration
 ---------------------------------
 
 1. Open the Parquet file with DuckDB for ad-hoc SQL::
