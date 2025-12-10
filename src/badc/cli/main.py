@@ -1179,6 +1179,13 @@ def infer_orchestrate(
             help="When applying, reuse existing telemetry summaries to skip completed chunks.",
         ),
     ] = False,
+    sockeye_resume_completed: Annotated[
+        bool,
+        typer.Option(
+            "--sockeye-resume-completed/--sockeye-rerun-all",
+            help="When generating Sockeye scripts, add --resume-summary if prior telemetry summaries exist.",
+        ),
+    ] = False,
 ) -> None:
     """Plan inference runs across manifests without executing them."""
 
@@ -1243,6 +1250,7 @@ def infer_orchestrate(
             time_limit=sockeye_time,
             cpus_per_task=sockeye_cpus_per_task,
             mem=sockeye_mem,
+            resume_completed=sockeye_resume_completed,
         )
         sockeye_script.parent.mkdir(parents=True, exist_ok=True)
         sockeye_script.write_text(script)
@@ -1531,6 +1539,7 @@ def _render_sockeye_script(
     time_limit: str | None,
     cpus_per_task: int | None,
     mem: str | None,
+    resume_completed: bool,
 ) -> str:
     dataset = dataset.expanduser().resolve()
     first_plan = plans[0]
@@ -1544,6 +1553,11 @@ def _render_sockeye_script(
     manifest_entries = [f'  "{_relative(plan.manifest_path)}"' for plan in plans]
     output_entries = [f'  "{_relative(plan.recording_output)}"' for plan in plans]
     telemetry_entries = [f'  "{_relative(plan.telemetry_log)}"' for plan in plans]
+    resume_entries = []
+    if resume_completed:
+        resume_entries = [
+            f'  "{_relative(_telemetry_summary_path(plan.telemetry_log))}"' for plan in plans
+        ]
 
     lines = ["#!/bin/bash", f"#SBATCH --job-name={job_name}"]
     if account:
@@ -1571,12 +1585,22 @@ def _render_sockeye_script(
     lines.append("TELEMETRY=(")
     lines.extend(telemetry_entries)
     lines.append(")")
+    if resume_completed:
+        lines.append("RESUMES=(")
+        lines.extend(resume_entries)
+        lines.append(")")
     lines.extend(
         [
             "IDX=$(($SLURM_ARRAY_TASK_ID-1))",
             "MANIFEST=${MANIFESTS[$IDX]}",
             "OUTPUT=${OUTPUTS[$IDX]}",
             "TELEMETRY_LOG=${TELEMETRY[$IDX]}",
+        ]
+    )
+    if resume_completed:
+        lines.append("RESUME_SUMMARY=${RESUMES[$IDX]}")
+    lines.extend(
+        [
             'cd "$DATASET"',
         ]
     )
@@ -1599,6 +1623,17 @@ def _render_sockeye_script(
     for arg in first_plan.hawkears_args:
         command += ["--hawkears-arg", arg]
     lines.append("CMD=(" + " ".join(command) + ")")
+    if resume_completed:
+        lines.extend(
+            [
+                'if [ -f "$RESUME_SUMMARY" ]; then',
+                '  echo "Resume summary found: $RESUME_SUMMARY"',
+                '  CMD+=("--resume-summary" "$RESUME_SUMMARY")',
+                "else",
+                '  echo "Resume summary $RESUME_SUMMARY not found; running full manifest."',
+                "fi",
+            ]
+        )
     lines.append("echo Running: ${CMD[*]}")
     lines.append("${CMD[@]}")
     return "\n".join(lines) + "\n"

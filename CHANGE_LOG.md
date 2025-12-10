@@ -41,6 +41,25 @@
   Phase 2 aggregation progress.
 - Extended ``tests/test_report_cli.py`` with a regression test that exercises the bundle command and
   verifies all artifacts are produced.
+- Commands executed:
+  - `source .venv/bin/activate && ruff format src tests`
+  - `source .venv/bin/activate && ruff check src tests`
+  - `source .venv/bin/activate && pytest`
+  - `source .venv/bin/activate && sphinx-build -b html docs _build/html -W`
+  - `source .venv/bin/activate && pre-commit run --all-files`
+
+# 2025-12-10 — Sockeye resume flag
+- ``badc infer orchestrate`` now accepts ``--sockeye-resume-completed``. When generating a Sockeye
+  array script the helper emits a ``RESUMES`` array and appends ``--resume-summary`` automatically
+  whenever the telemetry ``*.summary.json`` exists, so reruns skip chunks that already finished.
+- The Sockeye how-to plus CLI docs describe the new flag, and ``tests/test_infer_cli.py`` verifies
+  the emitted script wiring.
+- Commands executed:
+  - `source .venv/bin/activate && ruff format src tests`
+  - `source .venv/bin/activate && ruff check src tests`
+  - `source .venv/bin/activate && pytest`
+  - `source .venv/bin/activate && sphinx-build -b html docs _build/html -W`
+  - `source .venv/bin/activate && pre-commit run --all-files`
 
 # 2025-12-10 — Scheduler resume + Sockeye array helper
 - ``badc infer run`` now writes a resumable ``*.summary.json`` next to every telemetry log, recording

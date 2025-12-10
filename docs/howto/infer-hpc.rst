@@ -22,7 +22,9 @@ GPU planning
 * Sockeye arrays: ``badc infer orchestrate --sockeye-script sockeye_array.sh`` now emits a ready-to-use
   SLURM array script (one task per manifest). Pair this with ``sbatch sockeye_array.sh`` to run the
   entire plan without hand-editing bash snippets. Store the command string in the job log for
-  provenance.
+  provenance. When re-running an interrupted array, add ``--sockeye-resume-completed`` so the
+  generated script automatically passes ``--resume-summary`` if the prior telemetry
+  ``*.summary.json`` exists—finished chunks are skipped automatically.
 
 Notebook hand-off
 -----------------

@@ -317,7 +317,9 @@ Highlights:
   default (disable via ``--no-record-datalad``) so provenance is captured automatically.
 * ``--sockeye-script`` (plus the optional ``--sockeye-*`` overrides) writes a SLURM job-array script
   so Sockeye submissions no longer require hand-written `sbatch` files. Each array task maps to a
-  manifest/output pair from the generated plan.
+  manifest/output pair from the generated plan. Pair it with
+  ``--sockeye-resume-completed`` to have the script automatically append ``--resume-summary`` whenever
+  a telemetry ``*.summary.json`` already exists, so reruns skip completed chunks.
 * ``--resume-completed`` tells ``--apply`` runs to look for the telemetry ``*.summary.json`` that the
   prior run produced and pass ``--resume-summary`` automatically so only unfinished chunks are
   retried.
