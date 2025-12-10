@@ -1,3 +1,44 @@
+# 2025-12-10 — DuckDB aggregation helper
+- Added ``badc report duckdb`` to materialize canonical detections into a DuckDB database (with
+  helper views) and print top labels/recordings/timeline buckets directly in the CLI while emitting
+  optional CSV exports. The command leaves behind a `.duckdb` file so Erin can run ad-hoc SQL
+  immediately.
+- Documented the workflow in ``docs/cli/report.rst``, extended the README + roadmap/pipeline notes,
+  and covered it with a CLI regression test.
+- Commands executed:
+  - `.venv/bin/ruff format src tests`
+  - `.venv/bin/ruff check src tests`
+  - `.venv/bin/pytest`
+  - `.venv/bin/sphinx-build -b html docs _build/html -W`
+  - `.venv/bin/pre-commit run --all-files`
+
+# 2025-12-10 — Telemetry monitor retry counters
+- Extended ``badc infer monitor`` to display per-GPU retry attempts, failed-attempt totals, a retry
+  sparkline, and the attempt counter in the live event tail so long-running jobs expose flaky chunks
+  instantly. The CLI helper now parses ``details.attempt`` from telemetry, new helper columns render
+  in the Rich table, and the docs/how-to/notes call out the enhanced telemetry view.
+- Tests cover the new columns to guard against regressions in the monitor output.
+- Commands executed:
+  - `.venv/bin/ruff format src tests`
+  - `.venv/bin/ruff check src tests`
+  - `.venv/bin/pytest`
+  - `.venv/bin/sphinx-build -b html docs _build/html -W`
+  - `.venv/bin/pre-commit run --all-files`
+
+# 2025-12-09 — Inference scheduler retry metrics
+- Extended ``badc.hawkears_runner.run_job`` to return a structured ``JobResult`` (attempts + retry
+  counts) and raise ``JobExecutionError`` when retries are exhausted so the scheduler can summarize
+  flaky chunks without scraping telemetry logs.
+- Updated ``badc infer run``'s worker summary with new columns for retries and failed attempts,
+  tracked per worker inside ``_run_scheduler``; docs/how-tos/notes now describe the richer table and
+  tests cover the new accounting.
+- Commands executed:
+  - `.venv/bin/ruff format src tests`
+  - `.venv/bin/ruff check src tests`
+  - `.venv/bin/pytest`
+  - `.venv/bin/sphinx-build -b html docs _build/html -W`
+  - `.venv/bin/pre-commit run --all-files`
+
 # 2025-12-09 — Inference scheduler CPU/worker summary uplift
 - Switched ``--cpu-workers`` defaults to ``0`` so GPU detection drives concurrency by default while
   still guaranteeing at least one CPU worker when no GPUs are found; added optional CPU slots even

@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
@@ -26,6 +27,26 @@ from badc.telemetry import now_iso
 
 RAW_OUTPUT_SUFFIX = "_hawkears"
 LABELS_FILENAME = "HawkEars_labels.csv"
+
+
+@dataclass(slots=True)
+class JobResult:
+    """Metadata describing the outcome of a ``run_job`` invocation."""
+
+    output_path: Path
+    attempts: int
+    retries: int
+
+
+class JobExecutionError(RuntimeError):
+    """Raised when a job exhausts its retry budget without succeeding."""
+
+    def __init__(self, chunk_id: str, attempts: int, original: Exception | None = None):
+        message = f"Inference failed for {chunk_id} after {attempts} attempt(s)"
+        super().__init__(message)
+        self.chunk_id = chunk_id
+        self.attempts = attempts
+        self.original = original
 
 
 def _metrics_payload(metrics: GPUMetrics | None) -> dict[str, int | None] | None:
@@ -170,7 +191,7 @@ def run_job(
     hawkears_args: Sequence[str] | None = None,
     dataset_root: Path | None = None,
     telemetry_path: Path | None = None,
-) -> Path:
+) -> JobResult:
     """Execute a single inference job and return the JSON output path.
 
     Parameters
@@ -194,12 +215,12 @@ def run_job(
 
     Returns
     -------
-    Path
-        Location of the JSON payload summarizing detections/telemetry for the job.
+    JobResult
+        Information about the completed job (output path, attempts, retries).
 
     Raises
     ------
-    RuntimeError
+    JobExecutionError
         If HawkEars continues to fail after ``max_retries`` attempts.
     subprocess.CalledProcessError
         Propagated when ``runner_cmd`` fails and retries are exhausted.
@@ -260,7 +281,11 @@ def run_job(
                     finished_at=now_iso(),
                     telemetry_path=telemetry_path,
                 )
-                return output_path
+                return JobResult(
+                    output_path=output_path,
+                    attempts=attempts,
+                    retries=max(attempts - 1, 0),
+                )
 
             gpu_before = query_gpu_metrics(worker.index) if worker else None
             result = subprocess.run(
@@ -321,7 +346,11 @@ def run_job(
                 finished_at=now_iso(),
                 telemetry_path=telemetry_path,
             )
-            return output_path
+            return JobResult(
+                output_path=output_path,
+                attempts=attempts,
+                retries=max(attempts - 1, 0),
+            )
         except subprocess.CalledProcessError as exc:
             runtime = time.time() - start
             gpu_after = query_gpu_metrics(worker.index) if worker else None
@@ -344,6 +373,5 @@ def run_job(
                 telemetry_path=telemetry_path,
             )
             if attempts > max_retries:
-                raise RuntimeError(f"HawkEars failed for {job.chunk_id}") from exc
+                raise JobExecutionError(job.chunk_id, attempts, exc) from exc
             time.sleep(min(2**attempts, 5))
-    return output_path

@@ -77,8 +77,9 @@ Stages:
 - Aggregation outputs:
   - Species/site summaries (CSV, Markdown).
   - QC metrics (chunks attempted, failures, runtime distributions).
-  - Phase 2 helper: `badc report parquet` generates CSV/JSON artifacts (labels, recordings,
-    timeline buckets, summary) directly from the canonical Parquet export for Erin's analytics.
+  - Phase 2 helpers: `badc report parquet` and the new `badc report duckdb` generate CSV/JSON
+    artifacts, timeline buckets, and a DuckDB database so Erin can run ad-hoc SQL on the canonical
+    Parquet export without additional glue code.
 
 ## Report stage
 - Produce summary tables (per species/per site), quality-control metrics (chunks processed, failures), and GPU utilization charts.

@@ -183,3 +183,44 @@ Key options
 The command prints three Rich tables (labels, recordings, timeline) plus a summary panel with total
 detections, label/recording counts, and first/last chunk timestamps. Combine this with
 ``badc infer orchestrate`` to generate ready-to-review analytics packages for Erin.
+
+``badc report duckdb``
+----------------------
+
+Materialize the canonical detections Parquet export into a DuckDB database, create helper views
+(``detections``, ``label_summary``, ``recording_summary``, ``timeline_summary``), and print the same
+tables Erin reviews in notebooks. This command is ideal when you want a `.duckdb` file for ad-hoc
+SQL queries plus CSV exports for downstream workflows.
+
+Usage::
+
+   badc report duckdb \
+       --parquet data/datalad/bogus/artifacts/aggregate/detections.parquet \
+       --database data/datalad/bogus/artifacts/aggregate/detections.duckdb \
+       --bucket-minutes 30 \
+       --export-dir data/datalad/bogus/artifacts/aggregate/duckdb_exports
+
+Key options
+^^^^^^^^^^^
+
+``--parquet``
+   Canonical detections Parquet file produced by ``badc infer aggregate --parquet``.
+``--database``
+   DuckDB database that will be created (or overwritten) with the detections table and helper views.
+``--bucket-minutes``
+   Timeline bucket size (minutes) for the aggregated sparkline/table.
+``--top-labels`` / ``--top-recordings``
+   How many rows to display in the console (defaults: 15 labels, 10 recordings).
+``--export-dir``
+   Optional directory for CSV exports (``label_summary.csv``, ``recording_summary.csv``, ``timeline.csv``).
+
+Behavior
+^^^^^^^^
+
+* Loads the Parquet detections into a DuckDB table called ``detections`` and registers three views for
+  common analytics.
+* Prints the database summary (detection count, label count, recording count, first/last chunk), top
+  labels, top recordings, and a timeline table plus sparkline.
+* When ``--export-dir`` is provided, writes CSV snapshots mirroring the console output.
+* Leaves behind the DuckDB database so analysts can run ``duckdb artifacts/aggregate/detections.duckdb``
+  and continue exploring with SQL or notebooks.

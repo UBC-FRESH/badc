@@ -164,8 +164,8 @@ Expected outputs:
 
 * JSON detections under ``data/datalad/bogus/artifacts/infer/<recording>/``
 * Telemetry log inside ``data/datalad/bogus/artifacts/telemetry/…``
-* Console summary listing telemetry path + job counts, plus a per-worker success/failure table so
-  CPU vs. GPU bottlenecks stand out
+* Console summary listing telemetry path + job counts, plus a per-worker success/failure/ retry table
+  so CPU vs. GPU bottlenecks and flaky chunks stand out
 
 Step 3 — Monitor telemetry
 --------------------------
@@ -174,8 +174,9 @@ Step 3 — Monitor telemetry
 
    $ badc infer monitor --log data/datalad/bogus/artifacts/telemetry/XXXX-000_20251001_093000_local.jsonl --follow
 
-The monitor shows per-GPU event counts, utilization stats, and rolling VRAM trends. For quick
-inspection, use ``badc telemetry --log …`` to just print the latest entries.
+The monitor shows per-GPU event counts, retry/failure-attempt totals, utilization stats, and rolling
+VRAM/retry trends. For quick inspection, use ``badc telemetry --log …`` to just print the latest
+entries.
 
 Step 4 — Aggregate results
 --------------------------

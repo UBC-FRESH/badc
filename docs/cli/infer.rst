@@ -129,7 +129,8 @@ Workflow notes:
   ``badc infer monitor --log <file>`` (rich GPU summary) or ``badc telemetry --log <file>`` (plain
   tail).
 * Worker summary: once all jobs finish, ``badc infer run`` prints a per-worker table (GPU/CPU label,
-  total jobs, failures) so long runs surface retry hot spots without diving into telemetry logs.
+  total jobs, failures, successful retry counts, and failed attempts) so long runs surface retry
+  hot spots without diving into telemetry logs.
 * Failure handling: if any worker raises an exception, the scheduler stops submitting new jobs and
   re-raises the first error after threads finish.
 
@@ -247,9 +248,9 @@ recording, or both) or to the :doc:`/howto/aggregate-results` workflow for noteb
 
 Stream GPU utilization and per-chunk telemetry directly from the JSONL logs produced by
 ``badc infer run``. The view renders two ``rich`` tables: a per-GPU summary with success/failure
-counts, average runtimes, utilization trends (min/avg/max), peak VRAM usage, and ASCII sparklines
-showing rolling utilization/VRAM history, plus a live tail of recent chunk events (status, runtime,
-GPU, utilization/memory snapshot).
+counts, retry attempts, failed-attempt totals, average runtimes, utilization trends (min/avg/max),
+peak VRAM usage, and ASCII sparklines showing rolling utilization/VRAM/retry history, plus a live
+tail of recent chunk events (status, runtime, attempt counter, GPU, utilization/memory snapshot).
 
 Usage::
 
@@ -266,8 +267,9 @@ Options:
    Refresh the tables every ``--interval`` seconds (Ctrl+C to stop).
 
 Use this view during long HawkEars jobs to confirm GPUs remain busy (sustained utilization, stable
-VRAM headroom) and to spot failing chunks immediately via the event tail. The sparkline columns
-update every refresh when ``--follow`` is enabled, exposing rolling trends without leaving the CLI.
+VRAM headroom) and to spot retry spikes immediately via the per-GPU retry counters, retry sparkline,
+and the event tail's attempt column. The sparkline columns update every refresh when ``--follow`` is
+enabled, exposing rolling trends without leaving the CLI.
 ``badc infer orchestrate``
 -------------------------
 

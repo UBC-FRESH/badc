@@ -249,9 +249,10 @@ def test_infer_monitor_outputs_tables(tmp_path: Path) -> None:
         finished_at=now_iso(),
         runtime_s=1.2,
         details={
+            "attempt": 2,
             "gpu_metrics": {
                 "after": {"utilization": 50, "memory_used_mb": 1024, "memory_total_mb": 8192}
-            }
+            },
         },
     )
     log_telemetry(record, log_path)
@@ -259,6 +260,7 @@ def test_infer_monitor_outputs_tables(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert "GPU Utilization" in result.stdout
     assert "Last 15 Events" in result.stdout
+    assert "Attempt" in result.stdout
 
 
 def test_report_summary_cli(tmp_path: Path) -> None:

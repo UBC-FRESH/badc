@@ -9,6 +9,8 @@ from typer.testing import CliRunner
 import badc.cli.main as cli_main
 from badc import data as data_utils
 from badc.cli.main import app
+from badc.hawkears_runner import JobResult
+from badc.infer_scheduler import InferenceJob
 from badc.telemetry import TelemetryRecord
 
 runner = CliRunner()
@@ -110,8 +112,41 @@ def test_infer_run_stub_cpu_workers(tmp_path) -> None:
     assert (out_dir / "chunk_b.json").exists()
     assert (out_dir / "chunk_c.json").exists()
     assert "Worker summary" in result.stdout
+    assert "Retries" in result.stdout
     assert "cpu-0" in result.stdout
     assert "cpu-1" in result.stdout
+
+
+def test_run_scheduler_tracks_retries(tmp_path, monkeypatch) -> None:
+    chunk_path = tmp_path / "chunk.wav"
+    chunk_path.write_text("stub audio", encoding="utf-8")
+    job = InferenceJob(
+        chunk_id="chunk_a",
+        chunk_path=chunk_path,
+        recording_id="rec1",
+    )
+    output_dir = tmp_path / "outputs"
+    telemetry_log = tmp_path / "telemetry.jsonl"
+
+    def fake_run_job(**kwargs):
+        rec_dir = output_dir / job.recording_id
+        rec_dir.mkdir(parents=True, exist_ok=True)
+        path = rec_dir / f"{job.chunk_id}.json"
+        path.write_text("{}", encoding="utf-8")
+        return JobResult(output_path=path, attempts=3, retries=2)
+
+    monkeypatch.setattr(cli_main, "run_job", fake_run_job)
+    stats = cli_main._run_scheduler(
+        job_contexts=[(job, output_dir, None)],
+        worker_pool=[(None, "cpu-0")],
+        runner_cmd=None,
+        max_retries=2,
+        use_hawkears=False,
+        hawkears_args=[],
+        telemetry_path=telemetry_log,
+    )
+    assert stats["cpu-0"]["success"] == 1
+    assert stats["cpu-0"]["retries"] == 2
 
 
 def test_infer_run_defaults_to_dataset_output(tmp_path) -> None:

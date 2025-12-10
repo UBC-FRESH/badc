@@ -62,9 +62,10 @@ execution notes live alongside task-specific files under `notes/`.
       support and performance tuning for multi-hour recordings.)*
 - [ ] Design the aggregated “bird call events” datastore (likely DuckDB/Parquet) and expose query
       helpers for down-stream stats/figures. *(Canonical Parquet export + ``badc report summary``,
-      ``badc report quicklook``, and the new ``badc report parquet`` command now surface grouped
-      counts, bucketed timelines, and CSV/JSON artifacts for Erin. Remaining work: richer notebook
-      gallery + DuckDB views for cross-project comparisons.)*
+      ``badc report quicklook``, ``badc report parquet``, and the new ``badc report duckdb`` command
+      now surface grouped counts, bucketed timelines, CSV/JSON artifacts, and a ready-to-query DuckDB
+      database for Erin. Remaining work: richer notebook gallery + DuckDB views for cross-project
+      comparisons.)*
 - [ ] Wire Typer CLI commands for end-to-end runs (`badc chunk`, `badc infer`, `badc aggregate`,
       `badc report`). *(Scaffolded chunk/infer commands exist; `notes/pipeline-plan.md` now captures
       the full flow.)*

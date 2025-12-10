@@ -109,6 +109,9 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
 - `badc report parquet --parquet artifacts/aggregate/detections.parquet` — produces Phase 2-ready
   CSV/JSON artifacts (labels, recordings, timeline buckets, summary stats) using DuckDB; perfect for
   Erin’s aggregation workflows.
+- `badc report duckdb --parquet artifacts/aggregate/detections.parquet` — materializes the Parquet
+  detections into a DuckDB database, prints top labels/recordings/timeline buckets, and writes
+  optional CSV exports so Erin can open the `.duckdb` file and run custom SQL immediately.
 - `badc infer monitor --log data/telemetry/infer/<manifest>_<timestamp>.jsonl` — stream per-GPU
   telemetry tables with events/success/failure counts, trending utilization (min/avg/max), peak VRAM
   usage, rolling ASCII sparklines (utilization + VRAM), and a live tail of recent chunk status

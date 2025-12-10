@@ -27,7 +27,7 @@ from badc import data as data_utils
 from badc.audio import get_wav_duration
 from badc.chunk_writer import ChunkMetadata, iter_chunk_metadata
 from badc.gpu import detect_gpus
-from badc.hawkears_runner import run_job
+from badc.hawkears_runner import JobExecutionError, run_job
 from badc.infer_scheduler import GPUWorker, InferenceJob, load_jobs, plan_workers
 from badc.telemetry import TelemetryRecord, default_log_path, load_telemetry
 
@@ -993,9 +993,17 @@ def infer_run(
         summary_table.add_column("Worker")
         summary_table.add_column("Jobs", justify="right")
         summary_table.add_column("Failures", justify="right")
+        summary_table.add_column("Retries", justify="right")
+        summary_table.add_column("Failed attempts", justify="right")
         for label, counts in sorted(worker_summary.items()):
             total = counts["success"] + counts["failure"]
-            summary_table.add_row(label, str(total), str(counts["failure"]))
+            summary_table.add_row(
+                label,
+                str(total),
+                str(counts["failure"]),
+                str(counts.get("retries", 0)),
+                str(counts.get("failed_retries", 0)),
+            )
         console.print(summary_table)
 
 
@@ -1263,7 +1271,8 @@ def _run_scheduler(
     errors: list[Exception] = []
     runner_args = list(hawkears_args)
     stats: dict[str, dict[str, int]] = {
-        label: {"success": 0, "failure": 0} for _, label in worker_pool
+        label: {"success": 0, "failure": 0, "retries": 0, "failed_retries": 0}
+        for _, label in worker_pool
     }
     stats_lock = threading.Lock()
 
@@ -1277,7 +1286,7 @@ def _run_scheduler(
                 if stop_event.is_set():
                     continue
                 job, job_output, dataset_root = item
-                run_job(
+                result = run_job(
                     job=job,
                     worker=worker,  # type: ignore[arg-type]
                     output_dir=job_output,
@@ -1290,11 +1299,14 @@ def _run_scheduler(
                 )
                 with stats_lock:
                     stats[label]["success"] += 1
+                    stats[label]["retries"] += getattr(result, "retries", 0)
             except Exception as exc:  # pragma: no cover - propagated to main thread
                 errors.append(exc)
                 stop_event.set()
                 with stats_lock:
                     stats[label]["failure"] += 1
+                    if isinstance(exc, JobExecutionError):
+                        stats[label]["failed_retries"] += max(exc.attempts - 1, 0)
             finally:
                 job_queue.task_done()
 
@@ -1548,6 +1560,17 @@ def _select_metric_entry(details: dict | None) -> dict | None:
     return None
 
 
+def _extract_attempt(details: dict | None) -> int | None:
+    """Return the attempt counter embedded in telemetry details (if any)."""
+
+    if not isinstance(details, dict):
+        return None
+    attempt = details.get("attempt")
+    if isinstance(attempt, (int, float)):
+        return int(attempt)
+    return None
+
+
 def _summarize_gpu_stats(records: list[TelemetryRecord]) -> dict[str, dict]:
     """Aggregate telemetry entries per GPU for dashboard display."""
 
@@ -1563,12 +1586,16 @@ def _summarize_gpu_stats(records: list[TelemetryRecord]) -> dict[str, dict]:
             "util_samples": [],
             "memory_samples": [],
             "memory_total": None,
+            "retry_attempts": 0,
+            "retry_events": 0,
+            "failure_attempts": 0,
             "last_status": "-",
             "last_chunk": "-",
             "last_timestamp": "-",
             "last_metrics": None,
             "util_history": [],
             "memory_history": [],
+            "retry_history": [],
         }
     )
     for rec in records:
@@ -1576,10 +1603,17 @@ def _summarize_gpu_stats(records: list[TelemetryRecord]) -> dict[str, dict]:
         summary = summaries[key]
         summary["name"] = rec.gpu_name or summary["name"] or key
         summary["events"] += 1
+        attempt_value = _extract_attempt(rec.details)
+        event_attempt = max(attempt_value or 1, 1)
+        event_retries = max(event_attempt - 1, 0)
         if rec.status.lower() == "success":
             summary["success"] += 1
+            if event_retries:
+                summary["retry_attempts"] += event_retries
+                summary["retry_events"] += 1
         elif rec.status.lower() == "failure":
             summary["failures"] += 1
+            summary["failure_attempts"] += event_attempt
         if rec.runtime_s is not None:
             summary["runtime_sum"] += rec.runtime_s
             summary["runtime_samples"] += 1
@@ -1600,6 +1634,7 @@ def _summarize_gpu_stats(records: list[TelemetryRecord]) -> dict[str, dict]:
         summary["last_status"] = rec.status
         summary["last_chunk"] = rec.chunk_id
         summary["last_timestamp"] = rec.timestamp or summary["last_timestamp"]
+        summary["retry_history"].append(event_retries)
     finalized: dict[str, dict] = {}
     for key, data in summaries.items():
         avg_runtime = (
@@ -1621,6 +1656,9 @@ def _summarize_gpu_stats(records: list[TelemetryRecord]) -> dict[str, dict]:
             "events": data["events"],
             "success": data["success"],
             "failures": data["failures"],
+            "retry_attempts": data["retry_attempts"],
+            "retry_events": data["retry_events"],
+            "failure_attempts": data["failure_attempts"],
             "avg_runtime": avg_runtime,
             "util_stats": util_stats,
             "max_memory": max_memory,
@@ -1631,6 +1669,7 @@ def _summarize_gpu_stats(records: list[TelemetryRecord]) -> dict[str, dict]:
             "last_metrics": data["last_metrics"],
             "util_history": data["util_history"][-trend_window:],
             "memory_history": data["memory_history"][-trend_window:],
+            "retry_history": data["retry_history"][-trend_window:],
         }
     return finalized
 
@@ -1644,11 +1683,14 @@ def _build_monitor_renderable(records: list, tail: int) -> Group | Panel:
     gpu_table.add_column("Events", justify="right")
     gpu_table.add_column("Success", justify="right")
     gpu_table.add_column("Fail", justify="right")
+    gpu_table.add_column("Retry attempts", justify="right")
+    gpu_table.add_column("Failed attempts", justify="right")
     gpu_table.add_column("Avg Runtime (s)", justify="right")
     gpu_table.add_column("Util% (min/avg/max)", justify="right")
     gpu_table.add_column("VRAM max (MiB)", justify="right")
     gpu_table.add_column("Util trend")
     gpu_table.add_column("VRAM trend (MiB)")
+    gpu_table.add_column("Retry trend")
     gpu_table.add_column("Last Status")
     gpu_table.add_column("Last Chunk")
     gpu_table.add_column("Updated")
@@ -1676,16 +1718,20 @@ def _build_monitor_renderable(records: list, tail: int) -> Group | Panel:
             mem_display = "-"
         util_trend = _sparkline(entry.get("util_history") or [], width=10)
         mem_trend = _sparkline(entry.get("memory_history") or [], width=10)
+        retry_trend = _sparkline(entry.get("retry_history") or [], width=10)
         gpu_table.add_row(
             label,
             str(entry["events"]),
             str(entry["success"]),
             str(entry["failures"]),
+            str(entry["retry_attempts"]),
+            str(entry["failure_attempts"]),
             runtime_display,
             util_display,
             mem_display,
             util_trend,
             mem_trend,
+            retry_trend,
             entry["last_status"],
             entry["last_chunk"],
             entry["last_timestamp"] or "-",
@@ -1696,14 +1742,17 @@ def _build_monitor_renderable(records: list, tail: int) -> Group | Panel:
     tail_table.add_column("Chunk")
     tail_table.add_column("GPU")
     tail_table.add_column("Runtime (s)")
+    tail_table.add_column("Attempt")
     tail_table.add_column("Metrics")
     for rec in records[-tail:]:
+        attempt = _extract_attempt(rec.details)
         tail_table.add_row(
             rec.timestamp,
             rec.status,
             rec.chunk_id,
             f"{rec.gpu_index}" if rec.gpu_index is not None else "CPU",
             "-" if rec.runtime_s is None else f"{rec.runtime_s:.1f}",
+            "-" if attempt is None else str(attempt),
             _format_metrics(_select_metric_entry(rec.details)),
         )
     return Group(gpu_table, tail_table)
@@ -2078,6 +2127,209 @@ def report_parquet(
         summary_path = output_dir / "summary.json"
         summary_path.write_text(json.dumps(report.summary, indent=2), encoding="utf-8")
         console.print(f"Wrote parquet report artifacts to {output_dir}")
+
+
+@report_app.command("duckdb")
+def report_duckdb(
+    parquet: Annotated[
+        Path,
+        typer.Option(
+            "--parquet", help="Canonical detections Parquet file.", exists=True, dir_okay=False
+        ),
+    ],
+    database: Annotated[
+        Path,
+        typer.Option("--database", help="DuckDB database to create or update."),
+    ] = Path("artifacts/aggregate/detections.duckdb"),
+    bucket_minutes: Annotated[
+        int,
+        typer.Option("--bucket-minutes", help="Bucket size (minutes) for the timeline view."),
+    ] = 60,
+    top_labels: Annotated[
+        int,
+        typer.Option("--top-labels", help="Number of label rows to display."),
+    ] = 15,
+    top_recordings: Annotated[
+        int,
+        typer.Option("--top-recordings", help="Number of recording rows to display."),
+    ] = 10,
+    export_dir: Annotated[
+        Path | None,
+        typer.Option(
+            "--export-dir",
+            help="Optional directory for CSV exports (label_summary.csv, recording_summary.csv, timeline.csv).",
+        ),
+    ] = None,
+) -> None:
+    """Materialize detections into DuckDB and print ready-to-review summaries."""
+
+    try:
+        import duckdb  # type: ignore
+    except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency
+        console.print(
+            "duckdb is required for this command. Install with `pip install duckdb`.", style="red"
+        )
+        raise typer.Exit(code=1) from exc
+
+    bucket_minutes = max(1, bucket_minutes)
+    bucket_ms = bucket_minutes * 60 * 1000
+    database = database.expanduser()
+    database.parent.mkdir(parents=True, exist_ok=True)
+    con = duckdb.connect(str(database))
+    console.print(f"Loading detections into DuckDB: {database}", style="bold")
+    con.execute(
+        "CREATE OR REPLACE TABLE detections AS SELECT * FROM read_parquet(?)", [str(parquet)]
+    )
+    con.execute(
+        """
+        CREATE OR REPLACE VIEW label_summary AS
+        SELECT label,
+               COALESCE(label_name, '') AS label_name,
+               COUNT(*) AS detections,
+               AVG(confidence) AS avg_confidence
+        FROM detections
+        GROUP BY label, label_name
+        ORDER BY detections DESC
+        """
+    )
+    con.execute(
+        """
+        CREATE OR REPLACE VIEW recording_summary AS
+        SELECT recording_id,
+               COUNT(*) AS detections,
+               AVG(confidence) AS avg_confidence
+        FROM detections
+        GROUP BY recording_id
+        ORDER BY detections DESC
+        """
+    )
+    con.execute(
+        f"""
+        CREATE OR REPLACE VIEW timeline_summary AS
+        WITH chunk_data AS (
+            SELECT chunk_id,
+                   COALESCE(chunk_start_ms, 0) AS chunk_start_ms,
+                   CAST(FLOOR(COALESCE(chunk_start_ms, 0) / {bucket_ms}) AS BIGINT) AS bucket_index,
+                   COUNT(*) AS detections,
+                   AVG(confidence) AS avg_confidence
+            FROM detections
+            GROUP BY chunk_id, chunk_start_ms, bucket_index
+        )
+        SELECT bucket_index,
+               MIN(chunk_start_ms) AS bucket_start_ms,
+               SUM(detections) AS detections,
+               AVG(avg_confidence) AS avg_confidence
+        FROM chunk_data
+        GROUP BY bucket_index
+        ORDER BY bucket_start_ms, bucket_index
+        """
+    )
+    summary = con.execute(
+        """
+        SELECT COUNT(*) AS detections,
+               COUNT(DISTINCT label) AS label_count,
+               COUNT(DISTINCT recording_id) AS recording_count,
+               MIN(chunk_start_ms) AS first_chunk_ms,
+               MAX(chunk_start_ms) AS last_chunk_ms
+        FROM detections
+        """
+    ).fetchone()
+    label_rows = con.execute(
+        "SELECT label, label_name, detections, avg_confidence FROM label_summary LIMIT ?",
+        [max(1, top_labels)],
+    ).fetchall()
+    recording_rows = con.execute(
+        "SELECT recording_id, detections, avg_confidence FROM recording_summary LIMIT ?",
+        [max(1, top_recordings)],
+    ).fetchall()
+    timeline_rows = con.execute(
+        "SELECT bucket_index, bucket_start_ms, detections, avg_confidence FROM timeline_summary"
+    ).fetchall()
+    con.close()
+
+    summary_table = Table(title="DuckDB summary", expand=True)
+    summary_table.add_column("Metric")
+    summary_table.add_column("Value", justify="right")
+    metrics = [
+        ("Detections", summary[0]),
+        ("Unique labels", summary[1]),
+        ("Recordings", summary[2]),
+        ("First chunk (ms)", summary[3]),
+        ("Last chunk (ms)", summary[4]),
+    ]
+    for label, value in metrics:
+        summary_table.add_row(label, "-" if value is None else str(value))
+    console.print(summary_table)
+
+    label_table = Table(title=f"Top {top_labels} labels", expand=True)
+    label_table.add_column("Label")
+    label_table.add_column("Name")
+    label_table.add_column("Detections", justify="right")
+    label_table.add_column("Avg confidence", justify="right")
+    for row in label_rows:
+        label_table.add_row(
+            row[0] or "unknown",
+            row[1] or "",
+            str(int(row[2] or 0)),
+            "-" if row[3] is None else f"{row[3]:.3f}",
+        )
+    console.print(label_table)
+
+    recording_table = Table(title=f"Top {top_recordings} recordings", expand=True)
+    recording_table.add_column("Recording")
+    recording_table.add_column("Detections", justify="right")
+    recording_table.add_column("Avg confidence", justify="right")
+    for row in recording_rows:
+        recording_table.add_row(
+            row[0] or "unknown",
+            str(int(row[1] or 0)),
+            "-" if row[2] is None else f"{row[2]:.3f}",
+        )
+    console.print(recording_table)
+
+    if timeline_rows:
+        timeline_table = Table(title="Timeline buckets", expand=True)
+        timeline_table.add_column("Bucket")
+        timeline_table.add_column("Start (ms)", justify="right")
+        timeline_table.add_column("Detections", justify="right")
+        timeline_table.add_column("Avg confidence", justify="right")
+        for bucket_index, start_ms, det_count, avg_conf in timeline_rows[:20]:
+            timeline_table.add_row(
+                str(bucket_index),
+                "-" if start_ms is None else str(int(start_ms)),
+                str(int(det_count or 0)),
+                "-" if avg_conf is None else f"{avg_conf:.3f}",
+            )
+        console.print(timeline_table)
+        counts = [float(row[2]) for row in timeline_rows]
+        sparkline = _sparkline(counts, width=min(80, len(counts)))
+        console.print(
+            f"Timeline sparkline ({bucket_minutes}-minute buckets): {sparkline}", style="bold"
+        )
+
+    if export_dir:
+        export_dir.mkdir(parents=True, exist_ok=True)
+        _write_csv(
+            label_rows,
+            ["label", "label_name", "detections", "avg_confidence"],
+            export_dir / "label_summary.csv",
+        )
+        _write_csv(
+            recording_rows,
+            ["recording_id", "detections", "avg_confidence"],
+            export_dir / "recording_summary.csv",
+        )
+        _write_csv(
+            timeline_rows,
+            ["bucket_index", "bucket_start_ms", "detections", "avg_confidence"],
+            export_dir / "timeline.csv",
+        )
+        console.print(f"Wrote DuckDB CSV exports to {export_dir}")
+
+    console.print(
+        f"DuckDB database ready at {database}. Run `duckdb {database}` for ad-hoc queries.",
+        style="green",
+    )
 
 
 def main() -> None:

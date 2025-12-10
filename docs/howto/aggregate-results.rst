@@ -79,7 +79,37 @@ Step 4 — Detailed parquet report
    ``timeline.csv``, and ``summary.json`` so Erin can drop them straight into her thesis figures or
    notebooks without running DuckDB herself.
 
-Step 5 — Notebook/SQL exploration
+Step 5 — Materialize a DuckDB database
+--------------------------------------
+
+1. Turn the Parquet export into a DuckDB database (views + CSV snapshots) for Erin::
+
+      badc report duckdb \
+          --parquet data/datalad/bogus/artifacts/aggregate/detections.parquet \
+          --database data/datalad/bogus/artifacts/aggregate/detections.duckdb \
+          --bucket-minutes 30 \
+          --export-dir data/datalad/bogus/artifacts/aggregate/duckdb_exports
+
+   This creates the ``detections`` table plus three convenience views
+   (``label_summary``, ``recording_summary``, ``timeline_summary``), prints the same Rich tables shown
+   in ``badc report parquet``, and writes ``label_summary.csv`` / ``recording_summary.csv`` /
+   ``timeline.csv`` when ``--export-dir`` is provided.
+2. Open the database interactively::
+
+      duckdb data/datalad/bogus/artifacts/aggregate/detections.duckdb
+      -- Loading resources from /home/.../.duckdbrc
+      D  SELECT * FROM label_summary LIMIT 5;
+
+   Or issue one-off queries::
+
+      duckdb -c "SELECT recording_id, SUM(detections) AS calls \
+                 FROM recording_summary ORDER BY calls DESC LIMIT 5" \
+          data/datalad/bogus/artifacts/aggregate/detections.duckdb
+
+   The same database can be mounted in notebooks via `duckdb.connect(".../detections.duckdb")` for
+   richer charts without re-importing the Parquet file.
+
+Step 6 — Notebook/SQL exploration
 ---------------------------------
 
 1. Open the Parquet file with DuckDB for ad-hoc SQL::

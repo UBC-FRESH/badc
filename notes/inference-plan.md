@@ -28,8 +28,10 @@
    - Log start/end timestamps, GPU index/name, VRAM usage, runtime, exit code.
    - Persist to `data/telemetry/infer/<manifest_id>.jsonl` and summarise per worker.
    - Record HawkEars command, chunk id, retry counter, and failure reason for post-mortems.
-   - `badc infer run` prints a final worker summary (GPU/CPU label, successes, failures) using the
-     stats gathered during scheduling so retries/outliers are visible without opening the telemetry log.
+   - `badc infer run` prints a final worker summary (GPU/CPU label, successes, failures, retry
+     counts) using the stats gathered during scheduling so flare-ups are visible without opening the
+     telemetry log, and ``badc infer monitor`` now surfaces live retry/failed-attempt totals plus a
+     retry sparkline alongside the utilization/VRAM trends.
 5. **Output storage**:
    - Store raw HawkEars CSV/JSON outputs in `artifacts/infer/<recording>/chunk_id.*`.
    - Convert to canonical detection schema (Parquet) for aggregation.
