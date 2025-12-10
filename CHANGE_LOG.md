@@ -5,6 +5,10 @@
   ``badc report aggregate-dir`` and write rollup CSVs to
   ``data/datalad/bogus/artifacts/aggregate/aggregate_summary`` (DataLad saved/pushed to GitHub; S3
   push completed after sourcing ``setup/datalad_config.sh``).
+- Added chunk status files for every bogus recording and copied manifests into
+  ``manifests_unlocked`` so chunk-status checks pass without resolving annex paths; generated
+  ``plans/bogus_chunks_unlocked.json`` and confirmed `badc infer orchestrate --chunk-plan ...` now
+  shows all recordings with `status=completed`. DataLad pushes cover GitHub and Arbutus.
 - Emitted a Sockeye array script with scratch logging:
   ``artifacts/sockeye/bogus_bundle.sh`` (generated via ``--sockeye-log-dir /scratch/$USER/badc-logs`` +
   ``--sockeye-bundle``) to document the resume/bundle flow for cluster runs.
@@ -16,6 +20,12 @@
   - `cd data/datalad/bogus && datalad push --to origin`
   - `cd data/datalad/bogus && datalad push --to arbutus-s3` *(failed: AWS credentials unavailable)*
   - `badc infer orchestrate data/datalad/bogus --chunk-plan plans/bogus_chunks.json --sockeye-script artifacts/sockeye/bogus_bundle.sh --sockeye-job-name badc-bogus --sockeye-account pi-fresh --sockeye-partition gpu --sockeye-gres gpu:4 --sockeye-time 06:00:00 --sockeye-cpus-per-task 8 --sockeye-mem 64G --sockeye-resume-completed --sockeye-log-dir /scratch/$USER/badc-logs --sockeye-bundle --sockeye-bundle-aggregate-dir artifacts/aggregate --sockeye-bundle-bucket-minutes 30 --allow-partial-chunks`
+  - `python - <<'PY' ... write chunk_status ... PY`
+  - `mkdir -p data/datalad/bogus/manifests_unlocked && cd data/datalad/bogus && cp -L manifests/*.csv manifests_unlocked/`
+  - `python - <<'PY' ... build_chunk_plan(manifest_dir=Path('manifests_unlocked')) ... PY`
+  - `cd data/datalad/bogus && datalad save artifacts/chunks manifests_unlocked -m "Add chunk status files and unlocked manifests for infer guard"`
+  - `cd data/datalad/bogus && datalad push --to origin`
+  - `source setup/datalad_config.sh && cd data/datalad/bogus && datalad push --to arbutus-s3`
 
 # 2025-12-10 — Pipeline doc map + Sockeye log guidance
 - Added a text-based pipeline map and troubleshooting checklist to ``docs/howto/pipeline-e2e.rst`` and
