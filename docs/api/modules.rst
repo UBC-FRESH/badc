@@ -12,7 +12,9 @@ Core Modules
    badc.cli.main
    badc.data
    badc.gpu
+   badc.aggregate_api
    badc.hawkears
+   badc.hawkears_parser
    badc.hawkears_runner
    badc.infer_scheduler
    badc.telemetry

@@ -17,6 +17,9 @@ PhD analyses.
    git submodule update --init --recursive
    badc data connect bogus --pull
    ```
+   If you skip the `git submodule update` step, `badc data connect bogus` detects the missing
+   `data/datalad/bogus` submodule and runs `git submodule update --init --recursive data/datalad/bogus`
+   automatically before registering the dataset.
 4. Run `pre-commit install` so the Ruff hooks run automatically before each commit.
 5. Run the standard command cadence (per `AGENTS.md`): `ruff format`, `ruff check`, `pytest`, and
    `sphinx-build` once docs grow.
@@ -147,6 +150,32 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
 - `badc telemetry --log data/telemetry/infer/<manifest>_<timestamp>.jsonl` — plain tail of telemetry
   events (the run command prints the exact log path).
 - `badc gpus` — lists detected GPUs via `nvidia-smi` so we can size the HawkEars worker pool.
+
+## Python aggregation helpers
+
+Prefer to stay inside notebooks? Import the new helper API instead of shelling out to the CLI:
+
+```python
+from badc import aggregate_api
+
+# Load canonical detections and (optionally) write CSV/Parquet artifacts.
+records = aggregate_api.aggregate_inference_outputs(
+    "data/datalad/bogus/artifacts/infer",
+    manifest="data/datalad/bogus/manifests/GNWT-114_20230509_094500.csv",
+    summary_csv="artifacts/aggregate/GNWT-114_summary.csv",
+    parquet="artifacts/aggregate/GNWT-114.parquet",
+)
+
+# Bring detections straight into pandas
+df = aggregate_api.load_detection_dataframe("data/datalad/bogus/artifacts/infer")
+
+# Open the DuckDB bundle views (requires duckdb + pandas)
+views = aggregate_api.load_bundle_views("data/datalad/bogus/artifacts/aggregate/GNWT-114.duckdb")
+```
+
+The API mirrors the CLI behavior (optional manifest enrichment, CSV/Parquet exports, DuckDB view
+loading) while keeping pandas/duckdb optional so lightweight scripts can still consume the canonical
+``DetectionRecord`` objects.
 
 ## End-to-end CLI workflow
 

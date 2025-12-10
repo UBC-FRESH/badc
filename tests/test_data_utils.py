@@ -3,6 +3,8 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
+import pytest
+
 from badc import data
 
 
@@ -24,6 +26,24 @@ def test_connect_dataset_skips_update_for_git_submodule(tmp_path, monkeypatch):
 
     assert status == "exists"
     assert called is False
+    config = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    assert config["datasets"]["bogus"]["method"] == "git-submodule"
+
+
+def test_connect_dataset_records_repo_submodule(tmp_path):
+    spec = data.get_dataset_spec("bogus")
+    assert spec.submodule_path is not None
+    target = (Path(__file__).resolve().parents[1] / spec.submodule_path).resolve()
+    if not target.exists():
+        pytest.skip("Bogus submodule is not present in this checkout.")
+    config_path = tmp_path / "config.toml"
+    status = data.connect_dataset(
+        spec,
+        target,
+        pull_existing=False,
+        config_path=config_path,
+    )
+    assert status in {"exists", "updated"}
     config = tomllib.loads(config_path.read_text(encoding="utf-8"))
     assert config["datasets"]["bogus"]["method"] == "git-submodule"
 

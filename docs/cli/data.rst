@@ -23,6 +23,10 @@ Overview
 * Knows about the ``bogus`` dataset out of the box so people can smoke-test the
   CLI without touching production remotes.  You can override the URL via
   ``--url`` for custom mirrors or private deployments.
+* When ``NAME`` is ``bogus`` and the repository contains the
+  ``data/datalad/bogus`` git submodule, ``badc data connect`` automatically runs
+  ``git submodule update --init --recursive data/datalad/bogus`` instead of cloning a new copy,
+  keeping the registry aligned with the in-tree dataset.
 
 Dataset registry
 ----------------

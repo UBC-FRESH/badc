@@ -28,6 +28,9 @@ class DatasetSpec:
     description: str = ""
     """Free-form description shown in docs/tests."""
 
+    submodule_path: Path | None = None
+    """Optional git submodule path (relative to repo root) that should be preferred."""
+
 
 @dataclass(frozen=True)
 class SiblingInfo:
@@ -60,6 +63,7 @@ DEFAULT_DATASETS: dict[str, DatasetSpec] = {
         name="bogus",
         url="https://github.com/UBC-FRESH/badc-bogus-data.git",
         description="Lightweight public dataset for smoke-testing chunk/infer flows.",
+        submodule_path=Path("data/datalad/bogus"),
     ),
 }
 
@@ -173,6 +177,23 @@ def available_method(preferred: str | None = None) -> str:
     if shutil.which("datalad"):
         return "datalad"
     return "git"
+
+
+def _repo_root(start: Path | None = None) -> Path | None:
+    """Return the git repository root when running inside the BADC tree."""
+
+    candidate = (start or Path.cwd()).resolve()
+    for path in [candidate, *candidate.parents]:
+        if (path / ".git").exists():
+            return path
+    return None
+
+
+def _resolve_existing(path: Path) -> Path:
+    try:
+        return path.resolve()
+    except FileNotFoundError:
+        return path.expanduser().absolute()
 
 
 def _run(cmd: list[str], cwd: Path | None = None) -> None:
@@ -336,11 +357,26 @@ def connect_dataset(
     target_dir = target_dir.expanduser()
     target_dir.parent.mkdir(parents=True, exist_ok=True)
 
+    repo_root = _repo_root()
+    submodule_target: Path | None = None
+    using_submodule = False
+    if spec.submodule_path and repo_root:
+        submodule_target = (repo_root / spec.submodule_path).resolve()
+        target_resolved = _resolve_existing(target_dir)
+        using_submodule = target_resolved == submodule_target
+        if using_submodule and not target_dir.exists():
+            rel_path = spec.submodule_path.as_posix()
+            if not shutil.which("git"):
+                raise ValueError("git is required to initialize dataset submodules.")
+            _run(
+                ["git", "submodule", "update", "--init", "--recursive", rel_path],
+                cwd=repo_root,
+            )
     method_name = available_method(method)
     record_method = method_name
     target_exists = target_dir.exists()
     submodule_managed = target_exists and _is_git_submodule(target_dir)
-    if submodule_managed:
+    if submodule_managed or using_submodule:
         record_method = "git-submodule"
     status = ""
 

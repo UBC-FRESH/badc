@@ -53,6 +53,29 @@ Step 2 — Summaries via ``badc report summary``
 3. The optional ``--output`` path mirrors the on-screen table so collaborators without DuckDB can
    review the same summary.
 
+Python API shortcut
+-------------------
+
+When you prefer to stay inside a notebook or script, import :mod:`badc.aggregate_api` instead of
+shelling out to the CLI. The helpers wrap the same canonical schema and DuckDB tooling::
+
+   from badc import aggregate_api
+
+   records = aggregate_api.aggregate_inference_outputs(
+       "data/datalad/bogus/artifacts/infer",
+       manifest="data/datalad/bogus/manifests/GNWT-114_20230509_094500.csv",
+       summary_csv="artifacts/aggregate/GNWT-114_summary.csv",
+       parquet="artifacts/aggregate/GNWT-114.parquet",
+   )
+
+   detections_df = aggregate_api.load_detection_dataframe("data/datalad/bogus/artifacts/infer")
+   duckdb_views = aggregate_api.load_bundle_views(
+       "data/datalad/bogus/artifacts/aggregate/GNWT-114.duckdb", limit_labels=10
+   )
+
+Behind the scenes the module reuses :mod:`badc.aggregate` and
+:mod:`badc.duckdb_helpers`, so CSV/Parquet exports and DuckDB views stay consistent with the CLI.
+
 Step 3 — Quicklook dashboards via ``badc report quicklook``
 -----------------------------------------------------------
 

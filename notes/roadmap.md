@@ -92,7 +92,8 @@ execution notes live alongside task-specific files under `notes/`.
       `badc data status`) so deployments can swap between bogus/test and production datasets at
       runtime. *(Implemented via `badc data connect/disconnect/status`, writing to
       `~/.config/badc/data.toml`; still need to wire real datasets/submodules.)*
-- [ ] Author Python API wrappers so notebooks and downstream tooling can reuse the workflow.
+- [x] Author Python API wrappers so notebooks and downstream tooling can reuse the workflow.
+      *(:mod:`badc.aggregate_api` exposes detection loaders, pandas helpers, and DuckDB view accessors so notebooks/tests can reuse the workflow without shelling out to the CLI.)*
 - [ ] Extend docs with pipeline diagrams, config examples, and troubleshooting sections.
 
 ## Phase 3 — HPC & Containerisation

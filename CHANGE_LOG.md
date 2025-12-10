@@ -1,3 +1,19 @@
+# 2025-12-10 — Data submodule wiring + aggregation API
+- `badc data connect bogus` now detects the in-tree `data/datalad/bogus` git submodule and runs
+  `git submodule update --init --recursive` automatically when the directory is missing, so the CLI
+  records the submodule (method `git-submodule`) instead of cloning a duplicate checkout. Docs now
+  mention the behavior and a regression test ensures the registry records the correct method.
+- Added :mod:`badc.aggregate_api`, a lightweight Python API for notebooks/tests. It exposes helpers
+  to load detection records (list or pandas DataFrame), write summary/parquet artifacts, and open
+  DuckDB bundle views without invoking the CLI. README + how-to docs now reference the new module,
+  and unit tests cover the core flows.
+- Commands executed:
+  - `source .venv/bin/activate && ruff format src tests`
+  - `source .venv/bin/activate && ruff check src tests`
+  - `source .venv/bin/activate && pytest`
+  - `source .venv/bin/activate && sphinx-build -b html docs _build/html -W`
+  - `source .venv/bin/activate && pre-commit run --all-files`
+
 # 2025-12-10 — HawkEars parsing fallback + FLAC chunking
 - Introduced ``badc.hawkears_parser`` so both the runner and aggregator share one code path for
   parsing ``HawkEars_labels.csv``. ``badc infer aggregate`` now rehydrates detections directly from

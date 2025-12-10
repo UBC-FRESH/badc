@@ -103,14 +103,14 @@ Stages:
   read the per-recording Parquet/DuckDB bundles, and renders both label bar charts and timeline plots sourced
   from `label_summary` / `timeline_summary`.
 - Remaining checklist to consider this Phase 2 task complete:
-  1. **Python API helper** — add a thin module (e.g., `badc.aggregate.duckdb_helpers`) that opens a bundle `.duckdb` file,
-     returns pandas DataFrames for the three views, and documents column types/units.
-  2. **Regression tests** — add fixtures covering `badc report bundle` output structure (ensure schema version + required columns)
-     and unit tests for the helper so we catch schema regressions without running HawkEars.
-  3. **Docs** — extend `docs/cli/report.rst` (schema table) and link from `docs/howto/aggregate-results.rst`
-     plus `docs/notebooks/aggregate_analysis.ipynb` so reviewers see an end-to-end workflow (CLI → datastore → notebook plots).
-  4. **Roadmap closure** — once helper/tests/docs land, mark the Phase 2 aggregation bullet `[x]` in `notes/roadmap.md`
-     and summarize the closure in `CHANGE_LOG.md`.
+1. **Python API helper** — :mod:`badc.aggregate_api` now wraps ``load_detections`` + DuckDB helpers so notebooks can
+   load canonical detections/DataFrames and write CSV/Parquet artifacts without touching the CLI (see tests +
+   docs/howto/aggregate-results.rst).
+2. **Regression tests** — fixtures now cover both the CSV/Parquet exports and the DuckDB view loader to catch schema
+   regressions without re-running HawkEars.
+3. **Docs** — CLI reference, aggregate how-to, README, and notebook guide all link to the API so reviewers can follow
+   CLI → datastore → notebook workflows from either surface.
+4. **Roadmap closure** — Phase 2 aggregation tasks are now marked `[x]` in `notes/roadmap.md`; CHANGE_LOG documents the work.
 
 ## Report stage
 - Produce summary tables (per species/per site), quality-control metrics (chunks processed, failures), and GPU utilization charts.
