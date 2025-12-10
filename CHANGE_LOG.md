@@ -26,6 +26,7 @@
   - `cd data/datalad/bogus && datalad save artifacts/chunks manifests_unlocked -m "Add chunk status files and unlocked manifests for infer guard"`
   - `cd data/datalad/bogus && datalad push --to origin`
   - `source setup/datalad_config.sh && cd data/datalad/bogus && datalad push --to arbutus-s3`
+  - `badc infer orchestrate data/datalad/bogus --chunk-plan $(pwd)/plans/bogus_chunks_unlocked.json --include-existing --resume-completed --apply --bundle --bundle-rollup --bundle-aggregate-dir /tmp/badc-aggregate --bundle-bucket-minutes 30 --bundle-rollup-export-dir /tmp/badc-aggregate/aggregate_summary --stub-runner --no-record-datalad --output-dir /tmp/badc-infer --telemetry-dir /tmp/badc-telemetry` *(validation-only; outputs left under /tmp)*
 
 # 2025-12-10 — Pipeline doc map + Sockeye log guidance
 - Added a text-based pipeline map and troubleshooting checklist to ``docs/howto/pipeline-e2e.rst`` and
