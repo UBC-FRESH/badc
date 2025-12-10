@@ -1094,12 +1094,16 @@ def infer_run(
     default_output = output_dir.expanduser()
     use_dataset_outputs = default_output == DEFAULT_INFER_OUTPUT
     job_contexts = _prepare_job_contexts(jobs, default_output, use_dataset_outputs)
+    # Ensure per-recording output directories exist before workers start writing.
+    for job, output_base, _ in job_contexts:
+        (output_base / job.recording_id).mkdir(parents=True, exist_ok=True)
     telemetry_base: Path | None = None
     if telemetry_log is None and use_dataset_outputs and job_contexts:
         first_root = job_contexts[0][2]
         if first_root:
             telemetry_base = first_root / "artifacts" / "telemetry"
     telemetry_path = telemetry_log or default_log_path(manifest, base_dir=telemetry_base)
+    telemetry_path.parent.mkdir(parents=True, exist_ok=True)
 
     if print_datalad_run:
         _print_datalad_run_instructions(

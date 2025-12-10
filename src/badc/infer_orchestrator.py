@@ -79,15 +79,18 @@ def build_infer_plan(
     hawkears_args = tuple(hawkears_args or [])
 
     if manifest_paths is None:
-        candidates = sorted(manifest_root.rglob(pattern))
+        candidates = [(path, path.stem) for path in sorted(manifest_root.rglob(pattern))]
     else:
-        candidates = [Path(p).resolve() for p in manifest_paths]
+        candidates = [(Path(p), Path(p).stem) for p in manifest_paths]
 
     plans: list[InferPlan] = []
-    for manifest_path in candidates:
+    for manifest_path_raw, recording_id in candidates:
+        manifest_path = manifest_path_raw.expanduser()
+        # Avoid resolving symlinks to annex object paths (which rewrite the stem to MD5E-*).
+        if not manifest_path.is_absolute():
+            manifest_path = manifest_path.absolute()
         if not manifest_path.exists():
             continue
-        recording_id = manifest_path.stem
         if not include_existing and (output_root / recording_id).exists():
             continue
         telemetry_log = telemetry_root / "infer" / f"{recording_id}.jsonl"
