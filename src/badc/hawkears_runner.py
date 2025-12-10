@@ -358,6 +358,7 @@ def run_job(
                 "before": _metrics_payload(gpu_before),
                 "after": _metrics_payload(gpu_after),
             }
+            backoff = min(2**attempts, 5)
             log_scheduler_event(
                 job.chunk_id,
                 worker,
@@ -367,6 +368,7 @@ def run_job(
                     "returncode": exc.returncode,
                     "stderr": (exc.stderr or "")[-500:],
                     "gpu_metrics": metrics_summary,
+                    "backoff_s": backoff,
                 },
                 runtime_s=runtime,
                 finished_at=now_iso(),
@@ -374,4 +376,4 @@ def run_job(
             )
             if attempts > max_retries:
                 raise JobExecutionError(job.chunk_id, attempts, exc) from exc
-            time.sleep(min(2**attempts, 5))
+            time.sleep(backoff)

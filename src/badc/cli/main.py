@@ -970,7 +970,7 @@ def infer_run(
         return
 
     console.print(f"Telemetry log: {telemetry_path}")
-    worker_summary = _run_scheduler(
+    scheduler_summary = _run_scheduler(
         job_contexts=job_contexts,
         worker_pool=worker_slots,
         runner_cmd=runner_cmd,
@@ -978,6 +978,12 @@ def infer_run(
         use_hawkears=use_hawkears,
         hawkears_args=extra_args,
         telemetry_path=telemetry_path,
+    )
+    worker_summary = scheduler_summary["workers"]
+    _write_scheduler_summary(
+        telemetry_path=telemetry_path,
+        job_summary=scheduler_summary["jobs"],
+        worker_summary=worker_summary,
     )
     output_locations = sorted({ctx[1] for ctx in job_contexts})
     if len(output_locations) == 1:
@@ -1095,6 +1101,43 @@ def infer_orchestrate(
             help="Wrap applied runs in `datalad run` when possible.",
         ),
     ] = True,
+    sockeye_script: Annotated[
+        Path | None,
+        typer.Option(
+            "--sockeye-script",
+            help="Optional path to write a Sockeye SLURM array script for the generated plan.",
+        ),
+    ] = None,
+    sockeye_job_name: Annotated[
+        str,
+        typer.Option("--sockeye-job-name", help="Job name used in the generated Sockeye script."),
+    ] = "badc-infer",
+    sockeye_account: Annotated[
+        str | None,
+        typer.Option("--sockeye-account", help="Account name for Sockeye `#SBATCH --account`."),
+    ] = None,
+    sockeye_partition: Annotated[
+        str | None,
+        typer.Option(
+            "--sockeye-partition", help="Partition (`#SBATCH --partition`) used in the script."
+        ),
+    ] = None,
+    sockeye_gres: Annotated[
+        str | None,
+        typer.Option("--sockeye-gres", help="`#SBATCH --gres` value, e.g., gpu:2."),
+    ] = None,
+    sockeye_time: Annotated[
+        str | None,
+        typer.Option("--sockeye-time", help="Walltime limit for the script (e.g., 04:00:00)."),
+    ] = None,
+    sockeye_cpus_per_task: Annotated[
+        int | None,
+        typer.Option("--sockeye-cpus-per-task", help="`#SBATCH --cpus-per-task` value."),
+    ] = None,
+    sockeye_mem: Annotated[
+        str | None,
+        typer.Option("--sockeye-mem", help="`#SBATCH --mem` value (e.g., 64G)."),
+    ] = None,
 ) -> None:
     """Plan inference runs across manifests without executing them."""
 
@@ -1147,6 +1190,22 @@ def infer_orchestrate(
             plan_json.parent.mkdir(parents=True, exist_ok=True)
             plan_json.write_text(json.dumps(records, indent=2))
             console.print(f"Saved inference plan JSON to {plan_json}")
+
+    if sockeye_script:
+        script = _render_sockeye_script(
+            dataset,
+            plans,
+            job_name=sockeye_job_name,
+            account=sockeye_account,
+            partition=sockeye_partition,
+            gres=sockeye_gres,
+            time_limit=sockeye_time,
+            cpus_per_task=sockeye_cpus_per_task,
+            mem=sockeye_mem,
+        )
+        sockeye_script.parent.mkdir(parents=True, exist_ok=True)
+        sockeye_script.write_text(script)
+        console.print(f"Wrote Sockeye array script to {sockeye_script}")
 
     if print_datalad_run:
         console.print("\nDatalad commands (run from dataset root):", style="bold")
@@ -1227,7 +1286,7 @@ def _run_scheduler(
     use_hawkears: bool,
     hawkears_args: Sequence[str],
     telemetry_path: Path,
-) -> dict[str, dict[str, int]]:
+) -> dict[str, dict]:
     """Dispatch inference jobs to worker threads.
 
     Parameters
@@ -1250,7 +1309,8 @@ def _run_scheduler(
     Returns
     -------
     dict
-        Mapping of worker labels to success/failure counts.
+        Includes ``workers`` (per-worker statistics) and ``jobs`` (per-chunk
+        outcomes) so resume logic can identify which chunks succeeded.
 
     Raises
     ------
@@ -1275,6 +1335,8 @@ def _run_scheduler(
         for _, label in worker_pool
     }
     stats_lock = threading.Lock()
+    job_results: dict[str, dict[str, object]] = {}
+    job_lock = threading.Lock()
 
     def worker_loop(worker_entry: tuple[GPUWorker | None, str]) -> None:
         worker, label = worker_entry
@@ -1286,7 +1348,7 @@ def _run_scheduler(
                 if stop_event.is_set():
                     continue
                 job, job_output, dataset_root = item
-                result = run_job(
+                job_result = run_job(
                     job=job,
                     worker=worker,  # type: ignore[arg-type]
                     output_dir=job_output,
@@ -1299,7 +1361,15 @@ def _run_scheduler(
                 )
                 with stats_lock:
                     stats[label]["success"] += 1
-                    stats[label]["retries"] += getattr(result, "retries", 0)
+                    stats[label]["retries"] += getattr(job_result, "retries", 0)
+                with job_lock:
+                    job_results[job.chunk_id] = {
+                        "status": "success",
+                        "attempts": getattr(job_result, "attempts", None),
+                        "retries": getattr(job_result, "retries", None),
+                        "output": str(getattr(job_result, "output_path", job_output)),
+                        "worker": label,
+                    }
             except Exception as exc:  # pragma: no cover - propagated to main thread
                 errors.append(exc)
                 stop_event.set()
@@ -1307,6 +1377,13 @@ def _run_scheduler(
                     stats[label]["failure"] += 1
                     if isinstance(exc, JobExecutionError):
                         stats[label]["failed_retries"] += max(exc.attempts - 1, 0)
+                with job_lock:
+                    job_results[job.chunk_id] = {
+                        "status": "failure",
+                        "error": str(exc),
+                        "attempts": getattr(exc, "attempts", None),
+                        "worker": label,
+                    }
             finally:
                 job_queue.task_done()
 
@@ -1320,7 +1397,110 @@ def _run_scheduler(
         thread.join()
     if errors:
         raise errors[0]
-    return stats
+    return {"workers": stats, "jobs": job_results}
+
+
+def _write_scheduler_summary(
+    *,
+    telemetry_path: Path,
+    job_summary: dict[str, dict[str, object]],
+    worker_summary: dict[str, dict[str, int]],
+) -> None:
+    """Persist scheduler metadata alongside the telemetry log for resume workflows."""
+
+    summary_path = telemetry_path.with_suffix(telemetry_path.suffix + ".summary.json")
+    payload = {
+        "telemetry_log": str(telemetry_path),
+        "workers": worker_summary,
+        "jobs": job_summary,
+    }
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    console.print(f"Scheduler summary: {summary_path}")
+
+
+def _render_sockeye_script(
+    dataset: Path,
+    plans: Sequence[infer_orchestrator.InferPlan],
+    *,
+    job_name: str,
+    account: str | None,
+    partition: str | None,
+    gres: str | None,
+    time_limit: str | None,
+    cpus_per_task: int | None,
+    mem: str | None,
+) -> str:
+    dataset = dataset.expanduser().resolve()
+    first_plan = plans[0]
+
+    def _relative(path: Path) -> str:
+        try:
+            return str(Path(path).resolve().relative_to(dataset))
+        except ValueError:
+            return str(Path(path).resolve())
+
+    manifest_entries = [f'  "{_relative(plan.manifest_path)}"' for plan in plans]
+    output_entries = [f'  "{_relative(plan.recording_output)}"' for plan in plans]
+    telemetry_entries = [f'  "{_relative(plan.telemetry_log)}"' for plan in plans]
+
+    lines = ["#!/bin/bash", f"#SBATCH --job-name={job_name}"]
+    if account:
+        lines.append(f"#SBATCH --account={account}")
+    if partition:
+        lines.append(f"#SBATCH --partition={partition}")
+    if gres:
+        lines.append(f"#SBATCH --gres={gres}")
+    if time_limit:
+        lines.append(f"#SBATCH --time={time_limit}")
+    if cpus_per_task:
+        lines.append(f"#SBATCH --cpus-per-task={cpus_per_task}")
+    if mem:
+        lines.append(f"#SBATCH --mem={mem}")
+    lines.append(f"#SBATCH --array=1-{len(plans)}")
+    lines.append("")
+    lines.append("set -euo pipefail")
+    lines.append(f'DATASET="{dataset}"')
+    lines.append("MANIFESTS=(")
+    lines.extend(manifest_entries)
+    lines.append(")")
+    lines.append("OUTPUTS=(")
+    lines.extend(output_entries)
+    lines.append(")")
+    lines.append("TELEMETRY=(")
+    lines.extend(telemetry_entries)
+    lines.append(")")
+    lines.extend(
+        [
+            "IDX=$(($SLURM_ARRAY_TASK_ID-1))",
+            "MANIFEST=${MANIFESTS[$IDX]}",
+            "OUTPUT=${OUTPUTS[$IDX]}",
+            "TELEMETRY_LOG=${TELEMETRY[$IDX]}",
+            'cd "$DATASET"',
+        ]
+    )
+    command = [
+        "badc",
+        "infer",
+        "run",
+        '"$MANIFEST"',
+        "--output-dir",
+        '"$OUTPUT"',
+        "--telemetry-log",
+        '"$TELEMETRY_LOG"',
+    ]
+    if first_plan.max_gpus is not None:
+        command += ["--max-gpus", str(first_plan.max_gpus)]
+    if first_plan.cpu_workers > 0:
+        command += ["--cpu-workers", str(first_plan.cpu_workers)]
+    if first_plan.use_hawkears:
+        command.append("--use-hawkears")
+    for arg in first_plan.hawkears_args:
+        command += ["--hawkears-arg", arg]
+    lines.append("CMD=(" + " ".join(command) + ")")
+    lines.append("echo Running: ${CMD[*]}")
+    lines.append("${CMD[@]}")
+    return "\n".join(lines) + "\n"
 
 
 def _prepare_job_contexts(

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 import tomllib
 from pathlib import Path
@@ -96,6 +97,7 @@ def test_infer_run_stub_cpu_workers(tmp_path) -> None:
         f"rec1,chunk_c,{chunk_path},0,1000,0,hash,\n",
         encoding="utf-8",
     )
+    telemetry_log = tmp_path / "telemetry.jsonl"
     result = runner.invoke(
         app,
         [
@@ -104,6 +106,8 @@ def test_infer_run_stub_cpu_workers(tmp_path) -> None:
             str(manifest),
             "--cpu-workers",
             "2",
+            "--telemetry-log",
+            str(telemetry_log),
         ],
     )
     assert result.exit_code == 0, result.stdout
@@ -115,6 +119,10 @@ def test_infer_run_stub_cpu_workers(tmp_path) -> None:
     assert "Retries" in result.stdout
     assert "cpu-0" in result.stdout
     assert "cpu-1" in result.stdout
+    summary_path = telemetry_log.with_suffix(telemetry_log.suffix + ".summary.json")
+    assert summary_path.exists()
+    data = json.loads(summary_path.read_text())
+    assert data["jobs"]["chunk_a"]["status"] == "success"
 
 
 def test_run_scheduler_tracks_retries(tmp_path, monkeypatch) -> None:
@@ -136,7 +144,7 @@ def test_run_scheduler_tracks_retries(tmp_path, monkeypatch) -> None:
         return JobResult(output_path=path, attempts=3, retries=2)
 
     monkeypatch.setattr(cli_main, "run_job", fake_run_job)
-    stats = cli_main._run_scheduler(
+    summary = cli_main._run_scheduler(
         job_contexts=[(job, output_dir, None)],
         worker_pool=[(None, "cpu-0")],
         runner_cmd=None,
@@ -145,8 +153,9 @@ def test_run_scheduler_tracks_retries(tmp_path, monkeypatch) -> None:
         hawkears_args=[],
         telemetry_path=telemetry_log,
     )
-    assert stats["cpu-0"]["success"] == 1
-    assert stats["cpu-0"]["retries"] == 2
+    assert summary["workers"]["cpu-0"]["success"] == 1
+    assert summary["workers"]["cpu-0"]["retries"] == 2
+    assert summary["jobs"]["chunk_a"]["status"] == "success"
 
 
 def test_infer_run_defaults_to_dataset_output(tmp_path) -> None:

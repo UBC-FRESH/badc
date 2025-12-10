@@ -53,7 +53,9 @@ Key options:
    BADC writes under ``<dataset>/artifacts/infer`` so the files remain inside the dataset boundary.
 ``--telemetry-log``
    Override the telemetry log path (JSONL) that records scheduler events. Defaults to a unique file
-   per manifest/timestamp under ``data/telemetry/infer`` or ``<dataset>/artifacts/telemetry``.
+   per manifest/timestamp under ``data/telemetry/infer`` or ``<dataset>/artifacts/telemetry``. Each
+   run also writes a ``*.summary.json`` next to the log capturing per-worker/per-chunk outcomes for
+   resumable workflows.
 ``--print-datalad-run``
    Instead of running inference, emit a ``datalad run`` command tailored to the manifest/output pair.
 
@@ -127,7 +129,8 @@ Workflow notes:
 * Telemetry: every chunk emits a JSON record with timestamps, runtime, GPU index/name, and (when
   available) GPU utilization/memory snapshots. The CLI prints the log path; monitor progress via
   ``badc infer monitor --log <file>`` (rich GPU summary) or ``badc telemetry --log <file>`` (plain
-  tail).
+  tail). A sibling ``*.summary.json`` file captures the per-worker/per-chunk outcomes so interrupted
+  runs can resume without repeating successful chunks.
 * Worker summary: once all jobs finish, ``badc infer run`` prints a per-worker table (GPU/CPU label,
   total jobs, failures, successful retry counts, and failed attempts) so long runs surface retry
   hot spots without diving into telemetry logs.
@@ -303,6 +306,9 @@ Highlights:
 * ``--apply`` executes :command:`badc infer run` for each plan entry using the saved settings. When
   the dataset has ``.datalad`` and the CLI is available, runs are wrapped in ``datalad run`` by
   default (disable via ``--no-record-datalad``) so provenance is captured automatically.
+* ``--sockeye-script`` (plus the optional ``--sockeye-*`` overrides) writes a SLURM job-array script
+  so Sockeye submissions no longer require hand-written `sbatch` files. Each array task maps to a
+  manifest/output pair from the generated plan.
 
 Combine this with :command:`badc chunk orchestrate` to move from chunk plans to inference runs in a
 single workflow.

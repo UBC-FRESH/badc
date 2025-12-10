@@ -10,3 +10,15 @@
    
       run_job
    
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      JobResult
+   
+   .. rubric:: Exceptions
+
+   .. autosummary::
+   
+      JobExecutionError
+   

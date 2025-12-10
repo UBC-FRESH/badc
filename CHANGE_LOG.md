@@ -1,3 +1,21 @@
+# 2025-12-10 — Scheduler resume + Sockeye array helper
+- ``badc infer run`` now writes a resumable ``*.summary.json`` next to every telemetry log, recording
+  per-worker metrics and the status of each chunk. ``run_job`` logs backoff delays, `_run_scheduler`
+  tracks per-chunk outcomes, and tests cover the new summary file so interrupted runs can resume
+  cleanly.
+- Added ``--sockeye-script`` (plus related ``--sockeye-*`` overrides) to ``badc infer orchestrate``;
+  the command now emits a ready-to-submit Sockeye SLURM array script (one manifest per array task),
+  eliminating the need to handcraft sbatch templates.
+- Updated docs/how-tos/roadmap to describe the summary JSON, live retry sparkline, and Sockeye
+  workflow; ``docs/notebooks/aggregate_analysis.ipynb`` now includes a DuckDB bar chart example fed
+  directly from the generated `.duckdb` database.
+- Commands executed:
+  - `.venv/bin/ruff format src tests`
+  - `.venv/bin/ruff check src tests`
+  - `.venv/bin/pytest`
+  - `.venv/bin/sphinx-build -b html docs _build/html -W`
+  - `.venv/bin/pre-commit run --all-files`
+
 # 2025-12-10 — DuckDB aggregation helper
 - Added ``badc report duckdb`` to materialize canonical detections into a DuckDB database (with
   helper views) and print top labels/recordings/timeline buckets directly in the CLI while emitting

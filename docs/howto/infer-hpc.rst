@@ -19,7 +19,10 @@ GPU planning
 ------------
 * Use ``badc gpus`` inside an interactive ``srun --gres=gpu:1 --pty bash`` shell to confirm which devices will be available to the job.
 * If a manifest requires fewer workers than GPUs requested, pass ``--max-gpus`` to keep HawkEars from spawning unnecessary processes while still holding the reservation for future chunks.
-* Sockeye arrays: pair each array index with ``--print-datalad-run`` to log the exact ``datalad run`` command before launching the batch. Store the command string in the job log for provenance.
+* Sockeye arrays: ``badc infer orchestrate --sockeye-script sockeye_array.sh`` now emits a ready-to-use
+  SLURM array script (one task per manifest). Pair this with ``sbatch sockeye_array.sh`` to run the
+  entire plan without hand-editing bash snippets. Store the command string in the job log for
+  provenance.
 
 Notebook hand-off
 -----------------
@@ -46,6 +49,10 @@ Notebook hand-off
 
 3. Draft the manifest-specific job script
 -----------------------------------------
+
+Hint: ``badc infer orchestrate --sockeye-script job.sh`` can emit this SLURM array template
+automatically (one array index per manifest). Edit the generated script or start from the example
+below if you prefer a custom layout.
 
 .. code-block:: bash
 

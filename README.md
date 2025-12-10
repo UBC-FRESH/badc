@@ -88,7 +88,8 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
   runner (pass `--use-hawkears` to invoke the embedded `vendor/HawkEars/analyze.py`, or `--runner-cmd`
   to supply a custom command; stub mode remains the default for local tests). Use `--cpu-workers N`
   to append CPU worker threads (at least one CPU worker is used automatically when no GPUs are
-  detected). When chunks come from a DataLad dataset
+  detected). When chunks come from a DataLad dataset the command drops a telemetry log plus a
+  `*.summary.json` file so you can resume interrupted runs without reprocessing completed chunks, and
   (e.g., `data/datalad/bogus`), outputs automatically land under `artifacts/infer/` inside that same
   dataset so you can `datalad save` immediately.
 - `badc infer orchestrate` — scans a dataset’s manifests (or a saved chunk plan), prints an inference

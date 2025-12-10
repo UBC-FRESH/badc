@@ -30,8 +30,9 @@
    - Record HawkEars command, chunk id, retry counter, and failure reason for post-mortems.
    - `badc infer run` prints a final worker summary (GPU/CPU label, successes, failures, retry
      counts) using the stats gathered during scheduling so flare-ups are visible without opening the
-     telemetry log, and ``badc infer monitor`` now surfaces live retry/failed-attempt totals plus a
-     retry sparkline alongside the utilization/VRAM trends.
+     telemetry log, ``badc infer monitor`` surfaces live retry/failed-attempt totals plus a retry
+     sparkline, and every run writes a ``*.summary.json`` file (next to the telemetry log) that maps
+     chunk IDs to success/failure metadata for resumable workflows.
 5. **Output storage**:
    - Store raw HawkEars CSV/JSON outputs in `artifacts/infer/<recording>/chunk_id.*`.
    - Convert to canonical detection schema (Parquet) for aggregation.
@@ -46,7 +47,8 @@
 - `badc infer orchestrate` scans manifests or chunk-plan files, prints an inference plan, emits
   ready-to-run `datalad run` commands, persists CSV/JSON for HPC submission, and now executes the full
   run list via `--apply` (auto-wrapping each recording in `datalad run` when available; disable with
-  `--no-record-datalad`).
+  `--no-record-datalad`). `--sockeye-script` writes a SLURM array script (one manifest per array
+  index) so Sockeye submissions no longer require hand-editing sbatch snippets.
 
 ## Testing strategy
 - Mock HawkEars runner (fake script) to ensure scheduler distributes work across GPUs.

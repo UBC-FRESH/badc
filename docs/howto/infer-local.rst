@@ -165,7 +165,8 @@ Expected outputs:
 * JSON detections under ``data/datalad/bogus/artifacts/infer/<recording>/``
 * Telemetry log inside ``data/datalad/bogus/artifacts/telemetry/…``
 * Console summary listing telemetry path + job counts, plus a per-worker success/failure/ retry table
-  so CPU vs. GPU bottlenecks and flaky chunks stand out
+  so CPU vs. GPU bottlenecks and flaky chunks stand out. A ``*.summary.json`` file lands next to the
+  telemetry log capturing every chunk's status for resumable runs.
 
 Step 3 — Monitor telemetry
 --------------------------
