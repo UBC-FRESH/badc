@@ -3,11 +3,16 @@
 Purpose: provide a lightweight, public DataLad dataset containing short audio clips + metadata so
 contributors can test `badc data connect`/`disconnect` without touching the 60 TB production data.
 
-## Dataset goals
-- Contain ≤10 MB of audio (downsampled versions of `data/datalad/bogus/audio/GNWT-290_...` and
-  `data/datalad/bogus/audio/XXXX-...`).
-- Include a README describing provenance and usage (grouse vs. no-hit cases).
-- Serve as a submodule under `data/datalad/bogus`.
+## Dataset goals (current state)
+- Carry a handful of real GNWT recordings (now five clips):
+  - GNWT-114_20230509_094500 (~10 chunks @ 60 s each; ~10 min)
+  - GNWT-131_20230508_050402 (~60 chunks @ 60 s; ~60 min)
+  - GNWT-290_20230331_235938 (~60 chunks @ 60 s; ~60 min)
+  - GNWT049_20230401_010000 (~10 chunks @ 60 s; ~10 min)
+  - GNWT231_20230501_072500 (~10 chunks @ 60 s; ~10 min)
+- Include a README describing provenance and usage (mix of bird-rich and noise-heavy clips so
+  detections/zero-hit cases are both present).
+- Serve as a submodule under `data/datalad/bogus` (already in place).
 - Support `datalad get`/`drop` flows and basic integrity checks (hashes).
 
 ## Workflow
@@ -23,6 +28,9 @@ contributors can test `badc data connect`/`disconnect` without touching the 60 T
    drops annexed content.
 
 ## Open questions
-- How to automate downsampling (FFmpeg scripts) to keep <10 MB?
-- Do we also store example HawkEars outputs?
-- Should we include noise-only samples for negative-case testing?
+- Should we downsample the long GNWT-131/290 clips to keep clone sizes reasonable, or leave them as
+  “realistic” duration fixtures (current audio >10 MB)?
+- Do we also store example HawkEars outputs? (Current dataset now carries inference/aggregate
+  artifacts for the five clips; we need to decide which stay permanent vs. tmp validation bundles.)
+- Should we include additional noise-only samples for negative-case testing? (Current set mixes bird
+  and noise; document expected detections per clip so tests can assert counts after refresh.)
