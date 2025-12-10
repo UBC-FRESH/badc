@@ -1,0 +1,42 @@
+[
+  {
+    "recording_id": "GNWT-114_20230509_094500",
+    "audio_path": "/home/gep/projects/badc/data/datalad/bogus/audio/GNWT-114_20230509_094500.wav",
+    "manifest_path": "/home/gep/projects/badc/data/datalad/bogus/manifests/GNWT-114_20230509_094500.csv",
+    "chunk_output_dir": "/home/gep/projects/badc/data/datalad/bogus/artifacts/chunks/GNWT-114_20230509_094500",
+    "chunk_duration": 60.0,
+    "overlap": 0.0
+  },
+  {
+    "recording_id": "GNWT-131_20230508_050402",
+    "audio_path": "/home/gep/projects/badc/data/datalad/bogus/audio/GNWT-131_20230508_050402.wav",
+    "manifest_path": "/home/gep/projects/badc/data/datalad/bogus/manifests/GNWT-131_20230508_050402.csv",
+    "chunk_output_dir": "/home/gep/projects/badc/data/datalad/bogus/artifacts/chunks/GNWT-131_20230508_050402",
+    "chunk_duration": 60.0,
+    "overlap": 0.0
+  },
+  {
+    "recording_id": "GNWT-290_20230331_235938",
+    "audio_path": "/home/gep/projects/badc/data/datalad/bogus/audio/GNWT-290_20230331_235938.wav",
+    "manifest_path": "/home/gep/projects/badc/data/datalad/bogus/manifests/GNWT-290_20230331_235938.csv",
+    "chunk_output_dir": "/home/gep/projects/badc/data/datalad/bogus/artifacts/chunks/GNWT-290_20230331_235938",
+    "chunk_duration": 60.0,
+    "overlap": 0.0
+  },
+  {
+    "recording_id": "GNWT049_20230401_010000",
+    "audio_path": "/home/gep/projects/badc/data/datalad/bogus/audio/GNWT049_20230401_010000.wav",
+    "manifest_path": "/home/gep/projects/badc/data/datalad/bogus/manifests/GNWT049_20230401_010000.csv",
+    "chunk_output_dir": "/home/gep/projects/badc/data/datalad/bogus/artifacts/chunks/GNWT049_20230401_010000",
+    "chunk_duration": 60.0,
+    "overlap": 0.0
+  },
+  {
+    "recording_id": "GNWT231_20230501_072500",
+    "audio_path": "/home/gep/projects/badc/data/datalad/bogus/audio/GNWT231_20230501_072500.wav",
+    "manifest_path": "/home/gep/projects/badc/data/datalad/bogus/manifests/GNWT231_20230501_072500.csv",
+    "chunk_output_dir": "/home/gep/projects/badc/data/datalad/bogus/artifacts/chunks/GNWT231_20230501_072500",
+    "chunk_duration": 60.0,
+    "overlap": 0.0
+  }
+]

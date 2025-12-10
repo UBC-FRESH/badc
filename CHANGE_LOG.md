@@ -1,3 +1,22 @@
+# 2025-12-10 — Aggregate rollup refresh + Sockeye script
+- Generated a fresh chunk-plan snapshot (`plans/bogus_chunks.{csv,json}`) for the refreshed bogus
+  dataset, attempted an `infer orchestrate --apply --bundle` stub run (blocked by annexed outputs and
+  missing chunk status files), then reused the existing detections to run
+  ``badc report aggregate-dir`` and write rollup CSVs to
+  ``data/datalad/bogus/artifacts/aggregate/aggregate_summary`` (DataLad saved/pushed to GitHub; S3
+  push skipped due to missing AWS credentials).
+- Emitted a Sockeye array script with scratch logging:
+  ``artifacts/sockeye/bogus_bundle.sh`` (generated via ``--sockeye-log-dir /scratch/$USER/badc-logs`` +
+  ``--sockeye-bundle``) to document the resume/bundle flow for cluster runs.
+- Commands executed:
+  - `badc chunk orchestrate data/datalad/bogus --pattern "*.wav" --chunk-duration 60 --overlap 0 --include-existing --plan-json plans/bogus_chunks.json --plan-csv plans/bogus_chunks.csv --no-record-datalad --workers 1`
+  - `badc infer orchestrate data/datalad/bogus --chunk-plan plans/bogus_chunks.json --include-existing --resume-completed --apply --bundle --bundle-rollup --bundle-aggregate-dir artifacts/aggregate --bundle-bucket-minutes 30 --bundle-rollup-export-dir artifacts/aggregate/aggregate_summary --stub-runner --no-record-datalad --allow-partial-chunks` *(failed: existing annexed outputs are read-only; chunk status files missing)*
+  - `badc report aggregate-dir data/datalad/bogus/artifacts/aggregate --export-dir data/datalad/bogus/artifacts/aggregate/aggregate_summary`
+  - `cd data/datalad/bogus && datalad save artifacts/aggregate/aggregate_summary -m "Aggregate rollup summary exports"`
+  - `cd data/datalad/bogus && datalad push --to origin`
+  - `cd data/datalad/bogus && datalad push --to arbutus-s3` *(failed: AWS credentials unavailable)*
+  - `badc infer orchestrate data/datalad/bogus --chunk-plan plans/bogus_chunks.json --sockeye-script artifacts/sockeye/bogus_bundle.sh --sockeye-job-name badc-bogus --sockeye-account pi-fresh --sockeye-partition gpu --sockeye-gres gpu:4 --sockeye-time 06:00:00 --sockeye-cpus-per-task 8 --sockeye-mem 64G --sockeye-resume-completed --sockeye-log-dir /scratch/$USER/badc-logs --sockeye-bundle --sockeye-bundle-aggregate-dir artifacts/aggregate --sockeye-bundle-bucket-minutes 30 --allow-partial-chunks`
+
 # 2025-12-10 — Pipeline doc map + Sockeye log guidance
 - Added a text-based pipeline map and troubleshooting checklist to ``docs/howto/pipeline-e2e.rst`` and
   linked it from README so operators can visualise chunk → infer → bundle flows and resolve common
