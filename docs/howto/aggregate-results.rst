@@ -9,8 +9,8 @@ Prerequisites
 -------------
 
 * ``badc infer run`` completed and wrote JSON files under ``<dataset>/artifacts/infer``.
-* The optional DuckDB dependency is installed (``pip install duckdb``) so ``--parquet`` exports and
-  report commands succeed.
+* DuckDB is available (installed via the package dependencies or ``pip install duckdb``) so
+  ``--parquet`` exports and report commands succeed.
 * ``badc`` is available on ``PATH`` (editable install or packaged release).
 
 Step 1 — Aggregate JSON to CSV/Parquet

@@ -174,8 +174,8 @@ views = aggregate_api.load_bundle_views("data/datalad/bogus/artifacts/aggregate/
 ```
 
 The API mirrors the CLI behavior (optional manifest enrichment, CSV/Parquet exports, DuckDB view
-loading) while keeping pandas/duckdb optional so lightweight scripts can still consume the canonical
-``DetectionRecord`` objects.
+loading) and ships with pandas/duckdb installed by default; helpers still guard imports so minimal
+environments can consume the canonical ``DetectionRecord`` objects without the heavier deps.
 
 ## End-to-end CLI workflow
 

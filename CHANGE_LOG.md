@@ -1446,6 +1446,16 @@
   - ``sphinx-build -b html docs _build/html -W``
   - ``pre-commit run --all-files``
 
+# 2025-12-10 — CI dependencies for aggregation
+- Added DuckDB + pandas to the package dependencies so aggregation/report helpers work in CI and
+  refreshed docs to note the bundled analytics deps.
+- Commands executed:
+  - ``git status``
+  - ``ruff format src tests``
+  - ``ruff check src tests``
+  - ``pytest``
+  - ``sphinx-build -b html docs _build/html -W``
+
 # 2025-12-09 — Parquet bundle notebook wiring
 - Updated ``docs/notebooks/aggregate_analysis.ipynb`` to load the new ``badc report parquet``
   outputs (labels/recordings/timeline CSVs + ``summary.json``) so plots and tables now reflect the
