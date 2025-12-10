@@ -4,7 +4,7 @@
   missing chunk status files), then reused the existing detections to run
   ``badc report aggregate-dir`` and write rollup CSVs to
   ``data/datalad/bogus/artifacts/aggregate/aggregate_summary`` (DataLad saved/pushed to GitHub; S3
-  push skipped due to missing AWS credentials).
+  push completed after sourcing ``setup/datalad_config.sh``).
 - Emitted a Sockeye array script with scratch logging:
   ``artifacts/sockeye/bogus_bundle.sh`` (generated via ``--sockeye-log-dir /scratch/$USER/badc-logs`` +
   ``--sockeye-bundle``) to document the resume/bundle flow for cluster runs.
