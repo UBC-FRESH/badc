@@ -69,17 +69,33 @@ Stages:
 ## Aggregate stage
 - Combine chunk-level detections, dedupe overlapping windows, and normalize timestamps relative to original recording.
 - Store in DuckDB + export CSV for downstream stats; optionally push to DataLad dataset for provenance.
-- CLI: `badc aggregate detections.parquet --out aggregated.db`.
-- DuckDB schema sketch:
-  - Table `detections_raw` (mirrors detection schema).
-  - Table `detections_normalized` (timestamps corrected for chunk offsets).
-  - Table `processing_log` (chunk status, runtimes, GPU info).
-- Aggregation outputs:
-  - Species/site summaries (CSV, Markdown).
-  - QC metrics (chunks attempted, failures, runtime distributions).
-  - Phase 2 helpers: `badc report parquet` and the new `badc report duckdb` generate CSV/JSON
-    artifacts, timeline buckets, and a DuckDB database so Erin can run ad-hoc SQL on the canonical
-    Parquet export without additional glue code.
+- CLI entry points:
+  - `badc infer aggregate <infer_dir> --manifest <manifest.csv> --output <summary.csv> --parquet <detections.parquet>`
+  - `badc report summary/quicklook/parquet/duckdb` for Phase 2-ready CSV/JSON/DuckDB bundles.
+  - `badc report bundle --parquet <recording>.parquet` to run quicklook + parquet + DuckDB helpers in one pass (used by `badc infer orchestrate --bundle` and `--sockeye-bundle`).
+- Canonical artifacts per recording (all under `artifacts/aggregate/<RUN_ID>*` inside the dataset):
+  - `<RUN_ID>_summary.csv` — detection-level CSV (one row per DetectionRecord).
+  - `<RUN_ID>.parquet` — canonical schema consumed by DuckDB.
+  - `<RUN_ID>_quicklook/{labels,chunks,recordings}.csv` — lightweight summaries for notebooks.
+  - `<RUN_ID>_parquet_report/{labels.csv,recordings.csv,timeline.csv,summary.json}` — outputs from `badc report parquet`.
+  - `<RUN_ID>.duckdb` plus `<RUN_ID>_duckdb_exports/{label_summary.csv,recording_summary.csv,timeline.csv}` — DuckDB datastore + CSV exports from `badc report duckdb`.
+- DuckDB bundle schema (materialized inside `badc report duckdb`):
+  - Table `detections` (one row per detection/status, mirrors `badc.aggregate.DetectionRecord`).
+  - View `label_summary(recording_id, label, label_name, detections, avg_confidence)`.
+  - View `recording_summary(recording_id, detections, avg_confidence)`.
+  - View `timeline_summary(recording_id, bucket_start_ms, bucket_end_ms, detections, avg_confidence)`.
+- Notebook coverage: `docs/notebooks/aggregate_analysis.ipynb` now targets real GNWT runs, shows how to
+  read the per-recording Parquet/DuckDB bundles, and renders both label bar charts and timeline plots sourced
+  from `label_summary` / `timeline_summary`.
+- Remaining checklist to consider this Phase 2 task complete:
+  1. **Python API helper** — add a thin module (e.g., `badc.aggregate.duckdb_helpers`) that opens a bundle `.duckdb` file,
+     returns pandas DataFrames for the three views, and documents column types/units.
+  2. **Regression tests** — add fixtures covering `badc report bundle` output structure (ensure schema version + required columns)
+     and unit tests for the helper so we catch schema regressions without running HawkEars.
+  3. **Docs** — extend `docs/cli/report.rst` (schema table) and link from `docs/howto/aggregate-results.rst`
+     plus `docs/notebooks/aggregate_analysis.ipynb` so reviewers see an end-to-end workflow (CLI → datastore → notebook plots).
+  4. **Roadmap closure** — once helper/tests/docs land, mark the Phase 2 aggregation bullet `[x]` in `notes/roadmap.md`
+     and summarize the closure in `CHANGE_LOG.md`.
 
 ## Report stage
 - Produce summary tables (per species/per site), quality-control metrics (chunks processed, failures), and GPU utilization charts.

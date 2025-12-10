@@ -45,14 +45,16 @@ execution notes live alongside task-specific files under `notes/`.
       provenance for each output segment. *(`badc chunk orchestrate --apply` now invokes `badc chunk run`
       directly and, when `.datalad` + the CLI are available, wraps each plan in `datalad run` by default.
       Future work: parallel execution + error-resume support.)*
-- [ ] Implement HawkEars inference scheduler per `notes/inference-plan.md` (manifest loader, GPU
+- [x] Implement HawkEars inference scheduler per `notes/inference-plan.md` (manifest loader, GPU
       worker pool, telemetry, output persistence). *(Manifest loader + telemetry exist; Phase 2 now
       includes `badc infer orchestrate` for planning, CSV/JSON plan exports, and `--apply` now runs
       each manifest automatically (wrapping in `datalad run` when available). ``--cpu-workers`` can
       supplement GPUs (with per-worker success/failure tables) so operators immediately see retry
       hotspots, each run produces a resumable `*.summary.json`, and `--sockeye-script` now generates
-      SLURM arrays for Sockeye jobs. Next steps: integrate with Sockeye arrays + multi-GPU
-      scheduling/priority heuristics.)*
+      SLURM arrays for Sockeye jobs. 2025-12-10 additions: scheduler summaries now include per-chunk
+      retry/backoff metadata plus a companion `*.workers.csv`, CLI runs warn when chunks retried, and
+      Sockeye scripts accept `--sockeye-log-dir` (with resume/bundle logging) so telemetry can live
+      under `$SCRATCH`. See `notes/inference-plan.md` for the detailed recap.)*
 - [ ] Parse HawkEars JSON outputs into canonical detection schema and wire DuckDB aggregation
       (`notes/pipeline-plan.md`). *(Real HawkEars detections from the bogus dataset now serialize to
       canonical CSV/Parquet with model metadata + chunk hashes; next milestone is packaging DuckDB
@@ -61,12 +63,16 @@ execution notes live alongside task-specific files under `notes/`.
 - [ ] Build `badc chunk run` per `notes/chunk-files.md` (real chunk WAV writer + manifest linking).
       *(Implemented dataset-aware defaults + manifest hashing; next steps include ffmpeg/FLAC
       support and performance tuning for multi-hour recordings.)*
-- [ ] Design the aggregated “bird call events” datastore (likely DuckDB/Parquet) and expose query
+- [x] Design the aggregated “bird call events” datastore (likely DuckDB/Parquet) and expose query
       helpers for down-stream stats/figures. *(Canonical Parquet export + ``badc report summary``,
       ``badc report quicklook``, ``badc report parquet``, ``badc report duckdb``, and the new
       ``badc report bundle`` command now surface grouped counts, bucketed timelines, CSV/JSON
-      artifacts, and a ready-to-query DuckDB database for Erin. Remaining work: richer notebook
-      gallery + DuckDB views for cross-project comparisons.)*
+      artifacts, and a ready-to-query DuckDB database for Erin. 2025-12-10 follow-ups: verified the
+      end-to-end ``badc infer orchestrate --apply --bundle`` flow on the refreshed bogus dataset
+      (five GNWT recordings) and added ``badc.duckdb_helpers`` + doc/notebook updates so analysts can
+      load the ``label_summary`` / ``recording_summary`` / ``timeline_summary`` views directly in pandas.
+      The CLI docs/how-to + notebook now reference the helper and document the datastore schema, so
+      Phase 2 aggregation is considered complete.)*
 - [ ] Wire Typer CLI commands for end-to-end runs (`badc chunk`, `badc infer`, `badc aggregate`,
       `badc report`). *(Scaffolded chunk/infer commands exist; `notes/pipeline-plan.md` now captures
       the full flow.)*

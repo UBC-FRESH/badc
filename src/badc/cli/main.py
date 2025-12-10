@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import os
 import queue
@@ -1172,6 +1173,13 @@ def infer_orchestrate(
         str | None,
         typer.Option("--sockeye-mem", help="`#SBATCH --mem` value (e.g., 64G)."),
     ] = None,
+    sockeye_log_dir: Annotated[
+        Path | None,
+        typer.Option(
+            "--sockeye-log-dir",
+            help="Directory for telemetry/summary logs inside the generated Sockeye script.",
+        ),
+    ] = None,
     resume_completed: Annotated[
         bool,
         typer.Option(
@@ -1296,6 +1304,7 @@ def infer_orchestrate(
             bundle=sockeye_bundle,
             bundle_aggregate_dir=sockeye_bundle_aggregate_dir,
             bundle_bucket_minutes=sockeye_bundle_bucket_minutes,
+            log_dir=sockeye_log_dir,
         )
         sockeye_script.parent.mkdir(parents=True, exist_ok=True)
         sockeye_script.write_text(script)
@@ -1530,6 +1539,8 @@ def _run_scheduler(
                         "output": str(getattr(job_result, "output_path", job_output)),
                         "worker": label,
                         "recording_id": job.recording_id,
+                        "last_backoff_s": getattr(job_result, "last_backoff_s", None),
+                        "last_error": getattr(job_result, "last_error", None),
                     }
             except Exception as exc:  # pragma: no cover - propagated to main thread
                 errors.append(exc)
@@ -1545,6 +1556,8 @@ def _run_scheduler(
                         "attempts": getattr(exc, "attempts", None),
                         "worker": label,
                         "recording_id": job.recording_id,
+                        "last_backoff_s": getattr(exc, "last_backoff_s", None),
+                        "last_error": getattr(exc, "last_error", str(exc)),
                     }
             finally:
                 job_queue.task_done()
@@ -1579,10 +1592,63 @@ def _write_scheduler_summary(
     summary_path.parent.mkdir(parents=True, exist_ok=True)
     summary_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     console.print(f"Scheduler summary: {summary_path}")
+    worker_csv = _write_worker_csv(summary_path, worker_summary)
+    console.print(f"Worker summary CSV: {worker_csv}")
+    _warn_retry_hotspots(summary_path, job_summary)
 
 
 def _telemetry_summary_path(telemetry_path: Path) -> Path:
     return telemetry_path.with_suffix(telemetry_path.suffix + ".summary.json")
+
+
+def _write_worker_csv(summary_path: Path, worker_summary: dict[str, dict[str, int]]) -> Path:
+    csv_path = summary_path.with_suffix(summary_path.suffix + ".workers.csv")
+    fieldnames = ["worker", "jobs", "success", "failure", "retries", "failed_retries"]
+    with csv_path.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.writer(fh)
+        writer.writerow(fieldnames)
+        for worker, stats in sorted(worker_summary.items()):
+            success = stats.get("success", 0)
+            failure = stats.get("failure", 0)
+            writer.writerow(
+                [
+                    worker,
+                    success + failure,
+                    success,
+                    failure,
+                    stats.get("retries", 0),
+                    stats.get("failed_retries", 0),
+                ]
+            )
+    return csv_path
+
+
+def _warn_retry_hotspots(summary_path: Path, jobs: dict[str, dict[str, object]]) -> None:
+    hotspots: list[tuple[str, dict[str, object]]] = []
+    for chunk_id, meta in jobs.items():
+        status = meta.get("status")
+        retries = int(meta.get("retries") or 0)
+        if status != "success" or retries > 0:
+            hotspots.append((chunk_id, meta))
+    if not hotspots:
+        return
+    hotspots.sort(key=lambda item: int(item[1].get("retries") or 0), reverse=True)
+    console.print(
+        f"{len(hotspots)} chunk(s) retried or failed. See {summary_path} for details:",
+        style="yellow",
+    )
+    for chunk_id, meta in hotspots[:5]:
+        retries = int(meta.get("retries") or 0)
+        status = meta.get("status")
+        worker = meta.get("worker")
+        last_error = meta.get("last_error")
+        console.print(
+            f" - {chunk_id} (worker={worker}, status={status}, retries={retries})"
+            + (f": {last_error}" if last_error else ""),
+            style="yellow",
+        )
+    if len(hotspots) > 5:
+        console.print(f"…and {len(hotspots) - 5} more chunk(s).", style="yellow")
 
 
 def _load_resume_chunks(summary_path: Path) -> set[tuple[str | None, str]]:
@@ -1637,6 +1703,7 @@ def _render_sockeye_script(
     bundle: bool,
     bundle_aggregate_dir: Path,
     bundle_bucket_minutes: int,
+    log_dir: Path | None,
 ) -> str:
     dataset = dataset.expanduser().resolve()
     first_plan = plans[0]
@@ -1649,12 +1716,25 @@ def _render_sockeye_script(
 
     manifest_entries = [f'  "{_relative(plan.manifest_path)}"' for plan in plans]
     output_entries = [f'  "{_relative(plan.recording_output)}"' for plan in plans]
-    telemetry_entries = [f'  "{_relative(plan.telemetry_log)}"' for plan in plans]
+    log_dir_rel: str | None = None
+    if log_dir is not None:
+        log_dir_abs = log_dir if log_dir.is_absolute() else dataset / log_dir
+        log_dir_rel = _relative(log_dir_abs)
+
+    if log_dir_rel:
+        telemetry_entries = [f'  "${{LOG_DIR}}/{plan.recording_id}.jsonl"' for plan in plans]
+    else:
+        telemetry_entries = [f'  "{_relative(plan.telemetry_log)}"' for plan in plans]
     resume_entries = []
     if resume_completed:
-        resume_entries = [
-            f'  "{_relative(_telemetry_summary_path(plan.telemetry_log))}"' for plan in plans
-        ]
+        if log_dir_rel:
+            resume_entries = [
+                f'  "${{LOG_DIR}}/{plan.recording_id}.jsonl.summary.json"' for plan in plans
+            ]
+        else:
+            resume_entries = [
+                f'  "{_relative(_telemetry_summary_path(plan.telemetry_log))}"' for plan in plans
+            ]
     aggregate_dir_abs = bundle_aggregate_dir
     if not bundle_aggregate_dir.is_absolute():
         aggregate_dir_abs = dataset / bundle_aggregate_dir
@@ -1677,6 +1757,9 @@ def _render_sockeye_script(
     lines.append("")
     lines.append("set -euo pipefail")
     lines.append(f'DATASET="{dataset}"')
+    if log_dir_rel:
+        lines.append(f'LOG_DIR="{log_dir_rel}"')
+        lines.append('mkdir -p "$LOG_DIR"')
     lines.append("MANIFESTS=(")
     lines.extend(manifest_entries)
     lines.append(")")
@@ -1748,6 +1831,7 @@ def _render_sockeye_script(
                 f'BUNDLE_CMD=(badc report bundle --parquet "$PARQUET_PATH" --output-dir "$AGGREGATE_DIR" --bucket-minutes {bundle_bucket_minutes})',
                 "echo Running: ${BUNDLE_CMD[*]}",
                 "${BUNDLE_CMD[@]}",
+                'echo "Bundle artifacts ready under $AGGREGATE_DIR (summary: $SUMMARY_PATH, parquet: $PARQUET_PATH, duckdb: $AGGREGATE_DIR/${RECORDING}.duckdb)"',
             ]
         )
     return "\n".join(lines) + "\n"

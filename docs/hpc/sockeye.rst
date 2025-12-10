@@ -85,6 +85,48 @@ Job arrays & manifests
 
 * Keep array jobs idempotent by writing outputs under ``artifacts/infer/<recording>/`` inside the dataset so failed tasks can be retried with ``datalad rerun``.
 
+Automated script generation
+---------------------------
+* Instead of hand-authoring sbatch files, run
+  ``badc infer orchestrate --sockeye-script`` to emit a ready-to-submit script that already knows
+  about your manifests, telemetry logs, and aggregation paths. Example (recorded 2025-12-10 after the
+  bogus dataset refresh)::
+
+     badc infer orchestrate data/datalad/bogus \
+         --manifest-dir manifests \
+         --include-existing \
+         --sockeye-script artifacts/sockeye/bogus_bundle.sh \
+         --sockeye-job-name badc-bogus \
+         --sockeye-account pi-fresh \
+         --sockeye-partition gpu \
+         --sockeye-gres gpu:4 \
+         --sockeye-time 06:00:00 \
+         --sockeye-cpus-per-task 8 \
+         --sockeye-mem 64G \
+         --sockeye-resume-completed \
+         --sockeye-log-dir /scratch/$USER/badc-logs \
+         --sockeye-bundle \
+         --sockeye-bundle-aggregate-dir artifacts/aggregate \
+         --sockeye-bundle-bucket-minutes 30
+
+  The generated script populates ``MANIFESTS``, ``OUTPUTS``, ``TELEMETRY``, and (when
+  ``--sockeye-resume-completed`` is enabled) ``RESUMES`` arrays. Each array index receives the right
+  telemetry summary and automatically appends ``--resume-summary`` so chunks already marked
+  ``success`` are skipped inline. Adding ``--sockeye-bundle`` injects the aggregation steps directly
+  after ``badc infer run``::
+
+     AGG_CMD=(badc infer aggregate "$OUTPUT" --manifest "$MANIFEST" --output "$SUMMARY_PATH" --parquet "$PARQUET_PATH")
+     BUNDLE_CMD=(badc report bundle --parquet "$PARQUET_PATH" --output-dir "$AGGREGATE_DIR" --bucket-minutes 30)
+
+  Because the dataset lives under DataLad/git-annex, the manifest/telemetry/resume entries resolve
+  to ``.git/modules/.../annex/objects`` locations. Always change into the dataset root (``cd "$DATASET"`` as
+  shown in the script) so ``datalad`` can materialise those files via ``datalad get`` before the job
+  starts. Use ``--sockeye-log-dir`` when you want telemetry/summary logs to land under a cluster-friendly
+  path (e.g., ``$SCRATCH/logs/badc``); the emitted script pre-creates the directory, points both the
+  ``TELEMETRY`` and ``RESUMES`` arrays at that location, echoes whether each resume summary exists, and
+  prints bundle artifact locations (summary/parquet/duckdb) after the reporting commands finish so you
+  can archive logs alongside SLURM output.
+
 Telemetry & monitoring
 ----------------------
 * Use ``badc telemetry --log data/telemetry/infer/log.jsonl`` to inspect the last few chunks.

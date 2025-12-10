@@ -36,17 +36,29 @@ class JobResult:
     output_path: Path
     attempts: int
     retries: int
+    last_backoff_s: float | None = None
+    last_error: str | None = None
 
 
 class JobExecutionError(RuntimeError):
     """Raised when a job exhausts its retry budget without succeeding."""
 
-    def __init__(self, chunk_id: str, attempts: int, original: Exception | None = None):
+    def __init__(
+        self,
+        chunk_id: str,
+        attempts: int,
+        original: Exception | None = None,
+        *,
+        last_backoff_s: float | None = None,
+        last_error: str | None = None,
+    ):
         message = f"Inference failed for {chunk_id} after {attempts} attempt(s)"
         super().__init__(message)
         self.chunk_id = chunk_id
         self.attempts = attempts
         self.original = original
+        self.last_backoff_s = last_backoff_s
+        self.last_error = last_error
 
 
 def _metrics_payload(metrics: GPUMetrics | None) -> dict[str, int | None] | None:
@@ -241,6 +253,8 @@ def run_job(
 
     model_version = hawkears.get_hawkears_version() if use_hawkears else None
     attempts = 0
+    last_backoff_s: float | None = None
+    last_error: str | None = None
     while attempts <= max_retries:
         attempts += 1
         start = time.time()
@@ -350,6 +364,8 @@ def run_job(
                 output_path=output_path,
                 attempts=attempts,
                 retries=max(attempts - 1, 0),
+                last_backoff_s=last_backoff_s,
+                last_error=last_error,
             )
         except subprocess.CalledProcessError as exc:
             runtime = time.time() - start
@@ -374,6 +390,14 @@ def run_job(
                 finished_at=now_iso(),
                 telemetry_path=telemetry_path,
             )
+            last_backoff_s = backoff
+            last_error = (exc.stderr or exc.stdout or str(exc))[-500:]
             if attempts > max_retries:
-                raise JobExecutionError(job.chunk_id, attempts, exc) from exc
+                raise JobExecutionError(
+                    job.chunk_id,
+                    attempts,
+                    exc,
+                    last_backoff_s=last_backoff_s,
+                    last_error=last_error,
+                ) from exc
             time.sleep(backoff)

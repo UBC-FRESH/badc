@@ -47,6 +47,12 @@ def test_infer_run_placeholder(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert "Processed 1 jobs" in result.stdout
     assert "Telemetry log" in result.stdout
+    summary_path = telemetry_log.with_suffix(telemetry_log.suffix + ".summary.json")
+    data = json.loads(summary_path.read_text(encoding="utf-8"))
+    job_meta = next(iter(data["jobs"].values()))
+    assert "last_backoff_s" in job_meta
+    worker_csv = summary_path.with_suffix(summary_path.suffix + ".workers.csv")
+    assert worker_csv.exists()
 
 
 def test_infer_orchestrate_plan(tmp_path: Path) -> None:
@@ -488,6 +494,45 @@ def test_infer_orchestrate_sockeye_script_bundle(tmp_path: Path) -> None:
     assert "badc infer aggregate" in text
     assert "badc report bundle" in text
     assert "--bucket-minutes 15" in text
+
+
+def test_infer_orchestrate_sockeye_script_log_dir(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset_sockeye_log"
+    (dataset / ".datalad").mkdir(parents=True)
+    manifest_dir = dataset / "manifests"
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    chunk_path = dataset / "chunks" / "rec" / "chunk_a.wav"
+    chunk_path.parent.mkdir(parents=True, exist_ok=True)
+    chunk_path.write_text("audio", encoding="utf-8")
+    manifest = manifest_dir / "rec.csv"
+    manifest.write_text(
+        "recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes\n"
+        f"rec,chunk_a,{chunk_path},0,1000,0,hash,\n",
+        encoding="utf-8",
+    )
+    script_path = tmp_path / "sockeye_log.sh"
+    result = runner.invoke(
+        app,
+        [
+            "infer",
+            "orchestrate",
+            str(dataset),
+            "--manifest-dir",
+            str(manifest_dir),
+            "--include-existing",
+            "--sockeye-script",
+            str(script_path),
+            "--sockeye-resume-completed",
+            "--sockeye-log-dir",
+            "logs",
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    text = script_path.read_text(encoding="utf-8")
+    assert 'LOG_DIR="logs"' in text
+    assert 'mkdir -p "$LOG_DIR"' in text
+    assert "${LOG_DIR}/rec.jsonl" in text
+    assert "${LOG_DIR}/rec.jsonl.summary.json" in text
 
 
 def test_infer_orchestrate_apply_with_bundle(tmp_path: Path, monkeypatch) -> None:

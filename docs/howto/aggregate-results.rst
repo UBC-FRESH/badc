@@ -127,7 +127,15 @@ Step 5 — Materialize a DuckDB database
           data/datalad/bogus/artifacts/aggregate/detections.duckdb
 
    The same database can be mounted in notebooks via `duckdb.connect(".../detections.duckdb")` for
-   richer charts without re-importing the Parquet file.
+   richer charts without re-importing the Parquet file. Prefer the helper
+   :func:`badc.duckdb_helpers.load_duckdb_views` when you want ready-made pandas DataFrames for the
+   ``label_summary`` / ``recording_summary`` / ``timeline_summary`` views::
+
+      from badc.duckdb_helpers import load_duckdb_views
+
+      views = load_duckdb_views("data/datalad/bogus/artifacts/aggregate/detections.duckdb",
+                                limit_labels=10)
+      views.label_summary.head()
 
 Step 6 — Notebook/SQL exploration
 ---------------------------------

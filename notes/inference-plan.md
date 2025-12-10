@@ -70,3 +70,77 @@
   A follow-up invocation adding `--resume-completed` reused that summary automatically and skipped
   every chunk, validating the dataset-scale resume flag without requiring manual `--resume-summary`
   plumbing per manifest.
+
+## Sockeye script + bundle automation — 2025-12-10
+- With the bogus dataset re-chunked (five GNWT recordings) and telemetry summaries recorded under
+  `data/datalad/bogus/artifacts/telemetry/infer/*.jsonl.summary.json`, ran:
+
+  ```
+  badc infer orchestrate data/datalad/bogus \
+      --manifest-dir manifests \
+      --include-existing \
+      --sockeye-script artifacts/sockeye/bogus_bundle.sh \
+      --sockeye-job-name badc-bogus \
+      --sockeye-account pi-fresh \
+      --sockeye-partition gpu \
+      --sockeye-gres gpu:4 \
+      --sockeye-time 06:00:00 \
+      --sockeye-cpus-per-task 8 \
+      --sockeye-mem 64G \
+      --sockeye-resume-completed \
+      --sockeye-bundle \
+      --sockeye-bundle-aggregate-dir artifacts/aggregate \
+      --sockeye-bundle-bucket-minutes 30
+  ```
+
+- The emitted script lives at `artifacts/sockeye/bogus_bundle.sh` (ignored by Git); it now includes:
+
+  * ``RESUMES=(...)`` pointing at each telemetry summary so reruns automatically append
+    ``--resume-summary`` when the JSON exists.
+  * ``AGG_CMD`` + ``BUNDLE_CMD`` blocks that run ``badc infer aggregate`` and
+    ``badc report bundle`` right after inference so every Sockeye array task leaves behind the
+    quicklook/parquet/DuckDB bundle under ``artifacts/aggregate``.
+- Reminder for operators: ensure `cd "$DATASET"` appears before invoking any `datalad` commands so
+  the annex-backed manifest paths resolve inside the job allocation (`datalad get` will populate the
+  symlink targets automatically).
+
+## Phase 2 scheduler polish — detailed TODOs
+1. **Enrich scheduler summaries**
+   - Extend `_write_scheduler_summary` to include retry/backoff metadata per worker and per chunk
+     (attempt count, final delay, last error message). Surfacing this data lets resume workflows flag
+     flaky slices before Sockeye reruns them.
+   - Tests: ensure the JSON contains the new fields and that ``badc infer run --resume-summary`` can
+     consume them without breaking existing behavior.
+2. **Persistent log/report hooks**
+   - Have ``badc infer run`` emit an optional CSV (e.g., `artifacts/telemetry/infer/<manifest>_workers.csv`)
+     summarising retries/failures so HPC operators can archive a single file alongside SLURM logs.
+   - Update the CLI so it warns when a run finishes but several chunks exceeded the retry budget.
+   - Document the workflow in this note + `docs/howto/infer-local.rst`.
+3. **Sockeye integration**
+   - Allow `badc infer orchestrate --sockeye-script` to accept a `--sockeye-log-dir` that redirects
+     telemetry/summary paths into a SLURM-friendly directory (e.g., `$SCRATCH/logs/...`), ensuring
+     multi-node submissions don't write to a read-only DataLad tree.
+   - Inject a short resume report into the emitted script (log when a summary is missing / when
+     bundle commands run) so cluster operators can eyeball array output quickly.
+   - Expand `docs/hpc/sockeye.rst` with a “resume + bundle logging” subsection referencing the new
+     flags/script snippets.
+
+## Scheduler summary enrichment — 2025-12-10
+- `_write_scheduler_summary` now writes `*.workers.csv` alongside the JSON so HPC operators can archive
+  a single file containing per-worker success/failure/retry counts. The CLI prints the CSV path after
+  each run.
+- `_run_scheduler` records `last_backoff_s` + `last_error` for every chunk (success or failure). The
+  CLI warns when any chunk retried or failed, listing the top offenders with their final error string.
+- `JobExecutionError` carries the last backoff/error metadata, and the summary JSON now includes those
+  fields so resume tooling can triage flaky chunks without scraping telemetry logs.
+
+## Sockeye log-dir support — 2025-12-10
+- Added ``--sockeye-log-dir`` to `badc infer orchestrate --sockeye-script` so generated SLURM arrays
+  can redirect telemetry/summary logs into `$SCRATCH` (or any writable directory) before running
+  inference. The script now emits `LOG_DIR=...`, creates the directory, and points both the
+  ``TELEMETRY`` and ``RESUMES`` arrays at `${LOG_DIR}/<recording>.jsonl`.
+- Generated scripts now echo whether the resume summary exists for each manifest and print the bundle
+  artifact paths (summary/parquet/duckdb) after reporting completes so SLURM logs capture all relevant
+  metadata.
+- `docs/hpc/sockeye.rst` details the new flag/logging behavior and reminds operators to archive the log directory
+  alongside SLURM output for multi-node runs.

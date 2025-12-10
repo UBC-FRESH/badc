@@ -32,6 +32,52 @@
   - `source .venv/bin/activate && badc infer orchestrate data/datalad/bogus --manifest-dir manifests --include-existing --apply --stub-runner --no-record-datalad`
   - `source .venv/bin/activate && badc infer orchestrate data/datalad/bogus --manifest-dir manifests --include-existing --apply --stub-runner --no-record-datalad --resume-completed`
 
+# 2025-12-10 — Bogus dataset orchestrate bundle validation
+- Re-chunked the refreshed bogus dataset (five GNWT recordings) via
+  ``badc chunk orchestrate --include-existing --apply`` to regenerate manifests and chunk WAVs inside
+  ``data/datalad/bogus`` (recorded with DataLad so future reruns stay deterministic).
+- Normalized each manifest's ``recording_id`` column to match the human-readable stem so inference
+  outputs land in ``artifacts/infer/<recording>`` instead of hashed annex names, which unblocks the
+  new ``--bundle`` automation.
+- Ran ``badc infer orchestrate --apply --bundle`` (stub runner) across every manifest; each recording
+  now has fresh inference JSON, telemetry summaries, quicklook CSVs, Parquet reports, and DuckDB
+  bundles under ``artifacts/aggregate/GNWT*`` for Phase 2 analytics review.
+- Saved the new inference/aggregation artifacts plus telemetry to ``data/datalad/bogus`` and pushed
+  the dataset to ``origin``; syncing to ``arbutus-s3`` is still blocked by missing
+  ``AWS_ACCESS_KEY_ID``/``AWS_SECRET_ACCESS_KEY`` credentials.
+- Commands executed:
+  - `source .venv/bin/activate && badc chunk orchestrate data/datalad/bogus --include-existing --apply --no-record-datalad`
+  - `python - <<'PY' ...` *(rewrite manifest `recording_id` columns to match the manifest stem; see repo history for the inline script)*
+  - `source .venv/bin/activate && badc infer orchestrate data/datalad/bogus --manifest-dir manifests --include-existing --apply --bundle --bundle-bucket-minutes 30 --stub-runner --no-record-datalad`
+  - `datalad save artifacts/infer artifacts/aggregate artifacts/telemetry/infer manifests -m "Bogus dataset orchestrate bundle run"`
+  - `datalad push --to origin`
+  - `datalad push --to arbutus-s3` *(failed: AWS credentials unavailable, so remote sync deferred)*
+
+# 2025-12-10 — Sockeye resume/bundle script docs
+- Regenerated a Sockeye SLURM array script for the bogus dataset with both
+  ``--sockeye-resume-completed`` and ``--sockeye-bundle`` so each array task automatically skips
+  completed chunks and produces quicklook/Parquet/DuckDB bundles after inference.
+- Captured the workflow in ``docs/hpc/sockeye.rst`` (new “Automated script generation” section) and
+  ``notes/inference-plan.md`` so operators know how to reuse the script located at
+  ``artifacts/sockeye/bogus_bundle.sh``.
+- Commands executed:
+  - `source .venv/bin/activate && badc infer orchestrate data/datalad/bogus --manifest-dir manifests --include-existing --sockeye-script artifacts/sockeye/bogus_bundle.sh --sockeye-job-name badc-bogus --sockeye-account pi-fresh --sockeye-partition gpu --sockeye-gres gpu:4 --sockeye-time 06:00:00 --sockeye-cpus-per-task 8 --sockeye-mem 64G --sockeye-resume-completed --sockeye-bundle --sockeye-bundle-aggregate-dir artifacts/aggregate --sockeye-bundle-bucket-minutes 30 --stub-runner`
+
+# 2025-12-10 — DuckDB notebook refresh
+- Updated ``docs/notebooks/aggregate_analysis.ipynb`` to target the refreshed bogus dataset:
+  ``RUN_ID`` now defaults to ``GNWT-114_20230509_094500``, the notebook reads per-recording
+  Parquet/DuckDB bundles emitted by ``badc report bundle``, and the DuckDB section queries
+  ``artifacts/aggregate/<RUN_ID>.duckdb`` instead of the legacy ``detections.duckdb``.
+- Added a DuckDB-powered timeline plot sourced from the ``timeline_summary`` view so reviewers can
+  visualize bucketed detections directly in the notebook alongside the existing label bar chart.
+- Commands executed:
+  - `python - <<'PY' ...` *(in-place JSON edit to retarget RUN_ID, DuckDB paths, and append the new timeline plotting cell; see git history for the full snippet)*
+  - `source .venv/bin/activate && ruff format src tests`
+  - `source .venv/bin/activate && ruff check src tests`
+  - `source .venv/bin/activate && pytest`
+  - `source .venv/bin/activate && sphinx-build -b html docs _build/html -W`
+  - `source .venv/bin/activate && pre-commit run --all-files`
+
 # 2025-12-10 — Aggregation bundle helper
 - Added ``badc report bundle`` to run the quicklook, parquet, and DuckDB reporting commands in one
   pass. The helper derives output directories from the Parquet stem (``detections_quicklook/``,
@@ -47,6 +93,41 @@
   - `source .venv/bin/activate && pytest`
   - `source .venv/bin/activate && sphinx-build -b html docs _build/html -W`
   - `source .venv/bin/activate && pre-commit run --all-files`
+
+# 2025-12-10 — DuckDB helper API
+- Added ``badc.duckdb_helpers`` with ``load_duckdb_views`` / ``verify_bundle_schema`` so notebooks/tests
+  can load the ``label_summary`` / ``recording_summary`` / ``timeline_summary`` views from bundle
+  `.duckdb` files without re-writing SQL. This will anchor the Phase 2 datastore closure task.
+- New unit tests (``tests/test_duckdb_helpers.py``) build a temporary DuckDB database, assert the helper
+  returns pandas DataFrames, and verify schema validation fails when views are missing.
+- ``docs/cli/report.rst`` and ``docs/howto/aggregate-results.rst`` now document the DuckDB schema,
+  reference the helper module, and show how to load bundle views in Python. The aggregation notebook
+  (`docs/notebooks/aggregate_analysis.ipynb`) imports the helper for its DuckDB sections so reviewers
+  see a real-world example. ``notes/roadmap.md`` marks the Phase 2 datastore bullet complete.
+- Commands executed:
+  - `source .venv/bin/activate && ruff format src tests`
+  - `source .venv/bin/activate && ruff check src tests`
+  - `source .venv/bin/activate && pytest`
+
+# 2025-12-10 — Scheduler summary + Sockeye log dir
+- ``badc infer run`` now records per-chunk retry metadata (`last_backoff_s`, `last_error`) in the
+  scheduler summary JSON, emits a `*.workers.csv` alongside every telemetry log, and warns in the
+  console whenever chunks retried or failed so operators can triage hotspots immediately.
+- ``JobExecutionError`` exposes the same metadata, and `_run_scheduler` propagates it into the summary
+  so resume tooling/HPC logs no longer need to scrape the raw telemetry JSONL.
+- Added ``--sockeye-log-dir`` to ``badc infer orchestrate --sockeye-script``; generated scripts now
+  create the log directory, point both telemetry and resume arrays at `${LOG_DIR}/<recording>.jsonl`,
+  log whether the resume summary exists, and print bundle artifact paths after reporting completes.
+- `docs/hpc/sockeye.rst`` documents how to stash logs under `$SCRATCH`, and ``notes/roadmap.md`` now
+  marks the Phase 2 scheduler bullet complete.
+- ``docs/howto/infer-local.rst`` highlights the new `*.workers.csv` output so local runs capture the
+  same analytics that HPC operators expect.
+- Tests updated (`tests/test_infer_cli.py`, `tests/test_hawkears_runner.py`) to cover the new summary
+  fields, worker CSV, and failure metadata.
+- Commands executed:
+  - `source .venv/bin/activate && ruff format src tests`
+  - `source .venv/bin/activate && ruff check src tests`
+  - `source .venv/bin/activate && pytest`
 
 # 2025-12-10 — Sockeye resume flag
 - ``badc infer orchestrate`` now accepts ``--sockeye-resume-completed``. When generating a Sockeye

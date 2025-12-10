@@ -165,10 +165,16 @@ Expected outputs:
 * JSON detections under ``data/datalad/bogus/artifacts/infer/<recording>/``
 * Telemetry log inside ``data/datalad/bogus/artifacts/telemetry/…``
 * Console summary listing telemetry path + job counts, plus a per-worker success/failure/ retry table
-  so CPU vs. GPU bottlenecks and flaky chunks stand out. A ``*.summary.json`` file lands next to the
-  telemetry log capturing every chunk's status for resumable runs. Re-run the command with
-  ``--resume-summary <telemetry.summary.json>`` (the CLI prints the exact path) to skip chunks that
-  already finished successfully after an interruption.
+  so CPU vs. GPU bottlenecks and flaky chunks stand out. Each run now writes:
+
+  - ``<telemetry>.summary.json`` — chunk-level metadata (status, retries, last error/backoff) for
+    resumable runs.
+  - ``<telemetry>.summary.json.workers.csv`` — per-worker (GPU/CPU) success/failure/retry counts for
+    quick archival alongside SLURM logs.
+
+  The CLI warns when any chunk retried or failed, echoing the chunk ID/worker/last error in the console.
+  Re-run the command with ``--resume-summary <telemetry.summary.json>`` (the CLI prints the exact path)
+  to skip chunks that already finished successfully after an interruption.
 
 Step 3 — Monitor telemetry
 --------------------------
