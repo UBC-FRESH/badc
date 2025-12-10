@@ -125,8 +125,15 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
 - `badc report bundle --parquet artifacts/aggregate/detections.parquet` — runs the quicklook, parquet,
   and DuckDB helpers in one shot, leaving behind `detections_quicklook/`,
   `detections_parquet_report/`, `detections.duckdb`, and matching CSV exports for reviewers.
+- `badc report aggregate-dir artifacts/aggregate --export-dir artifacts/aggregate/summary` — scans an
+  aggregate directory for `*_detections.parquet` files (one per recording/run), loads them via DuckDB,
+  prints the top labels/recordings across the entire dataset, and optionally writes CSV snapshots for
+  sharing or notebook ingestion.
 - `badc infer orchestrate --apply --bundle` — after each manifest is inferred, aggregate detections
-  and run the bundle helper automatically so Phase 2 artifacts stay in lockstep with inference runs.
+  and run the bundle helper automatically so Phase 2 artifacts stay in lockstep with inference runs;
+  append `--bundle-rollup` (enabled by default in `badc pipeline run`) to trigger `badc report
+  aggregate-dir` once the batch finishes so Erin immediately gets dataset-wide label/recording
+  leaderboards under `artifacts/aggregate/aggregate_summary/`.
 - `badc pipeline run data/datalad/bogus --chunk-plan plans/bogus.json --bundle` — convenience wrapper
   that runs `badc chunk orchestrate --plan-json … --apply` followed by
   `badc infer orchestrate --chunk-plan … --apply --bundle`, so an entire dataset can be chunked,

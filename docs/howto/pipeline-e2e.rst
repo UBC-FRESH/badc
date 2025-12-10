@@ -66,6 +66,7 @@ available, and attach the aggregation/report bundle so Phase 2 artifacts land 
        --bundle \
        --bundle-aggregate-dir artifacts/aggregate \
        --bundle-bucket-minutes 30 \
+       --bundle-rollup \
        --stub-runner \
        --no-record-datalad
 
@@ -74,6 +75,11 @@ Tips:
 * Drop ``--stub-runner`` and add ``--use-hawkears`` when you are ready to call the vendor runner.
 * For Sockeye submissions, append ``--sockeye-script artifacts/sockeye/badc.sh`` plus the
   ``--sockeye-*`` overrides; the generated script now validates chunk status before chaque array task.
+* ``--bundle-rollup`` automatically calls :command:`badc report aggregate-dir` once all manifests
+  finish, writing ``label_summary.csv`` / ``recording_summary.csv`` to
+  ``artifacts/aggregate/aggregate_summary/`` (override with ``--bundle-rollup-export-dir``). The
+  pipeline wrapper flips this flag on by default so dataset-scale runs always leave behind a
+  cross-run leaderboard for Erin.
 
 Step 3 — Review + save artifacts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

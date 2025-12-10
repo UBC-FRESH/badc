@@ -24,6 +24,7 @@
       list_gpus
       main
       pipeline_run
+      report_aggregate_dir
       report_bundle
       report_duckdb
       report_parquet

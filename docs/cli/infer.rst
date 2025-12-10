@@ -335,7 +335,10 @@ Highlights:
   BADC aggregates detections into ``artifacts/aggregate/`` and runs ``badc report bundle`` so the
   quicklook CSVs, parquet report, and DuckDB database live alongside the dataset without extra
   commands. Override paths via ``--bundle-aggregate-dir`` and adjust the timeline window via
-  ``--bundle-bucket-minutes``.
+  ``--bundle-bucket-minutes``. Append ``--bundle-rollup`` (plus its ``--bundle-rollup-limit`` and
+  ``--bundle-rollup-export-dir`` knobs) to run :command:`badc report aggregate-dir` after the queue
+  drains; the rollup emits dataset-wide label/recording leaderboards to
+  ``<aggregate_dir>/aggregate_summary`` by default so Erin immediately sees cross-run coverage.
 
 Chunk status paths default to ``artifacts/chunks/<recording>/.chunk_status.json``; customize the
 root with ``--chunks-dir`` when your dataset stores chunk WAVs elsewhere, or pass

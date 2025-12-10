@@ -763,6 +763,7 @@ def chunk_orchestrate(
             str(plan.chunk_output_dir),
         )
     console.print(table)
+
     if plan_csv or plan_json:
         records = [plan.to_dict() for plan in plans]
         if plan_csv:
@@ -1362,6 +1363,27 @@ def infer_orchestrate(
             help="Bucket size (minutes) for the local bundle timeline view.",
         ),
     ] = 60,
+    bundle_rollup: Annotated[
+        bool,
+        typer.Option(
+            "--bundle-rollup/--bundle-no-rollup",
+            help="After bundles complete, run `badc report aggregate-dir` across the aggregate directory.",
+        ),
+    ] = False,
+    bundle_rollup_limit: Annotated[
+        int,
+        typer.Option(
+            "--bundle-rollup-limit",
+            help="Rows per table for the aggregate-dir rollup.",
+        ),
+    ] = 20,
+    bundle_rollup_export_dir: Annotated[
+        Path | None,
+        typer.Option(
+            "--bundle-rollup-export-dir",
+            help="Optional directory (relative to dataset) for rollup CSV exports.",
+        ),
+    ] = None,
 ) -> None:
     """Plan inference runs across manifests without executing them."""
 
@@ -1420,6 +1442,15 @@ def infer_orchestrate(
             plan.chunk_status or "missing",
         )
     console.print(table)
+    if bundle_rollup and bundle_rollup_limit <= 0:
+        raise typer.BadParameter(
+            "--bundle-rollup-limit must be positive.", param_hint="--bundle-rollup-limit"
+        ) from None
+    if bundle_rollup and not bundle:
+        console.print(
+            "Bundle rollup requested but --bundle is disabled; rollup will only read existing artifacts.",
+            style="yellow",
+        )
 
     if plan_csv or plan_json:
         records = [plan.to_dict() for plan in plans]
@@ -1524,6 +1555,13 @@ def infer_orchestrate(
                     aggregate_dir=bundle_aggregate_dir,
                     bucket_minutes=bundle_bucket_minutes,
                 )
+        if bundle_rollup:
+            _run_bundle_rollup_summary(
+                dataset=dataset,
+                aggregate_dir=bundle_aggregate_dir,
+                export_dir=bundle_rollup_export_dir,
+                limit=bundle_rollup_limit,
+            )
 
 
 def _run_apply_bundle(
@@ -1562,6 +1600,39 @@ def _run_apply_bundle(
         run_prefix=plan.recording_id,
         bucket_minutes=bucket_minutes,
     )
+
+
+def _run_bundle_rollup_summary(
+    *,
+    dataset: Path,
+    aggregate_dir: Path,
+    export_dir: Path | None,
+    limit: int,
+) -> None:
+    try:
+        import duckdb  # type: ignore
+    except ModuleNotFoundError:
+        console.print("duckdb not available; skipping bundle rollup.", style="yellow")
+        return
+
+    base_dir = aggregate_dir if aggregate_dir.is_absolute() else (dataset / aggregate_dir)
+    export_dir_abs: Path | None = None
+    if export_dir:
+        export_dir_abs = export_dir if export_dir.is_absolute() else (dataset / export_dir)
+    else:
+        export_dir_abs = base_dir / "aggregate_summary"
+    console.print(
+        f"[cyan]Running aggregate-dir summary for {base_dir} (exports: {export_dir_abs})[/]"
+    )
+    try:
+        _aggregate_dir_summary(
+            duckdb_module=duckdb,
+            aggregate_dir=base_dir,
+            limit=limit,
+            export_dir=export_dir_abs,
+        )
+    except typer.BadParameter as exc:
+        console.print(f"Aggregate-dir summary skipped: {exc}", style="yellow")
 
 
 @infer_app.command("run-config")
@@ -2108,6 +2179,27 @@ def pipeline_run(
         int,
         typer.Option("--bundle-bucket-minutes", help="Timeline bucket size used by report bundle."),
     ] = 30,
+    bundle_rollup: Annotated[
+        bool,
+        typer.Option(
+            "--bundle-rollup/--bundle-no-rollup",
+            help="Run `badc report aggregate-dir` across the dataset after bundling completes.",
+        ),
+    ] = True,
+    bundle_rollup_limit: Annotated[
+        int,
+        typer.Option(
+            "--bundle-rollup-limit",
+            help="Rows per table when running `badc report aggregate-dir` from the pipeline wrapper.",
+        ),
+    ] = 20,
+    bundle_rollup_export_dir: Annotated[
+        Path | None,
+        typer.Option(
+            "--bundle-rollup-export-dir",
+            help="Optional path (relative to dataset) for rollup CSV exports.",
+        ),
+    ] = None,
     use_hawkears: Annotated[
         bool,
         typer.Option(
@@ -2192,6 +2284,9 @@ def pipeline_run(
         bundle=bundle,
         bundle_aggregate_dir=bundle_aggregate_dir,
         bundle_bucket_minutes=bundle_bucket_minutes,
+        bundle_rollup=bundle_rollup,
+        bundle_rollup_limit=bundle_rollup_limit,
+        bundle_rollup_export_dir=bundle_rollup_export_dir,
     )
     console.print(
         f"[green]Pipeline complete. Plan saved to {plan_path} and inference outputs under {output_dir}[/]"
@@ -3362,6 +3457,152 @@ def report_bundle(
         console.print("Skipping DuckDB materialization.", style="yellow")
 
     console.print("Aggregation bundle complete.", style="green")
+
+
+def _aggregate_dir_summary(
+    *,
+    duckdb_module: Any,
+    aggregate_dir: Path,
+    limit: int,
+    export_dir: Path | None,
+) -> None:
+    aggregate_dir = aggregate_dir.expanduser()
+    if not aggregate_dir.exists():
+        raise typer.BadParameter(
+            f"Aggregate directory {aggregate_dir} does not exist.", param_hint="aggregate_dir"
+        ) from None
+    if not aggregate_dir.is_dir():
+        raise typer.BadParameter(
+            f"{aggregate_dir} is not a directory.", param_hint="aggregate_dir"
+        ) from None
+    if limit <= 0:
+        raise typer.BadParameter("--limit must be positive.", param_hint="--limit") from None
+
+    glob_pattern = "*_detections.parquet"
+    parquet_files = sorted(aggregate_dir.glob(glob_pattern))
+    if not parquet_files:
+        glob_pattern = "*.parquet"
+        parquet_files = sorted(aggregate_dir.glob(glob_pattern))
+    if not parquet_files:
+        console.print(f"No *_detections.parquet files found under {aggregate_dir}", style="yellow")
+        return
+    glob_expr = str((aggregate_dir / glob_pattern).resolve())
+    conn = duckdb_module.connect()
+    try:
+        glob_expr_sql = glob_expr.replace("'", "''")
+        conn.execute(
+            f"CREATE OR REPLACE TEMP VIEW detections AS SELECT * FROM read_parquet('{glob_expr_sql}')"
+        )
+
+        total_detections = conn.execute("SELECT COUNT(*) FROM detections").fetchone()[0]
+        distinct_recordings = conn.execute(
+            "SELECT COUNT(DISTINCT recording_id) FROM detections"
+        ).fetchone()[0]
+        console.print(
+            f"[bold]Loaded {len(parquet_files)} parquet files[/] — {total_detections:,} detections across "
+            f"{distinct_recordings} recordings.",
+        )
+
+        def _fetch(query: str, *params: object) -> tuple[list[str], list[tuple]]:
+            cursor = conn.execute(query, params)
+            columns = [desc[0] for desc in cursor.description or []]
+            rows = cursor.fetchall()
+            return columns, rows
+
+        label_columns, label_rows = _fetch(
+            """
+            SELECT label_name,
+                   label,
+                   COUNT(*) AS detections,
+                   AVG(confidence) AS avg_confidence
+            FROM detections
+            GROUP BY label_name, label
+            ORDER BY detections DESC
+            LIMIT ?
+            """,
+            limit,
+        )
+        recording_columns, recording_rows = _fetch(
+            """
+            SELECT recording_id,
+                   COUNT(*) AS detections,
+                   AVG(confidence) AS avg_confidence
+            FROM detections
+            GROUP BY recording_id
+            ORDER BY detections DESC
+            LIMIT ?
+            """,
+            limit,
+        )
+    finally:
+        conn.close()
+
+    def _render_table(title: str, columns: list[str], rows: list[tuple]) -> None:
+        table = Table(title=title, expand=True)
+        for column in columns:
+            table.add_column(column)
+        for row in rows:
+            formatted = []
+            for value in row:
+                if isinstance(value, float):
+                    formatted.append(f"{value:.3f}")
+                else:
+                    formatted.append(str(value))
+            table.add_row(*formatted)
+        console.print(table)
+
+    _render_table("Top labels", label_columns, label_rows)
+    _render_table("Top recordings", recording_columns, recording_rows)
+
+    if export_dir:
+        export_dir = export_dir.expanduser()
+        export_dir.mkdir(parents=True, exist_ok=True)
+
+        def _write_csv_summary(columns: list[str], rows: list[tuple], target: Path) -> None:
+            with target.open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.writer(handle)
+                writer.writerow(columns)
+                writer.writerows(rows)
+
+        _write_csv_summary(label_columns, label_rows, export_dir / "label_summary.csv")
+        _write_csv_summary(recording_columns, recording_rows, export_dir / "recording_summary.csv")
+        console.print(f"Wrote CSV exports to {export_dir}", style="green")
+
+
+@report_app.command("aggregate-dir")
+def report_aggregate_dir(
+    aggregate_dir: Annotated[
+        Path,
+        typer.Argument(help="Directory containing *_detections.parquet files (one per recording)."),
+    ] = Path("artifacts/aggregate"),
+    limit: Annotated[
+        int,
+        typer.Option("--limit", help="Rows to display per summary table."),
+    ] = 10,
+    export_dir: Annotated[
+        Path | None,
+        typer.Option(
+            "--export-dir",
+            help="Optional directory for CSV exports (label_summary.csv, recording_summary.csv).",
+        ),
+    ] = None,
+) -> None:
+    """Summarize detections across every Parquet bundle in an aggregate directory."""
+
+    try:
+        import duckdb  # type: ignore
+    except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency
+        console.print(
+            "duckdb is required for this command. Install with `pip install duckdb`.", style="red"
+        )
+        raise typer.Exit(code=1) from exc
+
+    _aggregate_dir_summary(
+        duckdb_module=duckdb,
+        aggregate_dir=aggregate_dir,
+        limit=limit,
+        export_dir=export_dir,
+    )
 
 
 def main() -> None:

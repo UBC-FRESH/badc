@@ -313,3 +313,54 @@ Example directory layout::
        ├── label_summary.csv
        ├── recording_summary.csv
        └── timeline.csv
+
+``badc report aggregate-dir``
+-----------------------------
+
+Roll up every ``*_detections.parquet`` file under a directory (e.g., the per-recording outputs of
+``badc infer aggregate`` or the bundles generated via ``--bundle``) and display the busiest labels
+plus recordings in one shot. This is handy after dataset-scale runs when you want a quick sanity
+check across all manifests without opening DuckDB manually.
+
+Usage::
+
+   badc report aggregate-dir artifacts/aggregate \
+       --limit 20 \
+       --export-dir artifacts/aggregate/summary_exports
+
+Behavior:
+
+* Validates that the target directory exists and contains at least one ``*_detections.parquet`` file.
+* Uses DuckDB's ``read_parquet`` globbing support to read every file at once and register a temporary
+  ``detections`` view.
+* Prints two Rich tables (top labels, top recordings) honoring ``--limit``.
+* When ``--export-dir`` is provided, writes the tables to ``label_summary.csv`` and
+  ``recording_summary.csv`` for downstream notebooks or async reviews.
+
+Option reference
+^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+
+   * - Option / Argument
+     - Description
+     - Default
+   * - ``aggregate_dir``
+     - Directory containing per-recording ``*_detections.parquet`` files.
+     - ``artifacts/aggregate``
+   * - ``--limit INT``
+     - Maximum rows per table (labels + recordings). Must be positive.
+     - ``10``
+   * - ``--export-dir PATH``
+     - Optional directory for CSV exports (created automatically).
+     - Disabled
+
+See also
+^^^^^^^^
+
+* ``badc report bundle`` for producing each per-recording Parquet/DuckDB bundle (the rollup feeds on
+  those outputs).
+* ``badc infer orchestrate --bundle --bundle-rollup`` and ``badc pipeline run --bundle`` (rollup
+  enabled by default) to automate the cross-run summary immediately after inference completes.
+* :doc:`/howto/aggregate-results` for a walk-through that ends with this cross-run roll-up.

@@ -77,7 +77,10 @@ execution notes live alongside task-specific files under `notes/`.
       (five GNWT recordings) and added ``badc.duckdb_helpers`` + doc/notebook updates so analysts can
       load the ``label_summary`` / ``recording_summary`` / ``timeline_summary`` views directly in pandas.
       The CLI docs/how-to + notebook now reference the helper and document the datastore schema, so
-      Phase 2 aggregation is considered complete.)*
+      Phase 2 aggregation is considered complete. 2025-12-10 add-on: ``badc report aggregate-dir`` now
+      rolls up every ``*_detections.parquet`` in ``artifacts/aggregate`` so dataset-scale runs have a
+      one-liner summary for Erin, and ``badc infer orchestrate --bundle-rollup`` / ``badc pipeline run``
+      automatically invoke the helper with CSV exports under ``aggregate_summary/``.)*
 - [x] Wire Typer CLI commands for end-to-end runs (`badc chunk`, `badc infer`, `badc aggregate`,
       `badc report`). *(`docs/howto/pipeline-e2e.rst` now demonstrates the chunk → infer →
       aggregate/report workflow using `badc chunk orchestrate --plan-json … --apply` plus

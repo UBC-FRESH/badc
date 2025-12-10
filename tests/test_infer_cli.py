@@ -687,6 +687,11 @@ def test_infer_orchestrate_apply_with_bundle(tmp_path: Path, monkeypatch) -> Non
             "aggregates",
             "--bundle-bucket-minutes",
             "30",
+            "--bundle-rollup",
+            "--bundle-rollup-limit",
+            "5",
+            "--bundle-rollup-export-dir",
+            "aggregates/summary_exports",
             "--stub-runner",
             "--no-record-datalad",
         ],
@@ -698,3 +703,6 @@ def test_infer_orchestrate_apply_with_bundle(tmp_path: Path, monkeypatch) -> Non
     assert (aggregate_dir / "rec1_quicklook" / "labels.csv").exists()
     assert (aggregate_dir / "rec1_parquet_report" / "summary.json").exists()
     assert (aggregate_dir / "rec1.duckdb").exists()
+    summary_exports = aggregate_dir / "summary_exports"
+    assert (summary_exports / "label_summary.csv").exists()
+    assert (summary_exports / "recording_summary.csv").exists()

@@ -99,6 +99,28 @@ Tip: when running ``badc infer orchestrate --apply`` you can pass ``--bundle`` (
 ``--bundle-*`` overrides) so these aggregation/report steps run automatically after every recording —
 no need to invoke the commands manually unless you want custom tweaks.
 
+Step 4c — Roll up a directory of detections
+-------------------------------------------
+
+When the aggregate directory holds multiple per-recording Parquet files (e.g., after running
+``badc infer orchestrate --apply --bundle`` across a dataset), use the new helper to get a quick
+cross-run summary::
+
+   badc report aggregate-dir data/datalad/bogus/artifacts/aggregate \
+       --limit 20 \
+       --export-dir data/datalad/bogus/artifacts/aggregate/summary_exports
+
+The command scans for ``*_detections.parquet`` (falls back to ``*.parquet`` when bundle outputs use
+plain run-prefix names), loads the matches via DuckDB, prints consolidated label/recording
+leaderboards, and optionally writes ``label_summary.csv`` / ``recording_summary.csv`` under the
+export directory. This is the fastest sanity check to confirm the refreshed bogus dataset (now five
+GNWT recordings) still contains the expected vocalizations vs. background noise mix.
+
+Tip: pass ``--bundle-rollup`` to ``badc infer orchestrate`` (enabled automatically in
+``badc pipeline run``) to run this helper as soon as the queue drains. By default the rollup exports
+land in ``artifacts/aggregate/aggregate_summary/``, so Erin always has a dataset-wide CSV ready
+alongside the per-recording bundles.
+
 Step 5 — Materialize a DuckDB database
 --------------------------------------
 

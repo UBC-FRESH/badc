@@ -1,3 +1,37 @@
+# 2025-12-10 — Bundle rollup automation
+- Added `--bundle-rollup` (plus limit/export-dir knobs) to `badc infer orchestrate` so applied runs can
+  trigger `badc report aggregate-dir` automatically after the per-recording bundles finish. The helper
+  defaults to `aggregate_summary/` inside the aggregate directory and the pipeline wrapper now enables
+  it by default, wiring the dataset-wide summary directly into Phase 2 workflows.
+- Extended the inference CLI test suite to cover the new rollup flag and CSV exports.
+- Updated docs (README, CLI reference, pipeline how-to, aggregate-results how-to, DuckDB notebook) and
+  roadmap notes so Erin knows where to find the cross-run leaderboards.
+- Commands executed:
+  - `source .venv/bin/activate && ruff format src tests`
+  - `source .venv/bin/activate && ruff check src tests`
+  - `source .venv/bin/activate && pytest`
+  - `source .venv/bin/activate && sphinx-build -b html docs _build/html -W`
+  - `source .venv/bin/activate && pre-commit run --all-files` *(failed: notebook cell ended with a bare expression; fixed and reran)*
+  - `source .venv/bin/activate && pre-commit run --all-files` *(passed after ruff-format normalized the notebook JSON)*
+
+# 2025-12-10 — Aggregate-dir report helper
+- Added `badc report aggregate-dir` to summarize every `*_detections.parquet` file under an aggregate
+  directory via DuckDB, including optional CSV exports and argument validation for friendlier errors.
+- Extended `tests/test_report_cli.py` with regression coverage for the new helper (happy path + empty
+  directory guard) so Typer wiring and CSV exports stay stable.
+- Updated the CLI reference, aggregation how-to, README, and roadmap notes to document the feature
+  and highlight the refreshed bogus dataset roll-up workflow.
+- Commands executed:
+  - `source .venv/bin/activate && ruff format src tests`
+  - `source .venv/bin/activate && ruff check src tests`
+  - `source .venv/bin/activate && pytest` *(failed: DuckDB refused parameterized CREATE VIEW; reran after escaping the glob path)*
+  - `source .venv/bin/activate && ruff format src tests`
+  - `source .venv/bin/activate && ruff check src tests`
+  - `source .venv/bin/activate && pytest`
+  - `source .venv/bin/activate && sphinx-build -b html docs _build/html -W` *(failed: ``badc report aggregate-dir`` heading underline was too short; reran after fixing docs)*
+  - `source .venv/bin/activate && sphinx-build -b html docs _build/html -W`
+  - `source .venv/bin/activate && pre-commit run --all-files`
+
 # 2025-12-10 — Pipeline CLI wrapper
 - Added `badc pipeline run`, a Typer subcommand that chains
   `badc chunk orchestrate --plan-json … --apply` with
