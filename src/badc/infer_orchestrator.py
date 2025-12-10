@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
 
+from badc import chunk_orchestrator
+
 
 @dataclass(frozen=True, slots=True)
 class InferPlan:
@@ -20,6 +22,8 @@ class InferPlan:
     hawkears_args: Sequence[str] = ()
     max_gpus: int | None = None
     cpu_workers: int = 0
+    chunk_status: str | None = None
+    chunk_status_path: Path | None = None
 
     @property
     def recording_id(self) -> str:
@@ -36,6 +40,8 @@ class InferPlan:
             "hawkears_args": list(self.hawkears_args),
             "max_gpus": self.max_gpus,
             "cpu_workers": self.cpu_workers,
+            "chunk_status": self.chunk_status,
+            "chunk_status_path": (str(self.chunk_status_path) if self.chunk_status_path else None),
         }
 
     @property
@@ -55,6 +61,7 @@ def build_infer_plan(
     pattern: str = "*.csv",
     output_dir: Path = Path("artifacts/infer"),
     telemetry_dir: Path = Path("artifacts/telemetry"),
+    chunks_dir: Path = Path("artifacts/chunks"),
     include_existing: bool = False,
     use_hawkears: bool = True,
     hawkears_args: Sequence[str] | None = None,
@@ -68,6 +75,7 @@ def build_infer_plan(
     manifest_root = _resolve(dataset_root, manifest_dir)
     output_root = _resolve(dataset_root, output_dir)
     telemetry_root = _resolve(dataset_root, telemetry_dir)
+    chunks_root = _resolve(dataset_root, chunks_dir)
     hawkears_args = tuple(hawkears_args or [])
 
     if manifest_paths is None:
@@ -83,6 +91,18 @@ def build_infer_plan(
         if not include_existing and (output_root / recording_id).exists():
             continue
         telemetry_log = telemetry_root / "infer" / f"{recording_id}.jsonl"
+        chunk_dir = chunks_root / recording_id
+        chunk_status_path = chunk_dir / chunk_orchestrator.STATUS_FILENAME
+        chunk_status: str | None = None
+        if chunk_status_path.exists():
+            try:
+                status_data = json.loads(chunk_status_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                status_data = None
+            if isinstance(status_data, dict):
+                value = status_data.get("status")
+                if isinstance(value, str):
+                    chunk_status = value
         plans.append(
             InferPlan(
                 manifest_path=manifest_path,
@@ -92,6 +112,8 @@ def build_infer_plan(
                 hawkears_args=hawkears_args,
                 max_gpus=max_gpus,
                 cpu_workers=cpu_workers,
+                chunk_status=chunk_status,
+                chunk_status_path=chunk_status_path,
             )
         )
         if limit and len(plans) >= limit:

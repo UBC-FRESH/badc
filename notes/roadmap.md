@@ -47,7 +47,9 @@ execution notes live alongside task-specific files under `notes/`.
       timestamps, manifest rows, errors), automatically resumes anything marked `failed`/`in_progress`,
       and exposes `--workers` so non-Datalad runs can fan out across recordings while still logging
       status transitions. Plan CSV/JSON exports remain unchanged, so chunking + inference now share
-      the same “single command” ergonomics.)*
+      the same “single command” ergonomics. 2025-12-10 follow-up: `badc infer orchestrate` refuses to
+      plan inference unless those `.chunk_status.json` files report `completed`, and the generated
+      Sockeye scripts fail fast when a recording still needs chunking.)*
 - [x] Implement HawkEars inference scheduler per `notes/inference-plan.md` (manifest loader, GPU
       worker pool, telemetry, output persistence). *(Manifest loader + telemetry exist; Phase 2 now
       includes `badc infer orchestrate` for planning, CSV/JSON plan exports, and `--apply` now runs

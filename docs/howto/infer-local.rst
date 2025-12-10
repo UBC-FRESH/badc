@@ -149,6 +149,12 @@ or generate new ones:
        --chunk-duration 60 --hash-chunks \
        --output data/datalad/bogus/manifests/XXXX-000_20251001_093000.csv
 
+Each chunk run writes ``artifacts/chunks/<recording>/.chunk_status.json``. Confirm the file exists
+and reports ``status="completed"`` before moving on; :command:`badc infer orchestrate` enforces this
+by default so Sockeye scripts and local ``--apply`` runs never launch inference against partially
+chunked recordings. Use ``--allow-partial-chunks`` only when you intentionally want to process an
+incomplete manifest (e.g., debugging a failed chunk).
+
 Step 2 — Run HawkEars locally
 -----------------------------
 

@@ -34,6 +34,11 @@ Stages:
 - Execution: schedule HawkEars jobs; capture stdout/stderr, GPU telemetry, and exit codes.
 - Parallelism: auto-detect GPU count/type (NVML or `nvidia-smi`) and spin up one worker per GPU,
   respecting `CUDA_VISIBLE_DEVICES` on Sockeye; allow CLI overrides.
+- Chunk status enforcement: `badc infer orchestrate` inspects
+  `artifacts/chunks/<recording>/.chunk_status.json` (configurable via `--chunks-dir`) and refuses to
+  plan inference unless every recording reports `status="completed"`; override with
+  `--allow-partial-chunks` when debugging. Sockeye scripts inherit the same guard so SLURM jobs fail
+  fast if chunking hasn't finished.
 - Configuration surface (also documented in `docs/howto/infer-local.rst`):
 
   +-------------------------+-------------------------------+--------------------------------------------------+

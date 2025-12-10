@@ -127,6 +127,11 @@ Automated script generation
   prints bundle artifact locations (summary/parquet/duckdb) after the reporting commands finish so you
   can archive logs alongside SLURM output.
 
+  The array script now also validates ``artifacts/chunks/<recording>/.chunk_status.json`` before
+  running HawkEars. If the status file is missing or not ``completed``, the task exits with a clear
+  error so you can rerun ``badc chunk orchestrate --apply`` (or copy the missing chunk artifacts)
+  before consuming GPU allocations.
+
 Telemetry & monitoring
 ----------------------
 * Use ``badc telemetry --log data/telemetry/infer/log.jsonl`` to inspect the last few chunks.

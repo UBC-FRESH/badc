@@ -30,7 +30,9 @@ command + helpers in ``badc.chunk_orchestrator`` provide the first slice of that
   - ``--apply`` now records ``status`` (``in_progress``/``completed``/``failed``), timestamps,
     manifest row counts, and error messages in ``.chunk_status.json`` so reruns can resume
     automatically when a previous pass died mid-run. Recordings marked ``completed`` get skipped unless
-    ``--include-existing`` is provided.
+    ``--include-existing`` is provided. The inference orchestrator consumes the same status file and
+    refuses to launch inference/Sockeye jobs until it reads ``status="completed"`` (override with
+    ``--allow-partial-chunks`` when debugging).
   - ``--workers`` fans out across recordings when ``datalad run`` is unavailable/disabled; provenance
     recording remains the default when `.datalad` + the CLI exist, with a graceful fallback to
     parallel direct writes via ``--no-record-datalad``.

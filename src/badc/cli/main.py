@@ -1180,6 +1180,20 @@ def infer_orchestrate(
         Path,
         typer.Option("--telemetry-dir", help="Directory for telemetry logs."),
     ] = Path("artifacts/telemetry"),
+    chunks_dir: Annotated[
+        Path,
+        typer.Option(
+            "--chunks-dir",
+            help="Directory for chunk WAVs (relative to dataset) used when checking status files.",
+        ),
+    ] = Path("artifacts/chunks"),
+    require_chunk_status: Annotated[
+        bool,
+        typer.Option(
+            "--require-complete-chunks/--allow-partial-chunks",
+            help="Require `.chunk_status.json` to report `completed` before planning inference.",
+        ),
+    ] = True,
     chunk_plan: Annotated[
         Path | None,
         typer.Option("--chunk-plan", help="Optional chunk plan CSV/JSON to source manifests."),
@@ -1360,6 +1374,7 @@ def infer_orchestrate(
         pattern=pattern,
         output_dir=output_dir,
         telemetry_dir=telemetry_dir,
+        chunks_dir=chunks_dir,
         include_existing=include_existing,
         use_hawkears=use_hawkears,
         hawkears_args=hawkears_arg,
@@ -1370,17 +1385,37 @@ def infer_orchestrate(
     if not plans:
         console.print("No manifests matched the provided criteria.", style="yellow")
         return
+    incomplete_status: list[tuple[infer_orchestrator.InferPlan, str]] = []
+    for plan in plans:
+        status_label = plan.chunk_status or "missing"
+        if status_label != "completed":
+            incomplete_status.append((plan, status_label))
+    if incomplete_status and require_chunk_status:
+        console.print(
+            "Chunk status check failed; rerun `badc chunk orchestrate --apply` so each recording shows status=completed.",
+            style="red",
+        )
+        for plan, status_label in incomplete_status:
+            console.print(f" - {plan.recording_id}: {status_label}")
+        raise typer.Exit(code=1)
+    if incomplete_status and not require_chunk_status:
+        console.print(
+            "Warning: proceeding even though some chunk statuses are missing or incomplete. Use --require-complete-chunks to enforce.",
+            style="yellow",
+        )
     table = Table(title="Inference plan", expand=True)
     table.add_column("Recording")
     table.add_column("Manifest")
     table.add_column("Output dir")
     table.add_column("Telemetry log")
+    table.add_column("Chunk status")
     for plan in plans:
         table.add_row(
             plan.recording_id,
             str(plan.manifest_path),
             str(plan.recording_output),
             str(plan.telemetry_log),
+            plan.chunk_status or "missing",
         )
     console.print(table)
 
@@ -1826,6 +1861,10 @@ def _render_sockeye_script(
 
     manifest_entries = [f'  "{_relative(plan.manifest_path)}"' for plan in plans]
     output_entries = [f'  "{_relative(plan.recording_output)}"' for plan in plans]
+    chunk_status_entries = [
+        f'  "{_relative(plan.chunk_status_path)}"' if plan.chunk_status_path else '  ""'
+        for plan in plans
+    ]
     log_dir_rel: str | None = None
     if log_dir is not None:
         log_dir_abs = log_dir if log_dir.is_absolute() else dataset / log_dir
@@ -1873,6 +1912,9 @@ def _render_sockeye_script(
     lines.append("MANIFESTS=(")
     lines.extend(manifest_entries)
     lines.append(")")
+    lines.append("CHUNK_STATUS=(")
+    lines.extend(chunk_status_entries)
+    lines.append(")")
     lines.append("OUTPUTS=(")
     lines.extend(output_entries)
     lines.append(")")
@@ -1889,6 +1931,7 @@ def _render_sockeye_script(
             "MANIFEST=${MANIFESTS[$IDX]}",
             "OUTPUT=${OUTPUTS[$IDX]}",
             "TELEMETRY_LOG=${TELEMETRY[$IDX]}",
+            "CHUNK_STATUS_PATH=${CHUNK_STATUS[$IDX]}",
         ]
     )
     if resume_completed:
@@ -1896,6 +1939,30 @@ def _render_sockeye_script(
     lines.append('cd "$DATASET"')
     if bundle:
         lines.append('mkdir -p "' + aggregate_dir_rel + '"')
+    lines.extend(
+        [
+            'if [ -n "$CHUNK_STATUS_PATH" ]; then',
+            '  if [ ! -f "$CHUNK_STATUS_PATH" ]; then',
+            '    echo "Chunk status $CHUNK_STATUS_PATH missing for $MANIFEST. Run badc chunk orchestrate --apply first." >&2',
+            "    exit 2",
+            "  fi",
+            "  STATUS_VALUE=$(python - <<'PY' \"$CHUNK_STATUS_PATH\"",
+            "import json, pathlib, sys",
+            "path = pathlib.Path(sys.argv[1])",
+            "try:",
+            "    data = json.loads(path.read_text())",
+            "    print(data.get('status', 'unknown'))",
+            "except Exception:",
+            "    print('unknown')",
+            "PY",
+            ")",
+            '  if [ "$STATUS_VALUE" != "completed" ]; then',
+            '    echo "Chunk status for $MANIFEST is $STATUS_VALUE; rerun badc chunk orchestrate --apply before inference." >&2',
+            "    exit 3",
+            "  fi",
+            "fi",
+        ]
+    )
     command = [
         "badc",
         "infer",

@@ -303,6 +303,9 @@ def test_infer_orchestrate_apply_resumes_completed(tmp_path, monkeypatch) -> Non
         f"rec1,chunk_a,{chunk_path},0,1000,0,hash,\n",
         encoding="utf-8",
     )
+    status_path = dataset / "artifacts" / "chunks" / "rec1" / ".chunk_status.json"
+    status_path.parent.mkdir(parents=True, exist_ok=True)
+    status_path.write_text(json.dumps({"status": "completed"}), encoding="utf-8")
     telemetry_log = dataset / "artifacts" / "telemetry" / "infer" / "rec1.jsonl"
     summary_path = telemetry_log.with_suffix(telemetry_log.suffix + ".summary.json")
     summary_path.parent.mkdir(parents=True, exist_ok=True)

@@ -1,3 +1,26 @@
+# 2025-12-10 — Inference orchestrator chunk-status gating
+- `badc infer orchestrate` now inspects `<dataset>/<chunks-dir>/<recording>/.chunk_status.json`
+  (defaults to `artifacts/chunks`) before emitting plans. The CLI aborts unless each recording reports
+  `status="completed"`, with an escape hatch via `--allow-partial-chunks` for debugging workflows.
+- Added `--chunks-dir` so datasets with custom chunk layouts can point the status check at the right
+  directory. The plan table/CSV/JSON now include the chunk status column, making it obvious which
+  recordings still need chunking before inference.
+- Generated Sockeye scripts gained a `CHUNK_STATUS` array and pre-flight check: array tasks exit early
+  with a descriptive error whenever the status file is missing or not `completed`, preventing GPU
+  allocations from being wasted on half-written manifests.
+- Docs updated (`README.md`, `docs/cli/infer.rst`, `docs/howto/infer-local.rst`, `docs/hpc/sockeye.rst`,
+  `notes/inference-plan.md`, `notes/pipeline-plan.md`, `notes/chunk-orchestrator.md`, `notes/roadmap.md`) to
+  describe the new flags and the Sockeye guardrails.
+- New CLI tests (`tests/test_infer_cli.py`) cover the chunk-status requirement, the
+  `--allow-partial-chunks` bypass, and the Sockeye script injection; existing tests now materialize
+  `.chunk_status.json` fixtures so they continue to exercise `--apply` and script generation paths.
+- Commands executed:
+  - `source .venv/bin/activate && ruff format src tests`
+  - `source .venv/bin/activate && ruff check src tests`
+  - `source .venv/bin/activate && pytest`
+  - `source .venv/bin/activate && sphinx-build -b html docs _build/html -W`
+  - `source .venv/bin/activate && pre-commit run --all-files`
+
 # 2025-12-10 — Chunk orchestrator status tracking + workers
 - `badc chunk orchestrate --apply` now writes `.chunk_status.json` alongside each chunk directory
   (status, timestamps, manifest rows, last error) before/after invoking `badc chunk run`, so reruns

@@ -20,6 +20,12 @@ def _write_chunk(path: Path) -> None:
     path.write_bytes(b"\x00\x00")
 
 
+def _write_chunk_status(dataset: Path, recording: str, status: str = "completed") -> None:
+    status_path = dataset / "artifacts" / "chunks" / recording / ".chunk_status.json"
+    status_path.parent.mkdir(parents=True, exist_ok=True)
+    status_path.write_text(json.dumps({"status": status}), encoding="utf-8")
+
+
 def test_infer_run_placeholder(tmp_path: Path) -> None:
     manifest = tmp_path / "manifest.csv"
     chunk_path = tmp_path / "chunk.wav"
@@ -65,6 +71,8 @@ def test_infer_orchestrate_plan(tmp_path: Path) -> None:
         "rec,chunk_a,data/foo.wav,0,1000,0,hash,\n",
         encoding="utf-8",
     )
+    _write_chunk_status(dataset, "rec")
+    _write_chunk_status(dataset, "rec")
     result = runner.invoke(
         app,
         [
@@ -86,6 +94,88 @@ def test_infer_orchestrate_plan(tmp_path: Path) -> None:
     assert "Inference plan" in result.stdout
     assert (dataset / "plan.csv").exists()
     assert (dataset / "plan.json").exists()
+
+
+def test_infer_orchestrate_requires_chunk_status(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset_no_status"
+    manifest_dir = dataset / "manifests"
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    manifest = manifest_dir / "rec.csv"
+    manifest.write_text(
+        "recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes\n"
+        "rec,chunk_a,data/foo.wav,0,1000,0,hash,\n",
+        encoding="utf-8",
+    )
+    result = runner.invoke(
+        app,
+        [
+            "infer",
+            "orchestrate",
+            str(dataset),
+            "--manifest-dir",
+            str(manifest_dir),
+        ],
+    )
+    assert result.exit_code != 0
+    assert "Chunk status check failed" in result.stdout
+
+
+def test_infer_orchestrate_allow_partial_chunks(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset_partial"
+    manifest_dir = dataset / "manifests"
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    manifest = manifest_dir / "rec.csv"
+    manifest.write_text(
+        "recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes\n"
+        "rec,chunk_a,data/foo.wav,0,1000,0,hash,\n",
+        encoding="utf-8",
+    )
+    result = runner.invoke(
+        app,
+        [
+            "infer",
+            "orchestrate",
+            str(dataset),
+            "--manifest-dir",
+            str(manifest_dir),
+            "--allow-partial-chunks",
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    assert "Warning: proceeding even though some chunk statuses" in result.stdout
+
+
+def test_infer_orchestrate_sockeye_script_includes_chunk_status(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset_sockeye"
+    manifest_dir = dataset / "manifests"
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    manifest = manifest_dir / "rec.csv"
+    manifest.write_text(
+        "recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes\n"
+        "rec,chunk_a,data/foo.wav,0,1000,0,hash,\n",
+        encoding="utf-8",
+    )
+    status_path = dataset / "artifacts" / "chunks" / "rec" / ".chunk_status.json"
+    status_path.parent.mkdir(parents=True, exist_ok=True)
+    status_path.write_text(json.dumps({"status": "completed"}), encoding="utf-8")
+    script_path = dataset / "sockeye.sh"
+    result = runner.invoke(
+        app,
+        [
+            "infer",
+            "orchestrate",
+            str(dataset),
+            "--manifest-dir",
+            str(manifest_dir),
+            "--sockeye-script",
+            str(script_path),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    script = script_path.read_text(encoding="utf-8")
+    assert "CHUNK_STATUS=(" in script
+    assert ".chunk_status.json" in script
+    assert "Chunk status for $MANIFEST" in script
 
 
 def test_infer_orchestrate_cpu_workers(tmp_path: Path) -> None:
@@ -112,6 +202,7 @@ def test_infer_orchestrate_cpu_workers(tmp_path: Path) -> None:
             "--cpu-workers",
             "3",
             "--print-datalad-run",
+            "--allow-partial-chunks",
         ],
     )
     assert result.exit_code == 0, result.stdout
@@ -125,7 +216,7 @@ def test_infer_orchestrate_apply_runs_infer(tmp_path: Path) -> None:
     (dataset / ".datalad").mkdir(parents=True)
     manifest_dir = dataset / "manifests"
     manifest_dir.mkdir(parents=True, exist_ok=True)
-    chunk_path = dataset / "chunks" / "rec" / "chunk_a.wav"
+    chunk_path = dataset / "artifacts" / "chunks" / "rec" / "chunk_a.wav"
     _write_chunk(chunk_path)
     manifest = manifest_dir / "rec.csv"
     manifest.write_text(
@@ -133,6 +224,7 @@ def test_infer_orchestrate_apply_runs_infer(tmp_path: Path) -> None:
         f"rec,chunk_a,{chunk_path},0,1000,0,hash,\n",
         encoding="utf-8",
     )
+    _write_chunk_status(dataset, "rec")
     result = runner.invoke(
         app,
         [
@@ -159,7 +251,7 @@ def test_infer_orchestrate_apply_warns_without_datalad(tmp_path: Path) -> None:
     (dataset / ".datalad").mkdir(parents=True)
     manifest_dir = dataset / "manifests"
     manifest_dir.mkdir(parents=True, exist_ok=True)
-    chunk_path = dataset / "chunks" / "rec" / "chunk_a.wav"
+    chunk_path = dataset / "artifacts" / "chunks" / "rec" / "chunk_a.wav"
     _write_chunk(chunk_path)
     manifest = manifest_dir / "rec.csv"
     manifest.write_text(
@@ -167,6 +259,7 @@ def test_infer_orchestrate_apply_warns_without_datalad(tmp_path: Path) -> None:
         f"rec,chunk_a,{chunk_path},0,1000,0,hash,\n",
         encoding="utf-8",
     )
+    _write_chunk_status(dataset, "rec")
     env = {**os.environ, "BADC_DISABLE_DATALAD": "1"}
     result = runner.invoke(
         app,
@@ -392,7 +485,7 @@ def test_infer_orchestrate_sockeye_script(tmp_path: Path) -> None:
     (dataset / ".datalad").mkdir(parents=True)
     manifest_dir = dataset / "manifests"
     manifest_dir.mkdir(parents=True, exist_ok=True)
-    chunk_path = dataset / "chunks" / "rec" / "chunk_a.wav"
+    chunk_path = dataset / "artifacts" / "chunks" / "rec" / "chunk_a.wav"
     chunk_path.parent.mkdir(parents=True, exist_ok=True)
     chunk_path.write_text("audio", encoding="utf-8")
     manifest = manifest_dir / "rec.csv"
@@ -401,6 +494,7 @@ def test_infer_orchestrate_sockeye_script(tmp_path: Path) -> None:
         f"rec,chunk_a,{chunk_path},0,1000,0,hash,\n",
         encoding="utf-8",
     )
+    _write_chunk_status(dataset, "rec")
     script_path = tmp_path / "sockeye.sh"
     result = runner.invoke(
         app,
@@ -427,7 +521,7 @@ def test_infer_orchestrate_sockeye_script_resume(tmp_path: Path) -> None:
     (dataset / ".datalad").mkdir(parents=True)
     manifest_dir = dataset / "manifests"
     manifest_dir.mkdir(parents=True, exist_ok=True)
-    chunk_path = dataset / "chunks" / "rec" / "chunk_a.wav"
+    chunk_path = dataset / "artifacts" / "chunks" / "rec" / "chunk_a.wav"
     chunk_path.parent.mkdir(parents=True, exist_ok=True)
     chunk_path.write_text("audio", encoding="utf-8")
     manifest = manifest_dir / "rec.csv"
@@ -436,6 +530,7 @@ def test_infer_orchestrate_sockeye_script_resume(tmp_path: Path) -> None:
         f"rec,chunk_a,{chunk_path},0,1000,0,hash,\n",
         encoding="utf-8",
     )
+    _write_chunk_status(dataset, "rec")
     script_path = tmp_path / "sockeye_resume.sh"
     result = runner.invoke(
         app,
@@ -461,7 +556,7 @@ def test_infer_orchestrate_sockeye_script_bundle(tmp_path: Path) -> None:
     (dataset / ".datalad").mkdir(parents=True)
     manifest_dir = dataset / "manifests"
     manifest_dir.mkdir(parents=True, exist_ok=True)
-    chunk_path = dataset / "chunks" / "rec" / "chunk_a.wav"
+    chunk_path = dataset / "artifacts" / "chunks" / "rec" / "chunk_a.wav"
     chunk_path.parent.mkdir(parents=True, exist_ok=True)
     chunk_path.write_text("audio", encoding="utf-8")
     manifest = manifest_dir / "rec.csv"
@@ -470,6 +565,7 @@ def test_infer_orchestrate_sockeye_script_bundle(tmp_path: Path) -> None:
         f"rec,chunk_a,{chunk_path},0,1000,0,hash,\n",
         encoding="utf-8",
     )
+    _write_chunk_status(dataset, "rec")
     script_path = tmp_path / "sockeye_bundle.sh"
     result = runner.invoke(
         app,
@@ -501,7 +597,7 @@ def test_infer_orchestrate_sockeye_script_log_dir(tmp_path: Path) -> None:
     (dataset / ".datalad").mkdir(parents=True)
     manifest_dir = dataset / "manifests"
     manifest_dir.mkdir(parents=True, exist_ok=True)
-    chunk_path = dataset / "chunks" / "rec" / "chunk_a.wav"
+    chunk_path = dataset / "artifacts" / "chunks" / "rec" / "chunk_a.wav"
     chunk_path.parent.mkdir(parents=True, exist_ok=True)
     chunk_path.write_text("audio", encoding="utf-8")
     manifest = manifest_dir / "rec.csv"
@@ -510,6 +606,7 @@ def test_infer_orchestrate_sockeye_script_log_dir(tmp_path: Path) -> None:
         f"rec,chunk_a,{chunk_path},0,1000,0,hash,\n",
         encoding="utf-8",
     )
+    _write_chunk_status(dataset, "rec")
     script_path = tmp_path / "sockeye_log.sh"
     result = runner.invoke(
         app,
@@ -541,7 +638,7 @@ def test_infer_orchestrate_apply_with_bundle(tmp_path: Path, monkeypatch) -> Non
     (dataset / ".datalad").mkdir(parents=True)
     manifest_dir = dataset / "manifests"
     manifest_dir.mkdir(parents=True, exist_ok=True)
-    chunk_path = dataset / "chunks" / "rec1" / "chunk.wav"
+    chunk_path = dataset / "artifacts" / "chunks" / "rec1" / "chunk.wav"
     chunk_path.parent.mkdir(parents=True, exist_ok=True)
     chunk_path.write_text("audio", encoding="utf-8")
     manifest = manifest_dir / "rec1.csv"
@@ -550,6 +647,7 @@ def test_infer_orchestrate_apply_with_bundle(tmp_path: Path, monkeypatch) -> Non
         f"rec1,rec1_chunk,{chunk_path},0,1000,0,hash,\n",
         encoding="utf-8",
     )
+    _write_chunk_status(dataset, "rec1")
 
     def fake_infer_run(**kwargs):
         recording_id = Path(kwargs["manifest"]).stem

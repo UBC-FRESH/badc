@@ -99,7 +99,12 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
 - `badc infer orchestrate` — scans a dataset’s manifests (or a saved chunk plan), prints an inference
   plan table, emits ready-to-run `datalad run` commands, saves CSV/JSON plans, and (with `--apply`)
   executes each recording immediately. When `.datalad` plus the CLI are available the applied runs
-  are wrapped in `datalad run` automatically (toggle with `--no-record-datalad`).
+  are wrapped in `datalad run` automatically (toggle with `--no-record-datalad`). The planner
+  verifies that each recording’s chunk directory contains `.chunk_status.json` with
+  `status="completed"` (override with `--allow-partial-chunks`), so Sockeye scripts and `--apply`
+  runs never launch inference against half-written manifests. `--chunks-dir` selects the chunk root
+  if you deviate from `artifacts/chunks`, and generated Sockeye scripts fail fast whenever the chunk
+  status file is missing or reports a non-completed state.
 - `badc infer aggregate artifacts/infer --manifest chunk_manifest.csv --parquet artifacts/aggregate/detections.parquet`
   — reads detection JSON files, pulls in chunk metadata from the manifest when available (start/end
   offsets, hashes), ingests the real HawkEars label output (label code/name, detection end offset,

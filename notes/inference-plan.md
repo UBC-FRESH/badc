@@ -104,6 +104,16 @@
   the annex-backed manifest paths resolve inside the job allocation (`datalad get` will populate the
   symlink targets automatically).
 
+## Chunk orchestrator integration (2025-12-10)
+- `badc infer orchestrate` now inspects `<dataset>/artifacts/chunks/<recording>/.chunk_status.json`
+  before producing the plan (configurable via `--chunks-dir`). The planner refuses to run unless each
+  recording reports `status="completed"` (override with `--allow-partial-chunks` when you
+  intentionally want to proceed). This keeps Sockeye runs from burning GPU hours on manifests that
+  were only partially chunked.
+- Generated Sockeye scripts include a chunk-status sanity check before invoking HawkEars; array tasks
+  exit early with a descriptive error if the status file is missing or still marked `failed` /
+  `in_progress`.
+
 ## Phase 2 scheduler polish — detailed TODOs
 1. **Enrich scheduler summaries**
    - Extend `_write_scheduler_summary` to include retry/backoff metadata per worker and per chunk

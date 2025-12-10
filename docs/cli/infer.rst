@@ -301,7 +301,10 @@ Highlights:
 
 * Loads manifests from ``<dataset>/manifests`` (or a supplied chunk plan CSV/JSON).
 * Builds per-recording plans that capture manifest path, output directory, telemetry log, HawkEars
-  settings, and CPU/GPU worker overrides.
+  settings, CPU/GPU worker overrides, and the chunk status located under
+  ``<dataset>/<chunks-dir>/<recording>/.chunk_status.json`` (defaults to ``artifacts/chunks``).
+  Status must be ``completed`` unless you opt into ``--allow-partial-chunks``; this prevents Sockeye
+  scripts and local ``--apply`` runs from launching inference against half-finished chunk jobs.
 * ``--plan-csv`` / ``--plan-json`` save the plan for HPC submission scripts or future re-runs.
 * ``--print-datalad-run`` emits commands such as::
 
@@ -321,7 +324,10 @@ Highlights:
   ``--sockeye-resume-completed`` to have the script automatically append ``--resume-summary`` whenever
   a telemetry ``*.summary.json`` already exists, so reruns skip completed chunks. Add
   ``--sockeye-bundle`` to chain ``badc infer aggregate`` and ``badc report bundle`` right after each
-  inference run so Phase 2 quicklook/parquet artifacts land alongside the detections.
+  inference run so Phase 2 quicklook/parquet artifacts land alongside the detections. The emitted
+  script now also validates the chunk status file before running HawkEars; array tasks exit early
+  with a descriptive error if the status file is missing or reports anything other than
+  ``completed``.
 * ``--resume-completed`` tells ``--apply`` runs to look for the telemetry ``*.summary.json`` that the
   prior run produced and pass ``--resume-summary`` automatically so only unfinished chunks are
   retried.
@@ -330,6 +336,11 @@ Highlights:
   quicklook CSVs, parquet report, and DuckDB database live alongside the dataset without extra
   commands. Override paths via ``--bundle-aggregate-dir`` and adjust the timeline window via
   ``--bundle-bucket-minutes``.
+
+Chunk status paths default to ``artifacts/chunks/<recording>/.chunk_status.json``; customize the
+root with ``--chunks-dir`` when your dataset stores chunk WAVs elsewhere, or pass
+``--allow-partial-chunks`` if you intentionally want to run inference on manifests whose chunk status
+is missing or still marked ``failed``/``in_progress``.
 
 Combine this with :command:`badc chunk orchestrate` to move from chunk plans to inference runs in a
 single workflow.
