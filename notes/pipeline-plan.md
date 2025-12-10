@@ -22,6 +22,10 @@ Stages:
   manifest rows, and any error message) so reruns automatically resume everything marked `failed` or
   `in_progress`. `--workers` fans out across recordings when DataLad provenance is disabled; with
   `.datalad` present the command continues to default to `datalad run`.
+- High-level wrapper: `badc pipeline run` calls `badc chunk orchestrate --plan-json … --apply`
+  followed by `badc infer orchestrate --chunk-plan … --apply --bundle`, enforcing the chunk-status
+  guardrail and leaving behind telemetry summaries + bundle artifacts automatically. See
+  ``docs/howto/pipeline-e2e.rst`` for command examples and customization knobs.
 - Manifest schema (CSV + JSON metadata):
   - `recording_id` (str)
   - `chunk_id` (str; `<recording>_<start_ms>_<end_ms>`)

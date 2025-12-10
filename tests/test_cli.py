@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import tomllib
+import wave
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -21,6 +23,16 @@ def test_version_command() -> None:
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
     assert "BADC version" in result.stdout
+
+
+def _write_wav(path: Path, duration_s: float = 0.5, sample_rate: int = 8000) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    frames = int(sample_rate * duration_s)
+    with wave.open(str(path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(b"\x00\x00" * frames)
 
 
 def _init_git_repo(root: Path) -> Path:
@@ -344,6 +356,45 @@ def test_infer_orchestrate_apply_resumes_completed(tmp_path, monkeypatch) -> Non
     )
     assert result.exit_code == 0, result.stdout
     assert captured == [summary_path]
+
+
+def test_pipeline_run_end_to_end(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset"
+    (dataset / ".datalad").mkdir(parents=True)
+    audio = dataset / "audio" / "rec.wav"
+    _write_wav(audio, duration_s=0.3)
+    env = {**os.environ, "BADC_DISABLE_DATALAD": "1"}
+    result = runner.invoke(
+        app,
+        [
+            "pipeline",
+            "run",
+            str(dataset),
+            "--chunk-duration",
+            "0.2",
+            "--chunk-plan",
+            "plans/pipeline.json",
+            "--chunk-workers",
+            "1",
+            "--chunk-pattern",
+            "*.wav",
+            "--no-bundle",
+            "--stub-runner",
+            "--no-record-datalad",
+        ],
+        env=env,
+    )
+    assert result.exit_code == 0, result.stdout
+    plan_path = dataset / "plans" / "pipeline.json"
+    assert plan_path.exists()
+    manifest = dataset / "manifests" / "rec.csv"
+    assert manifest.exists()
+    chunk_status = dataset / "artifacts" / "chunks" / "rec" / ".chunk_status.json"
+    assert chunk_status.exists()
+    infer_dir = dataset / "artifacts" / "infer" / "rec"
+    assert infer_dir.exists()
+    telemetry_log = dataset / "artifacts" / "telemetry" / "infer" / "rec.jsonl"
+    assert telemetry_log.exists()
 
 
 def test_data_status_summary(tmp_path, monkeypatch) -> None:

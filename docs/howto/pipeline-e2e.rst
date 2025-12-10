@@ -1,6 +1,23 @@
 End-to-End CLI Pipeline
 =======================
 
+Quick start
+-----------
+Run the entire chunk → infer → aggregate/report loop in one shot with the new wrapper:
+
+.. code-block:: console
+
+   $ badc pipeline run data/datalad/bogus \
+       --chunk-plan plans/pipeline.json \
+       --chunk-duration 60 \
+       --bundle \
+       --bundle-aggregate-dir artifacts/aggregate
+
+The command saves the chunk plan JSON (for reruns/HPC scripts), enforces chunk-status completion
+before inference, and optionally runs ``badc infer aggregate`` + ``badc report bundle`` so every
+recording leaves behind quicklook CSVs, Parquet exports, and DuckDB bundles. The sections below break
+down the same workflow when you want to call each stage manually.
+
 This guide stitches the chunking, inference, aggregation, and reporting CLIs into a single,
 reproducible workflow that produces DataLad-tracked artifacts ready for Erin's Phase 2 analytics
 review.

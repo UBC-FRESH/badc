@@ -127,6 +127,10 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
   `detections_parquet_report/`, `detections.duckdb`, and matching CSV exports for reviewers.
 - `badc infer orchestrate --apply --bundle` — after each manifest is inferred, aggregate detections
   and run the bundle helper automatically so Phase 2 artifacts stay in lockstep with inference runs.
+- `badc pipeline run data/datalad/bogus --chunk-plan plans/bogus.json --bundle` — convenience wrapper
+  that runs `badc chunk orchestrate --plan-json … --apply` followed by
+  `badc infer orchestrate --chunk-plan … --apply --bundle`, so an entire dataset can be chunked,
+  inferred, and aggregated with a single command (see `docs/howto/pipeline-e2e.rst` for details).
 - `badc infer monitor --log data/telemetry/infer/<manifest>_<timestamp>.jsonl` — stream per-GPU
   telemetry tables with events/success/failure counts, trending utilization (min/avg/max), peak VRAM
   usage, rolling ASCII sparklines (utilization + VRAM), and a live tail of recent chunk status

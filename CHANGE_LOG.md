@@ -1,3 +1,19 @@
+# 2025-12-10 — Pipeline CLI wrapper
+- Added `badc pipeline run`, a Typer subcommand that chains
+  `badc chunk orchestrate --plan-json … --apply` with
+  `badc infer orchestrate --chunk-plan … --apply` (optionally `--bundle`). It enforces the chunk
+  status guardrail, shares the plan JSON between stages, and exposes the common knobs (chunk pattern,
+  duration, workers, resume-completed, bundle paths, HawkEars toggles). The command emits progress
+  logs and finishes with a succinct summary so operators can run the full loop with a single CLI call.
+- Added a CLI regression test covering the wrapper (`tests/test_cli.py::test_pipeline_run_end_to_end`).
+- README + pipeline how-to now reference the shortcut so Phase 2 operators know the command exists.
+- Commands executed:
+  - `source .venv/bin/activate && ruff format src tests`
+  - `source .venv/bin/activate && ruff check src tests`
+  - `source .venv/bin/activate && pytest`
+  - `source .venv/bin/activate && sphinx-build -b html docs _build/html -W`
+  - `source .venv/bin/activate && pre-commit run --all-files`
+
 # 2025-12-10 — End-to-end CLI workflow doc
 - Added ``docs/howto/pipeline-e2e.rst`` plus README pointers so operators can follow the exact
   chunk → infer → aggregate/report steps (`badc chunk orchestrate --plan-json … --apply` feeding

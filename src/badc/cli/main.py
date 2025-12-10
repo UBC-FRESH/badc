@@ -43,10 +43,12 @@ data_app = typer.Typer(help="Manage DataLad-backed audio repositories (stub comm
 chunk_app = typer.Typer(help="Chunking utilities and HawkEars probe helpers.")
 infer_app = typer.Typer(help="Inference + aggregation helpers (placeholder).")
 report_app = typer.Typer(help="Reporting helpers built atop DuckDB/parquet detections.")
+pipeline_app = typer.Typer(help="High-level helpers that chain chunking + inference workflows.")
 app.add_typer(data_app, name="data")
 app.add_typer(chunk_app, name="chunk")
 app.add_typer(infer_app, name="infer")
 app.add_typer(report_app, name="report")
+app.add_typer(pipeline_app, name="pipeline")
 
 
 def _print_header() -> None:
@@ -2012,6 +2014,188 @@ def _render_sockeye_script(
             ]
         )
     return "\n".join(lines) + "\n"
+
+
+@pipeline_app.command("run")
+def pipeline_run(
+    dataset: Annotated[
+        Path,
+        typer.Argument(help="DataLad dataset that contains audio/ manifests/chunk outputs."),
+    ] = Path("data/datalad/bogus"),
+    chunk_plan: Annotated[
+        Path,
+        typer.Option(
+            "--chunk-plan",
+            help="Plan JSON path (relative to dataset) shared between chunk and inference stages.",
+        ),
+    ] = Path("plans/pipeline_chunks.json"),
+    chunk_pattern: Annotated[
+        str,
+        typer.Option("--chunk-pattern", help="Glob used to select source audio files."),
+    ] = "*.wav",
+    chunk_duration: Annotated[
+        float,
+        typer.Option("--chunk-duration", help="Chunk duration in seconds."),
+    ] = 60.0,
+    chunk_overlap: Annotated[
+        float,
+        typer.Option("--chunk-overlap", help="Overlap between chunks in seconds."),
+    ] = 0.0,
+    chunk_include_existing: Annotated[
+        bool,
+        typer.Option(
+            "--chunk-include-existing/--chunk-skip-existing",
+            help="Include recordings that already have manifests.",
+        ),
+    ] = False,
+    chunk_limit: Annotated[
+        int,
+        typer.Option("--chunk-limit", help="Cap number of recordings to chunk."),
+    ] = 0,
+    chunk_workers: Annotated[
+        int,
+        typer.Option(
+            "--chunk-workers",
+            min=1,
+            help="Parallel workers when chunking without datalad run.",
+        ),
+    ] = 1,
+    manifest_dir: Annotated[
+        Path,
+        typer.Option("--manifest-dir", help="Directory for manifest CSVs (relative to dataset)."),
+    ] = Path("manifests"),
+    chunks_dir: Annotated[
+        Path,
+        typer.Option("--chunks-dir", help="Directory for chunk WAVs (relative to dataset)."),
+    ] = Path("artifacts/chunks"),
+    output_dir: Annotated[
+        Path,
+        typer.Option("--output-dir", help="Directory for inference outputs (relative to dataset)."),
+    ] = Path("artifacts/infer"),
+    telemetry_dir: Annotated[
+        Path,
+        typer.Option("--telemetry-dir", help="Directory for telemetry logs (relative to dataset)."),
+    ] = Path("artifacts/telemetry"),
+    infer_include_existing: Annotated[
+        bool,
+        typer.Option(
+            "--infer-include-existing/--infer-skip-existing",
+            help="Include manifests that already have inference outputs.",
+        ),
+    ] = True,
+    resume_completed: Annotated[
+        bool,
+        typer.Option(
+            "--resume-completed/--rerun-all",
+            help="Reuse telemetry summaries to skip completed chunks during inference.",
+        ),
+    ] = True,
+    bundle: Annotated[
+        bool,
+        typer.Option(
+            "--bundle/--no-bundle",
+            help="Aggregate detections and run `badc report bundle` after each inference run.",
+        ),
+    ] = True,
+    bundle_aggregate_dir: Annotated[
+        Path,
+        typer.Option(
+            "--bundle-aggregate-dir",
+            help="Directory for aggregate/report outputs (relative to dataset).",
+        ),
+    ] = Path("artifacts/aggregate"),
+    bundle_bucket_minutes: Annotated[
+        int,
+        typer.Option("--bundle-bucket-minutes", help="Timeline bucket size used by report bundle."),
+    ] = 30,
+    use_hawkears: Annotated[
+        bool,
+        typer.Option(
+            "--use-hawkears/--stub-runner",
+            help="Invoke vendor HawkEars analyze.py instead of the stub runner.",
+        ),
+    ] = False,
+    hawkears_arg: Annotated[
+        list[str] | None,
+        typer.Option("--hawkears-arg", help="Extra argument forwarded to HawkEars (repeatable)."),
+    ] = None,
+    max_gpus: Annotated[
+        int | None,
+        typer.Option("--max-gpus", help="Cap number of GPUs for inference."),
+    ] = None,
+    cpu_workers: Annotated[
+        int,
+        typer.Option("--cpu-workers", help="Additional CPU workers for inference."),
+    ] = 0,
+    record_datalad: Annotated[
+        bool,
+        typer.Option(
+            "--record-datalad/--no-record-datalad",
+            help="Wrap chunk and inference runs in `datalad run` when possible.",
+        ),
+    ] = True,
+    chunk_record_datalad: Annotated[
+        bool | None,
+        typer.Option(
+            "--chunk-record-datalad/--chunk-no-record-datalad",
+            help="Override chunk recording behavior (defaults to --record-datalad).",
+        ),
+    ] = None,
+) -> None:
+    """Run chunking + inference (+ optional bundle) in a single command."""
+
+    dataset = dataset.expanduser().resolve()
+    plan_path = chunk_plan if chunk_plan.is_absolute() else (dataset / chunk_plan)
+    plan_path.parent.mkdir(parents=True, exist_ok=True)
+    chunk_record_flag = chunk_record_datalad if chunk_record_datalad is not None else record_datalad
+    console.rule("BADC pipeline")
+    console.print("[bold]Step 1/2: Chunk orchestrate[/]")
+    chunk_orchestrate(
+        dataset=dataset,
+        pattern=chunk_pattern,
+        chunk_duration=chunk_duration,
+        overlap=chunk_overlap,
+        manifest_dir=manifest_dir,
+        chunks_dir=chunks_dir,
+        include_existing=chunk_include_existing,
+        limit=chunk_limit,
+        print_datalad_run=False,
+        apply=True,
+        plan_csv=None,
+        plan_json=plan_path,
+        record_datalad=chunk_record_flag,
+        workers=chunk_workers,
+    )
+    if not plan_path.exists():
+        console.print(
+            f"Chunk plan {plan_path} was not created; aborting before inference.", style="red"
+        )
+        raise typer.Exit(code=1)
+    console.print("[bold]Step 2/2: Inference orchestrate[/]")
+    infer_orchestrate(
+        dataset=dataset,
+        manifest_dir=manifest_dir,
+        output_dir=output_dir,
+        telemetry_dir=telemetry_dir,
+        chunks_dir=chunks_dir,
+        chunk_plan=plan_path,
+        include_existing=infer_include_existing,
+        limit=0,
+        max_gpus=max_gpus,
+        use_hawkears=use_hawkears,
+        hawkears_arg=hawkears_arg,
+        print_datalad_run=False,
+        apply=True,
+        cpu_workers=cpu_workers,
+        record_datalad=record_datalad,
+        resume_completed=resume_completed,
+        bundle=bundle,
+        bundle_aggregate_dir=bundle_aggregate_dir,
+        bundle_bucket_minutes=bundle_bucket_minutes,
+    )
+    console.print(
+        f"[green]Pipeline complete. Plan saved to {plan_path} and inference outputs under {output_dir}[/]"
+    )
 
 
 def _prepare_job_contexts(

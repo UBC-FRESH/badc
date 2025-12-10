@@ -23,6 +23,7 @@
       infer_run_config
       list_gpus
       main
+      pipeline_run
       report_bundle
       report_duckdb
       report_parquet
