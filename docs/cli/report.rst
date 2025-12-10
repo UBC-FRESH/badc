@@ -230,20 +230,28 @@ Behavior
 DuckDB schema reference
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-==================  ============================  ==============================================
-Object              Columns                       Notes
-==================  ============================  ==============================================
-``detections``      All fields from                Canonical detection rows (see
-                    :class:`badc.aggregate.DetectionRecord`. ``chunk_start_ms`` carries the
-                    absolute chunk offset (ms) so downstream SQL can build absolute timelines.
-``label_summary``   ``label``, ``label_name``,     Used for bar charts/leaderboards. ``avg_confidence``
-                    ``detections``,               is computed directly inside DuckDB.
-                    ``avg_confidence``
-``recording_summary`` ``recording_id``, ``detections``, Columns mirror the CLI tables and the CSV exports.
-                      ``avg_confidence``
-``timeline_summary`` ``bucket_index``, ``bucket_start_ms``, Bucket duration is controlled via ``--bucket-minutes``.
-                      ``detections``, ``avg_confidence``  Ready for timeline plots (see the updated notebook).
-==================  ============================  ==============================================
++--------------------+------------------------------+-----------------------------------------------+
+| Object             | Columns                      | Notes                                         |
++====================+==============================+===============================================+
+| ``detections``     | All fields from              | Canonical detection rows (see                 |
+|                    | :class:`badc.aggregate.      | :class:`badc.aggregate.DetectionRecord`).     |
+|                    | DetectionRecord`. ``chunk_   | ``chunk_start_ms`` carries the absolute       |
+|                    | start_ms`` carries the       | chunk offset (ms) so downstream SQL can build |
+|                    | absolute chunk offset (ms).  | absolute timelines.                           |
++--------------------+------------------------------+-----------------------------------------------+
+| ``label_summary``  | ``label``, ``label_name``,   | Used for bar charts/leaderboards.             |
+|                    | ``detections``,              | ``avg_confidence`` is computed directly       |
+|                    | ``avg_confidence``           | inside DuckDB.                                |
++--------------------+------------------------------+-----------------------------------------------+
+| ``recording_       | ``recording_id``,            | Columns mirror the CLI tables and the CSV     |
+| summary``          | ``detections``,              | exports.                                      |
+|                    | ``avg_confidence``           |                                               |
++--------------------+------------------------------+-----------------------------------------------+
+| ``timeline_        | ``bucket_index``,            | Bucket duration is controlled via             |
+| summary``          | ``bucket_start_ms``,         | ``--bucket-minutes``. Ready for timeline      |
+|                    | ``detections``,              | plots (see the updated notebook).             |
+|                    | ``avg_confidence``           |                                               |
++--------------------+------------------------------+-----------------------------------------------+
 
 The helper module mentioned above exposes a ``verify_bundle_schema`` function that ensures the
 database contains these tables/views and raises a descriptive error when they are missing. This is

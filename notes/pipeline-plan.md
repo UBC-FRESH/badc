@@ -16,6 +16,10 @@ Stages:
   already have manifests (unless `--include-existing`), prints a Rich summary, emits ready-to-run
   `datalad run` commands via `badc.chunk_orchestrator.render_datalad_run`, persists CSV/JSON plan
   files, and can apply the plan immediately (`--apply`) by invoking `badc chunk run` per recording.
+  Applied runs write `artifacts/chunks/<recording>/.chunk_status.json` (status, timestamps,
+  manifest rows, and any error message) so reruns automatically resume everything marked `failed` or
+  `in_progress`. `--workers` fans out across recordings when DataLad provenance is disabled; with
+  `.datalad` present the command continues to default to `datalad run`.
 - Manifest schema (CSV + JSON metadata):
   - `recording_id` (str)
   - `chunk_id` (str; `<recording>_<start_ms>_<end_ms>`)

@@ -13,6 +13,8 @@ import threading
 import time
 import tomllib
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated, Any, Optional, Sequence
 
@@ -715,6 +717,14 @@ def chunk_orchestrate(
             help="When applying, wrap each chunk in `datalad run` if possible.",
         ),
     ] = True,
+    workers: Annotated[
+        int,
+        typer.Option(
+            "--workers",
+            min=1,
+            help="Number of parallel chunk workers when applying without `datalad run`.",
+        ),
+    ] = 1,
 ) -> None:
     """Plan chunk jobs across an entire dataset without touching audio files."""
 
@@ -782,27 +792,127 @@ def chunk_orchestrate(
                 "Falling back to direct chunk runs.",
                 style="yellow",
             )
+        runnable: list[chunk_orchestrator.ChunkPlan] = []
         for plan in plans:
-            console.print(f"[cyan]Chunking {plan.recording_id}[/]")
-            if use_datalad:
-                command = chunk_orchestrator.render_datalad_run(plan, dataset)
-                try:
-                    subprocess.run(shlex.split(command), cwd=dataset, check=True)
-                except subprocess.CalledProcessError as exc:
-                    console.print(
-                        f"Chunking failed for {plan.recording_id}: {exc}",
-                        style="red",
-                    )
-                    raise typer.Exit(code=exc.returncode) from exc
-            else:
-                chunk_run(
-                    file=plan.audio_path,
-                    chunk_duration=plan.chunk_duration,
-                    overlap=plan.overlap,
-                    output_dir=plan.chunk_output_dir,
-                    manifest=plan.manifest_path,
-                    dry_run=False,
+            status = chunk_orchestrator.load_chunk_status(plan)
+            if (
+                status
+                and status.get("status") == "completed"
+                and plan.manifest_path.exists()
+                and not include_existing
+            ):
+                console.print(
+                    f"[green]Skipping {plan.recording_id} (already completed; use --include-existing to rerun).[/]"
                 )
+                continue
+            if status and chunk_orchestrator.status_requires_resume(status):
+                console.print(
+                    f"[yellow]Resuming {plan.recording_id} (previous status: {status.get('status')}).[/]"
+                )
+            runnable.append(plan)
+        if not runnable:
+            console.print("All recordings are already chunked; nothing to do.", style="green")
+            return
+        worker_count = max(1, workers)
+        if use_datalad and worker_count > 1:
+            console.print(
+                "Parallel workers requested but `datalad run` requires serial execution; falling back to a single worker.",
+                style="yellow",
+            )
+            worker_count = 1
+        elif worker_count > 1:
+            console.print(f"Running with {worker_count} worker(s).", style="bold")
+
+        def _apply_plan(plan: chunk_orchestrator.ChunkPlan) -> int:
+            started_dt = datetime.now(timezone.utc)
+            started_at = started_dt.isoformat()
+            chunk_orchestrator.write_chunk_status(
+                plan,
+                status="in_progress",
+                started_at=started_at,
+            )
+            try:
+                if use_datalad:
+                    command = chunk_orchestrator.render_datalad_run(plan, dataset)
+                    subprocess.run(shlex.split(command), cwd=dataset, check=True)
+                else:
+                    chunk_run(
+                        file=plan.audio_path,
+                        chunk_duration=plan.chunk_duration,
+                        overlap=plan.overlap,
+                        output_dir=plan.chunk_output_dir,
+                        manifest=plan.manifest_path,
+                        dry_run=False,
+                    )
+            except subprocess.CalledProcessError as exc:
+                finished_dt = datetime.now(timezone.utc)
+                chunk_orchestrator.write_chunk_status(
+                    plan,
+                    status="failed",
+                    started_at=started_at,
+                    completed_at=finished_dt.isoformat(),
+                    manifest_rows=chunk_orchestrator.count_manifest_rows(plan.manifest_path),
+                    duration_s=(finished_dt - started_dt).total_seconds(),
+                    error=str(exc),
+                )
+                raise
+            except Exception as exc:  # pragma: no cover - defensive
+                finished_dt = datetime.now(timezone.utc)
+                chunk_orchestrator.write_chunk_status(
+                    plan,
+                    status="failed",
+                    started_at=started_at,
+                    completed_at=finished_dt.isoformat(),
+                    manifest_rows=chunk_orchestrator.count_manifest_rows(plan.manifest_path),
+                    duration_s=(finished_dt - started_dt).total_seconds(),
+                    error=str(exc),
+                )
+                raise
+            finished_dt = datetime.now(timezone.utc)
+            rows = chunk_orchestrator.count_manifest_rows(plan.manifest_path)
+            chunk_orchestrator.write_chunk_status(
+                plan,
+                status="completed",
+                started_at=started_at,
+                completed_at=finished_dt.isoformat(),
+                manifest_rows=rows,
+                duration_s=(finished_dt - started_dt).total_seconds(),
+            )
+            return rows
+
+        errors: list[tuple[chunk_orchestrator.ChunkPlan, Exception]] = []
+        if worker_count == 1:
+            for plan in runnable:
+                console.print(f"[cyan]Chunking {plan.recording_id}[/]")
+                try:
+                    rows = _apply_plan(plan)
+                except subprocess.CalledProcessError as exc:
+                    console.print(f"[red]Chunking failed for {plan.recording_id}: {exc}[/]")
+                    raise typer.Exit(code=exc.returncode) from exc
+                except Exception as exc:  # pragma: no cover - defensive
+                    console.print(f"[red]Chunking failed for {plan.recording_id}: {exc}[/]")
+                    raise typer.Exit(code=1) from exc
+                console.print(f"[green]Completed {plan.recording_id} ({rows} manifest rows)[/]")
+        else:
+            console.print("Chunking recordings (parallel mode)…", style="cyan")
+            with ThreadPoolExecutor(max_workers=worker_count) as executor:
+                future_to_plan = {executor.submit(_apply_plan, plan): plan for plan in runnable}
+                for future in as_completed(future_to_plan):
+                    plan = future_to_plan[future]
+                    try:
+                        rows = future.result()
+                    except subprocess.CalledProcessError as exc:
+                        console.print(f"[red]Chunking failed for {plan.recording_id}: {exc}[/]")
+                        errors.append((plan, exc))
+                    except Exception as exc:  # pragma: no cover - defensive
+                        console.print(f"[red]Chunking failed for {plan.recording_id}: {exc}[/]")
+                        errors.append((plan, exc))
+                    else:
+                        console.print(
+                            f"[green]Completed {plan.recording_id} ({rows} manifest rows)[/]"
+                        )
+            if errors:
+                raise typer.Exit(code=1)
 
 
 @app.command("gpus")

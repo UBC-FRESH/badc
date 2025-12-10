@@ -12,10 +12,11 @@ command + helpers in ``badc.chunk_orchestrator`` provide the first slice of that
    writing GBs of intermediate data.
 
 ## Current implementation
-- ``src/badc/chunk_orchestrator.py`` exposes ``build_chunk_plan`` + ``render_datalad_run``.
+- ``src/badc/chunk_orchestrator.py`` exposes the plan builder plus helpers to persist per-recording
+  status metadata in ``artifacts/chunks/<recording>/.chunk_status.json``.
 - ``badc chunk orchestrate`` CLI wraps those helpers:
   - Arguments: dataset root (default ``data/datalad/bogus``), glob, chunk duration, overlap,
-    manifest/chunk directories, ``--include-existing`` (skip vs. reprocess), ``--limit``.
+    manifest/chunk directories, ``--include-existing`` (skip vs. reprocess), ``--workers``, ``--limit``.
   - Output: Rich table summarising recording, audio path, manifest destination, chunk directory.
   - ``--print-datalad-run`` prints a command like:
 
@@ -26,10 +27,17 @@ command + helpers in ``badc.chunk_orchestrator`` provide the first slice of that
          -- badc chunk run audio/XXXX.wav --chunk-duration 60 \
          --overlap 0 --output-dir artifacts/chunks/XXXX --manifest manifests/XXXX.csv
 
+  - ``--apply`` now records ``status`` (``in_progress``/``completed``/``failed``), timestamps,
+    manifest row counts, and error messages in ``.chunk_status.json`` so reruns can resume
+    automatically when a previous pass died mid-run. Recordings marked ``completed`` get skipped unless
+    ``--include-existing`` is provided.
+  - ``--workers`` fans out across recordings when ``datalad run`` is unavailable/disabled; provenance
+    recording remains the default when `.datalad` + the CLI exist, with a graceful fallback to
+    parallel direct writes via ``--no-record-datalad``.
+
 ## Next steps
-- Persist plan metadata (CSV/JSON) so HPC submit scripts can chunk recordings in batches.
-- Extend to emit ``badc infer run-config`` scaffolding once chunking completes (closing the loop
-  from audio -> manifest -> inference plan).
-- Sockeye mode: add template generation for SLURM job arrays (one recording per task).
-- Plan persistence (Phase 2 follow-up): once the CSV/JSON plan is saved, we can feed it into HPC
-  submit scripts or orchestrate partial re-runs by filtering rows.
+- Feed the saved plan CSV/JSON into HPC submitters (Sockeye arrays, Chinook batches) so chunk +
+  inference orchestration share a single scheduling surface.
+- Detect chunk output corruption (e.g., missing WAVs vs. manifest rows) and mark statuses as
+  ``failed`` when validation scripts detect discrepancies.
+- Explore ffmpeg-based chunking for non-WAV formats and document the performance/VRAM trade-offs.

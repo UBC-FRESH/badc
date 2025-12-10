@@ -41,10 +41,13 @@ execution notes live alongside task-specific files under `notes/`.
       Phase 2 when multi-GPU jobs land.)*
 
 ## Phase 2 — Data Automation & Analysis Layer
-- [ ] Implement chunker orchestrator that walks large datasets, schedules HawkEars jobs, and tracks
-      provenance for each output segment. *(`badc chunk orchestrate --apply` now invokes `badc chunk run`
-      directly and, when `.datalad` + the CLI are available, wraps each plan in `datalad run` by default.
-      Future work: parallel execution + error-resume support.)*
+- [x] Implement chunker orchestrator that walks large datasets, schedules HawkEars jobs, and tracks
+      provenance for each output segment. *(`badc chunk orchestrate --apply` now wraps executions in
+      `datalad run` when available, writes per-recording `.chunk_status.json` files (status,
+      timestamps, manifest rows, errors), automatically resumes anything marked `failed`/`in_progress`,
+      and exposes `--workers` so non-Datalad runs can fan out across recordings while still logging
+      status transitions. Plan CSV/JSON exports remain unchanged, so chunking + inference now share
+      the same “single command” ergonomics.)*
 - [x] Implement HawkEars inference scheduler per `notes/inference-plan.md` (manifest loader, GPU
       worker pool, telemetry, output persistence). *(Manifest loader + telemetry exist; Phase 2 now
       includes `badc infer orchestrate` for planning, CSV/JSON plan exports, and `--apply` now runs

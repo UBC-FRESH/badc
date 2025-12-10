@@ -154,3 +154,77 @@ def test_chunk_orchestrate_apply_warns_without_datalad(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.stdout
     assert "Falling back to direct chunk runs" in result.stdout
     assert (dataset / "manifests" / "rec.csv").exists()
+
+
+def test_chunk_orchestrate_workers_and_status_file(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset_workers"
+    for idx in range(2):
+        audio = dataset / "audio" / f"rec{idx}.wav"
+        _write_wav(audio, duration_s=0.5)
+    env = {**os.environ, "BADC_DISABLE_DATALAD": "1"}
+    result = runner.invoke(
+        app,
+        [
+            "chunk",
+            "orchestrate",
+            str(dataset),
+            "--chunk-duration",
+            "0.25",
+            "--apply",
+            "--no-record-datalad",
+            "--workers",
+            "2",
+        ],
+        env=env,
+    )
+    assert result.exit_code == 0, result.stdout
+    for idx in range(2):
+        manifest = dataset / "manifests" / f"rec{idx}.csv"
+        assert manifest.exists()
+        status_path = dataset / "artifacts" / "chunks" / f"rec{idx}" / ".chunk_status.json"
+        assert status_path.exists()
+        status_data = json.loads(status_path.read_text())
+        assert status_data["status"] == "completed"
+        assert status_data["manifest_rows"] > 0
+        assert "started_at" in status_data and "completed_at" in status_data
+
+
+def test_chunk_orchestrate_resumes_failed_status(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset_resume"
+    audio = dataset / "audio" / "rec.wav"
+    _write_wav(audio, duration_s=0.5)
+    env = {**os.environ, "BADC_DISABLE_DATALAD": "1"}
+    initial = runner.invoke(
+        app,
+        [
+            "chunk",
+            "orchestrate",
+            str(dataset),
+            "--chunk-duration",
+            "0.25",
+            "--apply",
+            "--no-record-datalad",
+        ],
+        env=env,
+    )
+    assert initial.exit_code == 0, initial.stdout
+    status_path = dataset / "artifacts" / "chunks" / "rec" / ".chunk_status.json"
+    status_data = json.loads(status_path.read_text())
+    status_data["status"] = "failed"
+    status_path.write_text(json.dumps(status_data))
+    rerun = runner.invoke(
+        app,
+        [
+            "chunk",
+            "orchestrate",
+            str(dataset),
+            "--chunk-duration",
+            "0.25",
+            "--apply",
+            "--no-record-datalad",
+        ],
+        env=env,
+    )
+    assert rerun.exit_code == 0, rerun.stdout
+    updated_status = json.loads(status_path.read_text())
+    assert updated_status["status"] == "completed"

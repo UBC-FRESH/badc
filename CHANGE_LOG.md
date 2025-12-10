@@ -1,3 +1,27 @@
+# 2025-12-10 — Chunk orchestrator status tracking + workers
+- `badc chunk orchestrate --apply` now writes `.chunk_status.json` alongside each chunk directory
+  (status, timestamps, manifest rows, last error) before/after invoking `badc chunk run`, so reruns
+  automatically resume anything that previously failed or was interrupted. Recordings marked
+  `completed` stay skipped unless `--include-existing` is provided, and the CLI warns when it is
+  resuming a failed/in-progress job.
+- Added `--workers` so non-DataLad runs can fan out across multiple recordings with a thread pool;
+  the command gracefully falls back to serial execution when provenance is recorded via `datalad run`.
+- Updated `README.md`, `docs/cli/chunk.rst`, `docs/howto/chunk-audio.rst`, `notes/roadmap.md`,
+  `notes/pipeline-plan.md`, and `notes/chunk-orchestrator.md` to document the status/resume workflow
+  and mark the Phase 2 chunk orchestrator task complete. Added regression tests covering the worker
+  flag plus status file/resume behavior.
+- Tidied `docs/notebooks/aggregate_analysis.ipynb` (ruff import order + removed the redundant
+  `con.execute` timeline cell) and switched the DuckDB schema table in `docs/cli/report.rst` to a
+  grid table so Sphinx treats it as valid reStructuredText.
+- Commands executed:
+  - `source .venv/bin/activate && ruff format src tests`
+  - `source .venv/bin/activate && ruff check src tests`
+  - `source .venv/bin/activate && pytest`
+  - `source .venv/bin/activate && sphinx-build -b html docs _build/html -W`
+  - `source .venv/bin/activate && ruff check --select I001 --fix docs/notebooks/aggregate_analysis.ipynb`
+  - `python - <<'PY' ...` *(removed the redundant `timeline_view = con.execute(...)` cell from `docs/notebooks/aggregate_analysis.ipynb`; see git history for the snippet)*
+  - `source .venv/bin/activate && pre-commit run --all-files`
+
 # 2025-12-10 — Resume-summary CLI wiring
 - ``badc infer run`` now accepts ``--resume-summary`` to skip chunks already marked ``success`` in a
   scheduler summary JSON. The CLI loads the summary before scheduling, prints skip/orphaned counts,

@@ -288,6 +288,7 @@ Usage::
        --chunk-duration 60 \
        --manifest-dir manifests \
        --chunks-dir artifacts/chunks \
+       --workers 4 \
        --limit 5 \
        --print-datalad-run
 
@@ -308,6 +309,14 @@ Highlights:
 * ``--plan-csv`` / ``--plan-json`` — write the computed plan to disk for future reference or to feed
   into batch submission scripts.
 * ``--apply`` immediately invokes :command:`badc chunk run` for every listed recording, writing
-  manifests/chunks exactly as shown in the plan. When the dataset contains ``.datalad`` and the
-  ``datalad`` executable is available, runs are wrapped in ``datalad run`` automatically (disable via
-  ``--no-record-datalad``).
+  manifests/chunks exactly as shown in the plan and persisting a ``.chunk_status.json`` file under
+  each chunk directory. The status file records ``status`` (``in_progress``/``completed``/``failed``),
+  timestamps, manifest row counts, and any error details so future runs know whether to resume or
+  skip the recording. Runs marked ``failed`` or ``in_progress`` are automatically resumed even when
+  ``--skip-existing`` is in effect; use ``--include-existing`` to force re-chunking of recordings that
+  completed successfully.
+* ``--workers`` lets you fan out across recordings when chunking directly (i.e., when
+  ``--no-record-datalad`` or ``.datalad``/``datalad`` are absent). When the dataset contains
+  ``.datalad`` and the CLI is available, runs are wrapped in ``datalad run`` automatically to
+  preserve provenance, and the orchestrator falls back to serial execution (override with
+  ``--no-record-datalad`` if parallelism is more important than recorded provenance).

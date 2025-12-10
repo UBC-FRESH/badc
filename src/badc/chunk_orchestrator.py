@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,6 +36,17 @@ class ChunkPlan:
 
 def _resolve(base: Path, value: Path) -> Path:
     return value if value.is_absolute() else (base / value)
+
+
+STATUS_FILENAME = ".chunk_status.json"
+
+
+def _status_path(chunk_output_dir: Path) -> Path:
+    return chunk_output_dir / STATUS_FILENAME
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 def build_chunk_plan(
@@ -80,18 +94,18 @@ def build_chunk_plan(
             continue
         recording_id = audio_path.stem
         manifest_path = manifest_root / f"{recording_id}.csv"
-        if not include_existing and manifest_path.exists():
-            continue
         chunk_output_dir = chunks_root / recording_id
-        plans.append(
-            ChunkPlan(
-                audio_path=audio_path,
-                manifest_path=manifest_path,
-                chunk_output_dir=chunk_output_dir,
-                chunk_duration=chunk_duration,
-                overlap=overlap,
-            )
+        plan = ChunkPlan(
+            audio_path=audio_path,
+            manifest_path=manifest_path,
+            chunk_output_dir=chunk_output_dir,
+            chunk_duration=chunk_duration,
+            overlap=overlap,
         )
+        status = load_chunk_status(plan)
+        if manifest_path.exists() and not include_existing and not status_requires_resume(status):
+            continue
+        plans.append(plan)
         if limit and len(plans) >= limit:
             break
     return plans
@@ -122,3 +136,52 @@ def render_datalad_run(plan: ChunkPlan, dataset_root: Path) -> str:
         f"--output-dir {chunks_rel} "
         f"--manifest {manifest_rel}"
     )
+
+
+def load_chunk_status(plan: ChunkPlan) -> dict[str, Any] | None:
+    """Return the status metadata for ``plan`` if it exists."""
+
+    status_path = _status_path(plan.chunk_output_dir)
+    if not status_path.exists():
+        return None
+    try:
+        return json.loads(status_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+
+
+def status_requires_resume(status: dict[str, Any] | None) -> bool:
+    """Return True when the status indicates chunking should resume."""
+
+    if not status:
+        return False
+    return status.get("status") in {"failed", "in_progress"}
+
+
+def write_chunk_status(plan: ChunkPlan, **extra: Any) -> Path:
+    """Persist a status record for ``plan`` and return the path."""
+
+    status_path = _status_path(plan.chunk_output_dir)
+    status_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "recording_id": plan.recording_id,
+        "audio_path": str(plan.audio_path),
+        "chunk_output_dir": str(plan.chunk_output_dir),
+        "manifest_path": str(plan.manifest_path),
+        "chunk_duration": plan.chunk_duration,
+        "overlap": plan.overlap,
+        "updated_at": _utc_now(),
+    }
+    payload.update(extra)
+    status_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return status_path
+
+
+def count_manifest_rows(manifest_path: Path) -> int:
+    """Return the number of rows in ``manifest_path`` (excluding header)."""
+
+    if not manifest_path.exists():
+        return 0
+    with manifest_path.open(encoding="utf-8") as fh:
+        # subtract header
+        return max(0, sum(1 for _ in fh) - 1)

@@ -81,8 +81,12 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
   `<dataset>/artifacts/chunks/<recording>` and manifests under `<dataset>/manifests/<recording>.csv`.
 - `badc chunk orchestrate` — scans a dataset’s `audio/` tree, lists recordings that still need
   manifests/chunk outputs, prints ready-to-run `datalad run` commands, persists CSV/JSON plans, and
-  (with `--apply`) invokes `badc chunk run` for each recording. When the dataset contains `.datalad`
-  and the `datalad` CLI is available, `--apply` wraps each job in `datalad run` automatically
+  (with `--apply`) invokes `badc chunk run` for each recording. Applied runs write a
+  `.chunk_status.json` file under each chunk directory so retries know whether the previous attempt
+  completed, failed, or was interrupted; reruns automatically resume anything marked `failed` or
+  `in_progress`, while `--include-existing` forces re-chunking even when the status is `completed`.
+  Pass `--workers N` to fan out across recordings when *not* wrapping executions in `datalad run`;
+  when `.datalad` plus the CLI are available, the orchestrator still records provenance by default
   (disable with `--no-record-datalad`).
 - `badc infer run --manifest manifest.csv` — loads chunk jobs, detects GPUs, and runs the HawkEars
   runner (pass `--use-hawkears` to invoke the embedded `vendor/HawkEars/analyze.py`, or `--runner-cmd`
