@@ -319,7 +319,9 @@ Highlights:
   so Sockeye submissions no longer require hand-written `sbatch` files. Each array task maps to a
   manifest/output pair from the generated plan. Pair it with
   ``--sockeye-resume-completed`` to have the script automatically append ``--resume-summary`` whenever
-  a telemetry ``*.summary.json`` already exists, so reruns skip completed chunks.
+  a telemetry ``*.summary.json`` already exists, so reruns skip completed chunks. Add
+  ``--sockeye-bundle`` to chain ``badc infer aggregate`` and ``badc report bundle`` right after each
+  inference run so Phase 2 quicklook/parquet artifacts land alongside the detections.
 * ``--resume-completed`` tells ``--apply`` runs to look for the telemetry ``*.summary.json`` that the
   prior run produced and pass ``--resume-summary`` automatically so only unfinished chunks are
   retried.

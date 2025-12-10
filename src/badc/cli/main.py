@@ -1186,6 +1186,27 @@ def infer_orchestrate(
             help="When generating Sockeye scripts, add --resume-summary if prior telemetry summaries exist.",
         ),
     ] = False,
+    sockeye_bundle: Annotated[
+        bool,
+        typer.Option(
+            "--sockeye-bundle/--sockeye-no-bundle",
+            help="After inference, aggregate detections and run `badc report bundle` per manifest inside the script.",
+        ),
+    ] = False,
+    sockeye_bundle_aggregate_dir: Annotated[
+        Path,
+        typer.Option(
+            "--sockeye-bundle-aggregate-dir",
+            help="Directory (relative to dataset) where aggregate/bundle outputs should be written.",
+        ),
+    ] = Path("artifacts/aggregate"),
+    sockeye_bundle_bucket_minutes: Annotated[
+        int,
+        typer.Option(
+            "--sockeye-bundle-bucket-minutes",
+            help="Bucket size (minutes) passed to `badc report bundle`.",
+        ),
+    ] = 60,
 ) -> None:
     """Plan inference runs across manifests without executing them."""
 
@@ -1251,6 +1272,9 @@ def infer_orchestrate(
             cpus_per_task=sockeye_cpus_per_task,
             mem=sockeye_mem,
             resume_completed=sockeye_resume_completed,
+            bundle=sockeye_bundle,
+            bundle_aggregate_dir=sockeye_bundle_aggregate_dir,
+            bundle_bucket_minutes=sockeye_bundle_bucket_minutes,
         )
         sockeye_script.parent.mkdir(parents=True, exist_ok=True)
         sockeye_script.write_text(script)
@@ -1540,6 +1564,9 @@ def _render_sockeye_script(
     cpus_per_task: int | None,
     mem: str | None,
     resume_completed: bool,
+    bundle: bool,
+    bundle_aggregate_dir: Path,
+    bundle_bucket_minutes: int,
 ) -> str:
     dataset = dataset.expanduser().resolve()
     first_plan = plans[0]
@@ -1558,6 +1585,10 @@ def _render_sockeye_script(
         resume_entries = [
             f'  "{_relative(_telemetry_summary_path(plan.telemetry_log))}"' for plan in plans
         ]
+    aggregate_dir_abs = bundle_aggregate_dir
+    if not bundle_aggregate_dir.is_absolute():
+        aggregate_dir_abs = dataset / bundle_aggregate_dir
+    aggregate_dir_rel = _relative(aggregate_dir_abs)
 
     lines = ["#!/bin/bash", f"#SBATCH --job-name={job_name}"]
     if account:
@@ -1599,11 +1630,9 @@ def _render_sockeye_script(
     )
     if resume_completed:
         lines.append("RESUME_SUMMARY=${RESUMES[$IDX]}")
-    lines.extend(
-        [
-            'cd "$DATASET"',
-        ]
-    )
+    lines.append('cd "$DATASET"')
+    if bundle:
+        lines.append('mkdir -p "' + aggregate_dir_rel + '"')
     command = [
         "badc",
         "infer",
@@ -1636,6 +1665,21 @@ def _render_sockeye_script(
         )
     lines.append("echo Running: ${CMD[*]}")
     lines.append("${CMD[@]}")
+    if bundle:
+        lines.extend(
+            [
+                'RECORDING=$(basename "$OUTPUT")',
+                f'AGGREGATE_DIR="{aggregate_dir_rel}"',
+                'SUMMARY_PATH="$AGGREGATE_DIR/${RECORDING}_summary.csv"',
+                'PARQUET_PATH="$AGGREGATE_DIR/${RECORDING}.parquet"',
+                'AGG_CMD=(badc infer aggregate "$OUTPUT" --manifest "$MANIFEST" --output "$SUMMARY_PATH" --parquet "$PARQUET_PATH")',
+                "echo Running: ${AGG_CMD[*]}",
+                "${AGG_CMD[@]}",
+                f'BUNDLE_CMD=(badc report bundle --parquet "$PARQUET_PATH" --output-dir "$AGGREGATE_DIR" --bucket-minutes {bundle_bucket_minutes})',
+                "echo Running: ${BUNDLE_CMD[*]}",
+                "${BUNDLE_CMD[@]}",
+            ]
+        )
     return "\n".join(lines) + "\n"
 
 

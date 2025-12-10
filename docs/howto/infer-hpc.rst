@@ -24,7 +24,10 @@ GPU planning
   entire plan without hand-editing bash snippets. Store the command string in the job log for
   provenance. When re-running an interrupted array, add ``--sockeye-resume-completed`` so the
   generated script automatically passes ``--resume-summary`` if the prior telemetry
-  ``*.summary.json`` exists—finished chunks are skipped automatically.
+  ``*.summary.json`` exists—finished chunks are skipped automatically. Use ``--sockeye-bundle`` when
+  generating the script to automatically append ``badc infer aggregate`` + ``badc report bundle`` per
+  manifest, leaving behind the CSV/Parquet/DuckDB exports (quicklook, parquet report, DuckDB) right
+  after each recording finishes.
 
 Notebook hand-off
 -----------------

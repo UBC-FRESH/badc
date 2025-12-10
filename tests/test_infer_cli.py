@@ -447,3 +447,43 @@ def test_infer_orchestrate_sockeye_script_resume(tmp_path: Path) -> None:
     text = script_path.read_text(encoding="utf-8")
     assert "RESUMES=(" in text
     assert 'CMD+=("--resume-summary"' in text
+
+
+def test_infer_orchestrate_sockeye_script_bundle(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset_sockeye_bundle"
+    (dataset / ".datalad").mkdir(parents=True)
+    manifest_dir = dataset / "manifests"
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    chunk_path = dataset / "chunks" / "rec" / "chunk_a.wav"
+    chunk_path.parent.mkdir(parents=True, exist_ok=True)
+    chunk_path.write_text("audio", encoding="utf-8")
+    manifest = manifest_dir / "rec.csv"
+    manifest.write_text(
+        "recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes\n"
+        f"rec,chunk_a,{chunk_path},0,1000,0,hash,\n",
+        encoding="utf-8",
+    )
+    script_path = tmp_path / "sockeye_bundle.sh"
+    result = runner.invoke(
+        app,
+        [
+            "infer",
+            "orchestrate",
+            str(dataset),
+            "--manifest-dir",
+            str(manifest_dir),
+            "--include-existing",
+            "--sockeye-script",
+            str(script_path),
+            "--sockeye-bundle",
+            "--sockeye-bundle-aggregate-dir",
+            "aggregates",
+            "--sockeye-bundle-bucket-minutes",
+            "15",
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    text = script_path.read_text(encoding="utf-8")
+    assert "badc infer aggregate" in text
+    assert "badc report bundle" in text
+    assert "--bucket-minutes 15" in text
