@@ -8,6 +8,8 @@ Stages:
 4. Report: generate CSV summaries, charts, and thesis-ready tables/figures.
 
 ## Chunk stage
+- End-to-end workflow captured in ``docs/howto/pipeline-e2e.rst`` (chunk → infer → bundle). This guide
+  is now the canonical reference for operators running the Typer CLIs sequentially.
 - Inputs: DataLad-tracked audio, chunk-size hint from probe utility, optional overlap (e.g., 2 s) to avoid boundary misses.
 - Temp layout: `artifacts/chunk/<recording>/<chunk_id>.wav` plus `chunk_manifest.csv`.
 - CLI commands: `badc chunk probe`, `badc chunk split`, `badc chunk run` (future, orchestrates splitting + manifest writing).

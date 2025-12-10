@@ -135,6 +135,22 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
   events (the run command prints the exact log path).
 - `badc gpus` — lists detected GPUs via `nvidia-smi` so we can size the HawkEars worker pool.
 
+## End-to-end CLI workflow
+
+Need to move from raw audio to DuckDB-ready detections in one sitting? Follow
+``docs/howto/pipeline-e2e.rst`` for the full chunk → infer → aggregate/report loop. The guide shows:
+
+1. Running ``badc chunk orchestrate --plan-json … --apply`` so every recording writes
+   ``artifacts/chunks/<recording>/.chunk_status.json``.
+2. Feeding that plan directly into ``badc infer orchestrate --chunk-plan … --apply --bundle`` so
+   detections, telemetry summaries, quicklook CSVs, Parquet reports, and DuckDB bundles stay in sync.
+3. Capturing the outputs with ``datalad save`` / ``datalad push`` and opening the refreshed DuckDB
+   bundles in notebooks (see ``docs/notebooks/aggregate_analysis.ipynb``).
+
+Sockeye operators can reuse the same plan file with ``--sockeye-script``; the generated sbatch
+template now refuses to launch array tasks when the chunk status file isn’t ``completed``, preventing
+GPU waste on half-written manifests.
+
 ### Attaching the sample dataset
 
 The bogus DataLad dataset is now a git submodule at `data/datalad/bogus`. After cloning the repo:

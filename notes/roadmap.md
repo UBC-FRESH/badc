@@ -78,9 +78,11 @@ execution notes live alongside task-specific files under `notes/`.
       load the ``label_summary`` / ``recording_summary`` / ``timeline_summary`` views directly in pandas.
       The CLI docs/how-to + notebook now reference the helper and document the datastore schema, so
       Phase 2 aggregation is considered complete.)*
-- [ ] Wire Typer CLI commands for end-to-end runs (`badc chunk`, `badc infer`, `badc aggregate`,
-      `badc report`). *(Scaffolded chunk/infer commands exist; `notes/pipeline-plan.md` now captures
-      the full flow.)*
+- [x] Wire Typer CLI commands for end-to-end runs (`badc chunk`, `badc infer`, `badc aggregate`,
+      `badc report`). *(`docs/howto/pipeline-e2e.rst` now demonstrates the chunk → infer →
+      aggregate/report workflow using `badc chunk orchestrate --plan-json … --apply` plus
+      `badc infer orchestrate --chunk-plan … --apply --bundle`, so operators can reproduce the
+      entire pipeline (including Sockeye scripts) without hand-written glue.)*
 - [x] Add CLI plumbing for DataLad attachments (`badc data connect`, `badc data disconnect`,
       `badc data status`) so deployments can swap between bogus/test and production datasets at
       runtime. *(Implemented via `badc data connect/disconnect/status`, writing to

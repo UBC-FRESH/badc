@@ -1,3 +1,21 @@
+# 2025-12-10 — End-to-end CLI workflow doc
+- Added ``docs/howto/pipeline-e2e.rst`` plus README pointers so operators can follow the exact
+  chunk → infer → aggregate/report steps (`badc chunk orchestrate --plan-json … --apply` feeding
+  directly into `badc infer orchestrate --chunk-plan … --apply --bundle`, then DataLad save/push).
+  The guide also covers Sockeye script generation and references the DuckDB notebook for Phase 2
+  review.
+- Updated ``docs/howto/index.rst`` to include the new guide, refreshed ``notes/pipeline-plan.md`` to
+  point at it, and marked the Phase 2 roadmap bullet (“Wire Typer CLI commands for end-to-end runs”)
+  complete.
+- README now has a dedicated “End-to-end CLI workflow” section linking to the doc and summarizing the
+  automation story.
+- Commands executed:
+  - `source .venv/bin/activate && ruff format src tests`
+  - `source .venv/bin/activate && ruff check src tests`
+  - `source .venv/bin/activate && pytest`
+  - `source .venv/bin/activate && sphinx-build -b html docs _build/html -W`
+  - `source .venv/bin/activate && pre-commit run --all-files`
+
 # 2025-12-10 — Inference orchestrator chunk-status gating
 - `badc infer orchestrate` now inspects `<dataset>/<chunks-dir>/<recording>/.chunk_status.json`
   (defaults to `artifacts/chunks`) before emitting plans. The CLI aborts unless each recording reports

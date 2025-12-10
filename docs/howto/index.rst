@@ -11,5 +11,6 @@ or on Sockeye, and aggregating detections).
    chunk-audio
    infer-local
    infer-hpc
+   pipeline-e2e
    datalad-run
    aggregate-results
