@@ -29,7 +29,7 @@ Usage::
    badc infer run MANIFEST.csv [--max-gpus N] [--cpu-workers N]
        [--output-dir PATH] [--runner-cmd CMD | --use-hawkears]
        [--hawkears-arg ARG ...] [--max-retries N]
-       [--print-datalad-run]
+       [--resume-summary PATH] [--print-datalad-run]
 
 Key options:
 
@@ -56,6 +56,10 @@ Key options:
    per manifest/timestamp under ``data/telemetry/infer`` or ``<dataset>/artifacts/telemetry``. Each
    run also writes a ``*.summary.json`` next to the log capturing per-worker/per-chunk outcomes for
    resumable workflows.
+``--resume-summary``
+   Provide a previously written ``*.summary.json`` (usually next to the telemetry log) to skip
+   chunks already marked ``success``. Helpful when resuming an interrupted run or iterating on a
+   subset of failures.
 ``--print-datalad-run``
    Instead of running inference, emit a ``datalad run`` command tailored to the manifest/output pair.
 
@@ -95,6 +99,9 @@ Option reference
    * - ``--telemetry-log PATH``
      - Telemetry log file capturing scheduler events.
      - Derived from manifest name
+   * - ``--resume-summary PATH``
+     - Scheduler summary JSON for resuming interrupted runs.
+     - Disabled
    * - ``--print-datalad-run``
      - Emit provenance-friendly command instead of executing jobs.
      - Disabled
@@ -118,6 +125,7 @@ Help excerpt
      --hawkears-arg TEXT      Extra argument to pass to HawkEars (repeatable).
      --max-retries INTEGER    Maximum retries per chunk.
      --telemetry-log PATH     Telemetry log path (JSONL).
+     --resume-summary PATH    Skip chunks marked success in this scheduler summary JSON.
      --print-datalad-run      Show a ready-to-run `datalad run` command.
      --help                   Show this message and exit.
 
@@ -130,7 +138,8 @@ Workflow notes:
   available) GPU utilization/memory snapshots. The CLI prints the log path; monitor progress via
   ``badc infer monitor --log <file>`` (rich GPU summary) or ``badc telemetry --log <file>`` (plain
   tail). A sibling ``*.summary.json`` file captures the per-worker/per-chunk outcomes so interrupted
-  runs can resume without repeating successful chunks.
+  runs can resume without repeating successful chunks—pass that path to
+  ``--resume-summary <telemetry.summary.json>`` on the next invocation to skip completed jobs.
 * Worker summary: once all jobs finish, ``badc infer run`` prints a per-worker table (GPU/CPU label,
   total jobs, failures, successful retry counts, and failed attempts) so long runs surface retry
   hot spots without diving into telemetry logs.
@@ -309,6 +318,9 @@ Highlights:
 * ``--sockeye-script`` (plus the optional ``--sockeye-*`` overrides) writes a SLURM job-array script
   so Sockeye submissions no longer require hand-written `sbatch` files. Each array task maps to a
   manifest/output pair from the generated plan.
+* ``--resume-completed`` tells ``--apply`` runs to look for the telemetry ``*.summary.json`` that the
+  prior run produced and pass ``--resume-summary`` automatically so only unfinished chunks are
+  retried.
 
 Combine this with :command:`badc chunk orchestrate` to move from chunk plans to inference runs in a
 single workflow.

@@ -79,6 +79,22 @@ Step 4 — Detailed parquet report
    ``timeline.csv``, and ``summary.json`` so Erin can drop them straight into her thesis figures or
    notebooks without running DuckDB herself.
 
+Step 4b — Run the bundle helper (optional)
+------------------------------------------
+
+When you want the quicklook CSVs, parquet bundle, and DuckDB database in one pass, use::
+
+   badc report bundle \
+       --parquet data/datalad/bogus/artifacts/aggregate/detections.parquet \
+       --output-dir data/datalad/bogus/artifacts/aggregate \
+       --bucket-minutes 30
+
+The command derives ``detections_quicklook/``, ``detections_parquet_report/``,
+``detections_duckdb_exports/``, and ``detections.duckdb`` automatically. Toggle individual stages
+with ``--no-quicklook`` / ``--no-parquet-report`` / ``--no-duckdb-report`` or override specific
+paths (e.g., ``--duckdb-database``) when needed. This is the fastest way to package Phase 2 review
+artifacts for Erin after each inference run.
+
 Step 5 — Materialize a DuckDB database
 --------------------------------------
 

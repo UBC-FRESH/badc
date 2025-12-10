@@ -109,3 +109,52 @@ def test_report_duckdb_cli(tmp_path: Path) -> None:
     assert (export_dir / "label_summary.csv").exists()
     assert (export_dir / "recording_summary.csv").exists()
     assert (export_dir / "timeline.csv").exists()
+
+
+def test_report_bundle_cli(tmp_path: Path) -> None:
+    pytest.importorskip("duckdb")
+    parquet_path = tmp_path / "detections.parquet"
+    records = _make_records(tmp_path)
+    write_parquet(records, parquet_path)
+    bundle_dir = tmp_path / "bundle"
+    result = runner.invoke(
+        app,
+        [
+            "report",
+            "bundle",
+            "--parquet",
+            str(parquet_path),
+            "--output-dir",
+            str(bundle_dir),
+            "--bucket-minutes",
+            "1",
+            "--parquet-top-labels",
+            "2",
+            "--parquet-top-recordings",
+            "2",
+            "--quicklook-top-labels",
+            "2",
+            "--quicklook-top-recordings",
+            "2",
+            "--duckdb-top-labels",
+            "2",
+            "--duckdb-top-recordings",
+            "2",
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    quicklook_dir = bundle_dir / "detections_quicklook"
+    parquet_report_dir = bundle_dir / "detections_parquet_report"
+    duckdb_db = bundle_dir / "detections.duckdb"
+    duckdb_exports = bundle_dir / "detections_duckdb_exports"
+    assert (quicklook_dir / "labels.csv").exists()
+    assert (quicklook_dir / "recordings.csv").exists()
+    assert (quicklook_dir / "chunks.csv").exists()
+    assert (parquet_report_dir / "labels.csv").exists()
+    assert (parquet_report_dir / "recordings.csv").exists()
+    assert (parquet_report_dir / "timeline.csv").exists()
+    assert (parquet_report_dir / "summary.json").exists()
+    assert duckdb_db.exists()
+    assert (duckdb_exports / "label_summary.csv").exists()
+    assert (duckdb_exports / "recording_summary.csv").exists()
+    assert (duckdb_exports / "timeline.csv").exists()

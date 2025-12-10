@@ -224,3 +224,60 @@ Behavior
 * When ``--export-dir`` is provided, writes CSV snapshots mirroring the console output.
 * Leaves behind the DuckDB database so analysts can run ``duckdb artifacts/aggregate/detections.duckdb``
   and continue exploring with SQL or notebooks.
+
+``badc report bundle``
+----------------------
+
+Create the full Phase 2 artifact set (quicklook CSVs, parquet report bundle, DuckDB database +
+exports) with a single command. This is ideal after every inference run so Erin can review the same
+tables/plots without re-running CLI commands one-by-one.
+
+Usage::
+
+   badc report bundle \
+       --parquet data/datalad/bogus/artifacts/aggregate/detections.parquet \
+       --output-dir data/datalad/bogus/artifacts/aggregate \
+       --bucket-minutes 30
+
+Behavior:
+
+* Derives paths from the Parquet stem (e.g., ``detections_quicklook``) unless ``--output-dir`` or the
+  per-artifact overrides are supplied.
+* Invokes ``badc report quicklook`` (unless ``--no-quicklook``), ``badc report parquet`` (unless
+  ``--no-parquet-report``), and ``badc report duckdb`` (unless ``--no-duckdb-report``) with the
+  provided sizing arguments.
+* Writes CSVs to ``<stem>_quicklook`` and ``<stem>_parquet_report``, materializes
+  ``<stem>.duckdb``, and mirrors DuckDB summaries into ``<stem>_duckdb_exports``.
+
+Key options:
+
+``--parquet``
+   Canonical detections file to summarize (required).
+``--output-dir`` / ``--run-prefix``
+   Base directory and prefix for derived folders/files. Defaults to ``parquet.parent`` and
+   ``parquet.stem``.
+``--quicklook/--no-quicklook`` etc.
+   Toggle individual stages.
+``--parquet-top-labels``, ``--quicklook-top-labels``, ``--duckdb-top-labels`` …
+   Control how many rows each report prints/exports.
+``--bucket-minutes``
+   Shared bucket size for the parquet + DuckDB timeline views.
+
+Example directory layout::
+
+   artifacts/aggregate/
+   ├── detections.parquet
+   ├── detections_quicklook/
+   │   ├── labels.csv
+   │   ├── recordings.csv
+   │   └── chunks.csv
+   ├── detections_parquet_report/
+   │   ├── labels.csv
+   │   ├── recordings.csv
+   │   ├── timeline.csv
+   │   └── summary.json
+   ├── detections.duckdb
+   └── detections_duckdb_exports/
+       ├── label_summary.csv
+       ├── recording_summary.csv
+       └── timeline.csv

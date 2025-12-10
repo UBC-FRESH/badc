@@ -55,6 +55,23 @@ def test_render_datalad_run(tmp_path: Path) -> None:
     assert "--hawkears-arg --min_score" in command
 
 
+def test_render_datalad_run_with_resume(tmp_path: Path) -> None:
+    dataset = tmp_path / "dataset"
+    dataset.mkdir()
+    plan = InferPlan(
+        manifest_path=dataset / "manifests" / "rec.csv",
+        output_dir=dataset / "artifacts" / "infer",
+        telemetry_log=dataset / "artifacts" / "telemetry" / "rec.jsonl",
+    )
+    plan.manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    plan.manifest_path.write_text("")
+    summary = dataset / "artifacts" / "telemetry" / "rec.summary.json"
+    summary.parent.mkdir(parents=True, exist_ok=True)
+    summary.write_text("{}", encoding="utf-8")
+    command = render_datalad_run(plan, dataset, resume_summary=summary)
+    assert "--resume-summary artifacts/telemetry/rec.summary.json" in command
+
+
 def test_load_manifest_paths_from_plan(tmp_path: Path) -> None:
     csv_plan = tmp_path / "plan.csv"
     csv_plan.write_text("manifest_path\nfoo.csv\n")

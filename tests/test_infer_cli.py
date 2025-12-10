@@ -21,11 +21,28 @@ def _write_chunk(path: Path) -> None:
 
 def test_infer_run_placeholder(tmp_path: Path) -> None:
     manifest = tmp_path / "manifest.csv"
+    chunk_path = tmp_path / "chunk.wav"
+    _write_chunk(chunk_path)
+    telemetry_log = tmp_path / "telemetry.jsonl"
+    output_dir = tmp_path / "outputs"
     manifest.write_text(
         "recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes\n"
-        "rec1,chunk_a,data/datalad/bogus/audio/foo.wav,0,1000,0,hash,\n"
+        f"rec1,chunk_a,{chunk_path},0,1000,0,hash,\n"
     )
-    result = runner.invoke(app, ["infer", "run", str(manifest), "--runner-cmd", "echo stub"])
+    result = runner.invoke(
+        app,
+        [
+            "infer",
+            "run",
+            str(manifest),
+            "--runner-cmd",
+            "echo stub",
+            "--output-dir",
+            str(output_dir),
+            "--telemetry-log",
+            str(telemetry_log),
+        ],
+    )
     assert result.exit_code == 0
     assert "Processed 1 jobs" in result.stdout
     assert "Telemetry log" in result.stdout

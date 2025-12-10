@@ -63,10 +63,10 @@ execution notes live alongside task-specific files under `notes/`.
       support and performance tuning for multi-hour recordings.)*
 - [ ] Design the aggregated “bird call events” datastore (likely DuckDB/Parquet) and expose query
       helpers for down-stream stats/figures. *(Canonical Parquet export + ``badc report summary``,
-      ``badc report quicklook``, ``badc report parquet``, and the new ``badc report duckdb`` command
-      now surface grouped counts, bucketed timelines, CSV/JSON artifacts, and a ready-to-query DuckDB
-      database for Erin. Remaining work: richer notebook gallery + DuckDB views for cross-project
-      comparisons.)*
+      ``badc report quicklook``, ``badc report parquet``, ``badc report duckdb``, and the new
+      ``badc report bundle`` command now surface grouped counts, bucketed timelines, CSV/JSON
+      artifacts, and a ready-to-query DuckDB database for Erin. Remaining work: richer notebook
+      gallery + DuckDB views for cross-project comparisons.)*
 - [ ] Wire Typer CLI commands for end-to-end runs (`badc chunk`, `badc infer`, `badc aggregate`,
       `badc report`). *(Scaffolded chunk/infer commands exist; `notes/pipeline-plan.md` now captures
       the full flow.)*
@@ -114,6 +114,9 @@ execution notes live alongside task-specific files under `notes/`.
    the submission templates referenced in `docs/howto/infer-hpc.rst`.
 5. **Regression scaffolding** — add smoke tests/notebooks that exercise Parquet exports end-to-end so
    CI can catch schema regressions without running HawkEars.
+6. **Bogus dataset test refresh** — now that the bogus dataset carries five real audio clips (mix of
+   bird vocalizations and noise), re-plan every test/smoke harness that depends on it so durations,
+   fixture sizes, and expected detections stay accurate.
 
 ## Backlog & Ideas
 - GPU-aware scheduling heuristics that prioritise short chunks when VRAM is scarce.

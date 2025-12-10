@@ -166,7 +166,9 @@ Expected outputs:
 * Telemetry log inside ``data/datalad/bogus/artifacts/telemetry/…``
 * Console summary listing telemetry path + job counts, plus a per-worker success/failure/ retry table
   so CPU vs. GPU bottlenecks and flaky chunks stand out. A ``*.summary.json`` file lands next to the
-  telemetry log capturing every chunk's status for resumable runs.
+  telemetry log capturing every chunk's status for resumable runs. Re-run the command with
+  ``--resume-summary <telemetry.summary.json>`` (the CLI prints the exact path) to skip chunks that
+  already finished successfully after an interruption.
 
 Step 3 — Monitor telemetry
 --------------------------
@@ -233,7 +235,9 @@ them:
 The command prints a Rich table, saves CSV/JSON plans for later, and (with ``--apply``) runs
 ``badc infer run`` for every manifest automatically. When the dataset contains ``.datalad`` and the
 CLI is available, the applied runs are wrapped in ``datalad run`` by default (add
-``--no-record-datalad`` to perform plain executions).
+``--no-record-datalad`` to perform plain executions). Include ``--resume-completed`` when rerunning
+plans so the CLI looks for the prior telemetry ``*.summary.json`` per manifest and forwards it via
+``--resume-summary``—only unfinished chunks will be scheduled.
 
 Smoke tests
 -----------

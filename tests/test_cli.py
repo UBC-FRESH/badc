@@ -125,6 +125,74 @@ def test_infer_run_stub_cpu_workers(tmp_path) -> None:
     assert data["jobs"]["chunk_a"]["status"] == "success"
 
 
+def test_infer_run_resume_skips_completed(tmp_path) -> None:
+    chunk_path = tmp_path / "chunk.wav"
+    chunk_path.write_text("stub audio", encoding="utf-8")
+    manifest = tmp_path / "manifest.csv"
+    manifest.write_text(
+        "recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes\n"
+        f"rec1,chunk_a,{chunk_path},0,1000,0,hash,\n"
+        f"rec1,chunk_b,{chunk_path},0,1000,0,hash,\n",
+        encoding="utf-8",
+    )
+    summary = tmp_path / "resume.summary.json"
+    summary.write_text(
+        json.dumps(
+            {
+                "jobs": {
+                    "chunk_a": {
+                        "status": "success",
+                        "recording_id": "rec1",
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    output_dir = tmp_path / "outputs"
+    telemetry_log = tmp_path / "telemetry.jsonl"
+    result = runner.invoke(
+        app,
+        [
+            "infer",
+            "run",
+            str(manifest),
+            "--output-dir",
+            str(output_dir),
+            "--telemetry-log",
+            str(telemetry_log),
+            "--resume-summary",
+            str(summary),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    assert "Skipping 1 chunk" in result.stdout
+    rec_dir = output_dir / "rec1"
+    assert rec_dir.exists()
+    assert not (rec_dir / "chunk_a.json").exists()
+    assert (rec_dir / "chunk_b.json").exists()
+
+
+def test_load_resume_chunks_handles_missing_recording(tmp_path) -> None:
+    summary = tmp_path / "resume.summary.json"
+    summary.write_text(
+        json.dumps(
+            {
+                "jobs": {
+                    "chunk_a": {"status": "success"},
+                    "chunk_b": {"status": "success", "recording_id": "rec1"},
+                    "chunk_c": {"status": "failure"},
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    entries = cli_main._load_resume_chunks(summary)
+    assert (None, "chunk_a") in entries
+    assert ("rec1", "chunk_b") in entries
+    assert (None, "chunk_c") not in entries
+
+
 def test_run_scheduler_tracks_retries(tmp_path, monkeypatch) -> None:
     chunk_path = tmp_path / "chunk.wav"
     chunk_path.write_text("stub audio", encoding="utf-8")
@@ -190,6 +258,89 @@ def test_infer_print_datalad_run(tmp_path) -> None:
     assert result.exit_code == 0
     assert "datalad run" in result.stdout
     assert "--telemetry-log" in result.stdout
+
+
+def test_infer_print_datalad_run_with_resume_summary(tmp_path) -> None:
+    dataset = tmp_path / "dataset"
+    (dataset / ".datalad").mkdir(parents=True)
+    chunk_path = dataset / "chunk.wav"
+    chunk_path.write_text("audio", encoding="utf-8")
+    manifest = dataset / "manifest.csv"
+    manifest.write_text(
+        "recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes\n"
+        f"rec1,chunk_a,{chunk_path},0,1000,0,hash,\n",
+        encoding="utf-8",
+    )
+    summary = dataset / "artifacts" / "telemetry" / "resume.summary.json"
+    summary.parent.mkdir(parents=True, exist_ok=True)
+    summary.write_text(json.dumps({"jobs": {}}), encoding="utf-8")
+    result = runner.invoke(
+        app,
+        [
+            "infer",
+            "run",
+            str(manifest),
+            "--print-datalad-run",
+            "--resume-summary",
+            str(summary),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    assert "--resume-summary" in result.stdout
+    assert "artifacts/telemetry/resume.summary.json" in result.stdout
+
+
+def test_infer_orchestrate_apply_resumes_completed(tmp_path, monkeypatch) -> None:
+    dataset = tmp_path / "dataset"
+    (dataset / ".datalad").mkdir(parents=True)
+    chunk_path = dataset / "audio.wav"
+    chunk_path.write_text("audio", encoding="utf-8")
+    manifest_dir = dataset / "manifests"
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    manifest = manifest_dir / "rec1.csv"
+    manifest.write_text(
+        "recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes\n"
+        f"rec1,chunk_a,{chunk_path},0,1000,0,hash,\n",
+        encoding="utf-8",
+    )
+    telemetry_log = dataset / "artifacts" / "telemetry" / "infer" / "rec1.jsonl"
+    summary_path = telemetry_log.with_suffix(telemetry_log.suffix + ".summary.json")
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path.write_text(
+        json.dumps(
+            {
+                "jobs": {
+                    "chunk_a": {
+                        "status": "success",
+                        "recording_id": "rec1",
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    captured: list[Path | None] = []
+
+    def fake_infer_run(**kwargs):
+        captured.append(kwargs.get("resume_summary"))
+
+    monkeypatch.setattr(cli_main, "infer_run", fake_infer_run)
+    result = runner.invoke(
+        app,
+        [
+            "infer",
+            "orchestrate",
+            str(dataset),
+            "--manifest-dir",
+            "manifests",
+            "--apply",
+            "--resume-completed",
+            "--stub-runner",
+            "--no-record-datalad",
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    assert captured == [summary_path]
 
 
 def test_data_status_summary(tmp_path, monkeypatch) -> None:

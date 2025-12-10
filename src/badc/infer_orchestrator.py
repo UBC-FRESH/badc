@@ -99,18 +99,23 @@ def build_infer_plan(
     return plans
 
 
-def render_datalad_run(plan: InferPlan, dataset_root: Path) -> str:
+def render_datalad_run(
+    plan: InferPlan, dataset_root: Path, *, resume_summary: Path | None = None
+) -> str:
     """Return a ready-to-run ``datalad run`` command for the provided plan."""
 
     dataset_root = dataset_root.expanduser().resolve()
     manifest_abs = plan.manifest_path.resolve()
     output_abs = plan.output_dir.resolve()
     telemetry_abs = plan.telemetry_log.resolve()
+    resume_rel = None
     try:
         manifest_rel = manifest_abs.relative_to(dataset_root)
         output_rel = output_abs.relative_to(dataset_root)
         recording_output_rel = (output_abs / plan.recording_id).relative_to(dataset_root)
         telemetry_rel = telemetry_abs.relative_to(dataset_root)
+        if resume_summary is not None:
+            resume_rel = resume_summary.resolve().relative_to(dataset_root)
     except ValueError as exc:  # pragma: no cover - defensive
         raise ValueError("Plan paths must live inside the dataset root.") from exc
 
@@ -132,6 +137,9 @@ def render_datalad_run(plan: InferPlan, dataset_root: Path) -> str:
         cmd += ["--cpu-workers", str(plan.cpu_workers)]
     for arg in plan.hawkears_args:
         cmd += ["--hawkears-arg", arg]
+    if resume_summary is not None:
+        resume_rel = resume_rel if resume_rel is not None else resume_summary
+        cmd += ["--resume-summary", str(resume_rel)]
 
     return (
         f'datalad run -m "Infer {plan.recording_id}" '

@@ -54,3 +54,19 @@
 - Mock HawkEars runner (fake script) to ensure scheduler distributes work across GPUs.
 - Property tests verifying each chunk is processed exactly once.
 - Telemetry tests checking JSONL entries include GPU metadata and runtimes.
+
+## Resume workflow validation — 2025-12-10
+- Ran `badc infer run data/datalad/bogus/manifests/XXXX-000_20251001_093000.csv --cpu-workers 1`
+  (stub runner) to generate a fresh telemetry pair at
+  `data/datalad/bogus/artifacts/telemetry/XXXX-000_20251001_093000_20251210T025842Z.jsonl`
+  + `.summary.json` (15 chunks completed across gpu-0/gpu-1/cpu-0).
+- Re-ran the same command with
+  `--resume-summary data/datalad/bogus/artifacts/telemetry/XXXX-000_20251001_093000_20251210T025842Z.jsonl.summary.json`
+  and confirmed the CLI skipped all 15 chunks and printed the orphan/skip diagnostics.
+- Exercised the orchestrator path with
+  `badc infer orchestrate data/datalad/bogus --manifest-dir manifests --include-existing --apply --stub-runner --no-record-datalad`
+  to create the deterministic telemetry log
+  `data/datalad/bogus/artifacts/telemetry/infer/XXXX-000_20251001_093000.jsonl` (plus summary).
+  A follow-up invocation adding `--resume-completed` reused that summary automatically and skipped
+  every chunk, validating the dataset-scale resume flag without requiring manual `--resume-summary`
+  plumbing per manifest.

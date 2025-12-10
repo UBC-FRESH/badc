@@ -877,6 +877,13 @@ def infer_run(
             help="Show a ready-to-run `datalad run` command (no inference executed).",
         ),
     ] = False,
+    resume_summary: Annotated[
+        Path | None,
+        typer.Option(
+            "--resume-summary",
+            help="Skip chunks already marked success in this scheduler summary JSON.",
+        ),
+    ] = None,
 ) -> None:
     """Run HawkEars (or a custom runner) for every chunk in a manifest.
 
@@ -916,12 +923,38 @@ def infer_run(
         )
 
     jobs = load_jobs(manifest)
+    resume_entries: set[tuple[str | None, str]] = set()
+    if resume_summary:
+        resume_entries = _load_resume_chunks(resume_summary)
+        if resume_entries:
+            console.print(
+                f"Resume summary {resume_summary} has {len(resume_entries)} completed chunk(s).",
+                style="yellow",
+            )
     extra_args = hawkears_arg or []
     workers, detection_note = plan_workers(max_gpus=max_gpus)
     if detection_note:
         console.print(detection_note, style="yellow")
+    if resume_entries:
+        before = len(jobs)
+        jobs = [job for job in jobs if not _should_skip_job(job, resume_entries)]
+        skipped = before - len(jobs)
+        if skipped:
+            console.print(f"Skipping {skipped} chunk(s) already completed.", style="yellow")
+        orphaned = len(resume_entries) - skipped
+        if orphaned > 0:
+            console.print(
+                f"{orphaned} chunk entry(ies) from the summary were not present in this manifest.",
+                style="yellow",
+            )
     if not jobs:
-        console.print("No jobs found in manifest.", style="yellow")
+        if resume_entries:
+            console.print(
+                "All chunks in this manifest are already marked complete in the resume summary.",
+                style="yellow",
+            )
+        else:
+            console.print("No jobs found in manifest.", style="yellow")
         return
 
     worker_slots: list[tuple[GPUWorker | None, str]] = []
@@ -966,6 +999,7 @@ def infer_run(
             use_hawkears=use_hawkears,
             hawkears_args=extra_args,
             cpu_workers=cpu_workers,
+            resume_summary=resume_summary,
         )
         return
 
@@ -1138,6 +1172,13 @@ def infer_orchestrate(
         str | None,
         typer.Option("--sockeye-mem", help="`#SBATCH --mem` value (e.g., 64G)."),
     ] = None,
+    resume_completed: Annotated[
+        bool,
+        typer.Option(
+            "--resume-completed/--rerun-all",
+            help="When applying, reuse existing telemetry summaries to skip completed chunks.",
+        ),
+    ] = False,
 ) -> None:
     """Plan inference runs across manifests without executing them."""
 
@@ -1226,8 +1267,24 @@ def infer_orchestrate(
             console.print(f"[cyan]Inferring {plan.recording_id}[/]")
             plan.telemetry_log.parent.mkdir(parents=True, exist_ok=True)
             plan.output_dir.mkdir(parents=True, exist_ok=True)
+            resume_arg: Path | None = None
+            if resume_completed:
+                summary_path = _telemetry_summary_path(plan.telemetry_log)
+                if summary_path.exists():
+                    resume_arg = summary_path
+                    console.print(
+                        f"Resume enabled; skipping completed chunks via {summary_path}.",
+                        style="yellow",
+                    )
+                else:
+                    console.print(
+                        f"Resume enabled but no summary at {summary_path}; running full manifest.",
+                        style="yellow",
+                    )
             if use_datalad:
-                command = infer_orchestrator.render_datalad_run(plan, dataset)
+                command = infer_orchestrator.render_datalad_run(
+                    plan, dataset, resume_summary=resume_arg
+                )
                 try:
                     subprocess.run(shlex.split(command), cwd=dataset, check=True)
                 except subprocess.CalledProcessError as exc:
@@ -1245,6 +1302,7 @@ def infer_orchestrate(
                     use_hawkears=plan.use_hawkears,
                     hawkears_arg=list(plan.hawkears_args),
                     cpu_workers=plan.cpu_workers,
+                    resume_summary=resume_arg,
                 )
 
 
@@ -1369,6 +1427,7 @@ def _run_scheduler(
                         "retries": getattr(job_result, "retries", None),
                         "output": str(getattr(job_result, "output_path", job_output)),
                         "worker": label,
+                        "recording_id": job.recording_id,
                     }
             except Exception as exc:  # pragma: no cover - propagated to main thread
                 errors.append(exc)
@@ -1383,6 +1442,7 @@ def _run_scheduler(
                         "error": str(exc),
                         "attempts": getattr(exc, "attempts", None),
                         "worker": label,
+                        "recording_id": job.recording_id,
                     }
             finally:
                 job_queue.task_done()
@@ -1408,7 +1468,7 @@ def _write_scheduler_summary(
 ) -> None:
     """Persist scheduler metadata alongside the telemetry log for resume workflows."""
 
-    summary_path = telemetry_path.with_suffix(telemetry_path.suffix + ".summary.json")
+    summary_path = _telemetry_summary_path(telemetry_path)
     payload = {
         "telemetry_log": str(telemetry_path),
         "workers": worker_summary,
@@ -1417,6 +1477,47 @@ def _write_scheduler_summary(
     summary_path.parent.mkdir(parents=True, exist_ok=True)
     summary_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     console.print(f"Scheduler summary: {summary_path}")
+
+
+def _telemetry_summary_path(telemetry_path: Path) -> Path:
+    return telemetry_path.with_suffix(telemetry_path.suffix + ".summary.json")
+
+
+def _load_resume_chunks(summary_path: Path) -> set[tuple[str | None, str]]:
+    summary_path = summary_path.expanduser()
+    try:
+        raw = summary_path.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:  # pragma: no cover - defensive
+        raise typer.BadParameter(
+            f"Resume summary {summary_path} does not exist.", param_hint="resume-summary"
+        ) from exc
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise typer.BadParameter(
+            f"Failed to parse resume summary {summary_path}: {exc}", param_hint="resume-summary"
+        ) from exc
+    jobs = data.get("jobs") or {}
+    entries: set[tuple[str | None, str]] = set()
+    for chunk_id, meta in jobs.items():
+        if not isinstance(meta, dict):
+            continue
+        if meta.get("status") != "success":
+            continue
+        recording_id = meta.get("recording_id")
+        entries.add((recording_id, chunk_id))
+    return entries
+
+
+def _should_skip_job(job: InferenceJob, resume_entries: set[tuple[str | None, str]]) -> bool:
+    if not resume_entries:
+        return False
+    key = (job.recording_id, job.chunk_id)
+    if key in resume_entries:
+        return True
+    if (None, job.chunk_id) in resume_entries:
+        return True
+    return False
 
 
 def _render_sockeye_script(
@@ -1571,6 +1672,7 @@ def _print_datalad_run_instructions(
     use_hawkears: bool,
     hawkears_args: Sequence[str],
     cpu_workers: int,
+    resume_summary: Path | None,
 ) -> None:
     """Render a ``datalad run`` command for the provided jobs.
 
@@ -1597,6 +1699,9 @@ def _print_datalad_run_instructions(
         Additional HawkEars CLI flags.
     cpu_workers : int
         Number of CPU workers to encode; relevant when no GPUs are present.
+    resume_summary : Path, optional
+        Scheduler summary JSON produced by a previous run; when provided the generated
+        command includes ``--resume-summary`` so successful chunks are skipped.
 
     Raises
     ------
@@ -1646,6 +1751,8 @@ def _print_datalad_run_instructions(
         cmd += ["--hawkears-arg", arg]
     if cpu_workers > 0:
         cmd += ["--cpu-workers", str(cpu_workers)]
+    if resume_summary:
+        cmd += ["--resume-summary", _relativize(resume_summary, dataset_root)]
     datalad_cmd = [
         "datalad",
         "run",
@@ -2510,6 +2617,157 @@ def report_duckdb(
         f"DuckDB database ready at {database}. Run `duckdb {database}` for ad-hoc queries.",
         style="green",
     )
+
+
+@report_app.command("bundle")
+def report_bundle(
+    parquet: Annotated[
+        Path,
+        typer.Option(
+            "--parquet", help="Canonical detections Parquet file.", exists=True, dir_okay=False
+        ),
+    ],
+    output_dir: Annotated[
+        Path | None,
+        typer.Option(
+            "--output-dir",
+            help="Base directory for generated artifacts (defaults to the Parquet parent).",
+        ),
+    ] = None,
+    run_prefix: Annotated[
+        str | None,
+        typer.Option(
+            "--run-prefix",
+            help="Prefix used for derived directories (defaults to the Parquet stem).",
+        ),
+    ] = None,
+    bucket_minutes: Annotated[
+        int,
+        typer.Option(
+            "--bucket-minutes",
+            help="Bucket size (minutes) for the parquet/duckdb timeline aggregations.",
+        ),
+    ] = 60,
+    parquet_top_labels: Annotated[
+        int,
+        typer.Option("--parquet-top-labels", help="Rows to show in the parquet report tables."),
+    ] = 20,
+    parquet_top_recordings: Annotated[
+        int,
+        typer.Option(
+            "--parquet-top-recordings",
+            help="Recording rows to show in the parquet report tables.",
+        ),
+    ] = 10,
+    quicklook_top_labels: Annotated[
+        int,
+        typer.Option("--quicklook-top-labels", help="Label rows for the quicklook view."),
+    ] = 10,
+    quicklook_top_recordings: Annotated[
+        int,
+        typer.Option("--quicklook-top-recordings", help="Recording rows for the quicklook view."),
+    ] = 5,
+    duckdb_top_labels: Annotated[
+        int,
+        typer.Option("--duckdb-top-labels", help="Rows to display from duckdb.label_summary."),
+    ] = 15,
+    duckdb_top_recordings: Annotated[
+        int,
+        typer.Option(
+            "--duckdb-top-recordings",
+            help="Rows to display from duckdb.recording_summary.",
+        ),
+    ] = 10,
+    quicklook: Annotated[
+        bool,
+        typer.Option("--quicklook/--no-quicklook", help="Generate the quicklook CSV bundle."),
+    ] = True,
+    parquet_report: Annotated[
+        bool,
+        typer.Option(
+            "--parquet-report/--no-parquet-report",
+            help="Generate the parquet report (CSV + summary JSON).",
+        ),
+    ] = True,
+    duckdb_report: Annotated[
+        bool,
+        typer.Option(
+            "--duckdb-report/--no-duckdb-report",
+            help="Materialize the DuckDB database and CSV exports.",
+        ),
+    ] = True,
+    quicklook_dir: Annotated[
+        Path | None,
+        typer.Option("--quicklook-dir", help="Override directory for quicklook CSVs."),
+    ] = None,
+    parquet_report_dir: Annotated[
+        Path | None,
+        typer.Option("--parquet-report-dir", help="Override directory for parquet report exports."),
+    ] = None,
+    duckdb_database: Annotated[
+        Path | None,
+        typer.Option("--duckdb-database", help="Override DuckDB database path."),
+    ] = None,
+    duckdb_export_dir: Annotated[
+        Path | None,
+        typer.Option("--duckdb-export-dir", help="Override directory for DuckDB CSV exports."),
+    ] = None,
+) -> None:
+    """Produce quicklook, parquet, and DuckDB artifacts in one pass."""
+
+    parquet = parquet.expanduser()
+    base_dir = (output_dir or parquet.parent).expanduser()
+    prefix = run_prefix or parquet.stem
+    default_quicklook_dir = (base_dir / f"{prefix}_quicklook").expanduser()
+    default_parquet_dir = (base_dir / f"{prefix}_parquet_report").expanduser()
+    default_duckdb_path = (base_dir / f"{prefix}.duckdb").expanduser()
+    default_duckdb_exports = (base_dir / f"{prefix}_duckdb_exports").expanduser()
+    quicklook_dest = (quicklook_dir or default_quicklook_dir).expanduser()
+    parquet_dest = (parquet_report_dir or default_parquet_dir).expanduser()
+    duckdb_path = (duckdb_database or default_duckdb_path).expanduser()
+    duckdb_exports = (duckdb_export_dir or default_duckdb_exports).expanduser()
+
+    console.print(
+        f"Generating aggregation bundle for {parquet} (base directory: {base_dir})", style="bold"
+    )
+
+    if quicklook:
+        console.print(f"[cyan]Quicklook → {quicklook_dest}[/]")
+        report_quicklook(
+            parquet=parquet,
+            top_labels=quicklook_top_labels,
+            top_recordings=quicklook_top_recordings,
+            output_dir=quicklook_dest,
+        )
+    else:
+        console.print("Skipping quicklook bundle.", style="yellow")
+
+    if parquet_report:
+        console.print(f"[cyan]Parquet report → {parquet_dest}[/]")
+        report_parquet(
+            parquet=parquet,
+            top_labels=parquet_top_labels,
+            top_recordings=parquet_top_recordings,
+            bucket_minutes=bucket_minutes,
+            output_dir=parquet_dest,
+        )
+    else:
+        console.print("Skipping parquet report.", style="yellow")
+
+    if duckdb_report:
+        console.print(f"[cyan]DuckDB report → {duckdb_path} (exports: {duckdb_exports})[/]")
+        report_duckdb(
+            parquet=parquet,
+            database=duckdb_path,
+            bucket_minutes=bucket_minutes,
+            top_labels=duckdb_top_labels,
+            top_recordings=duckdb_top_recordings,
+            export_dir=duckdb_exports,
+        )
+    else:
+        console.print("Skipping DuckDB materialization.", style="yellow")
+
+    console.print("Aggregation bundle complete.", style="green")
 
 
 def main() -> None:

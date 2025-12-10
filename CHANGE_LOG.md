@@ -1,3 +1,47 @@
+# 2025-12-10 — Resume-summary CLI wiring
+- ``badc infer run`` now accepts ``--resume-summary`` to skip chunks already marked ``success`` in a
+  scheduler summary JSON. The CLI loads the summary before scheduling, prints skip/orphaned counts,
+  and embeds the flag in ``--print-datalad-run`` output with dataset-relative paths so reruns stay
+  provenance-friendly.
+- ``badc infer orchestrate --apply`` gained ``--resume-completed``: when enabled it looks for the
+  telemetry ``*.summary.json`` per plan, automatically passes ``--resume-summary`` (both for direct
+  runs and the generated ``datalad run`` command), and warns when no summary exists. This makes
+  dataset-scale retries idempotent without manual flag plumbing.
+- Added unit tests covering resume parsing/skip logic, datalad command rendering, and the new
+  orchestrate flag; docs/how-tos now document both ``--resume-summary`` and ``--resume-completed``.
+- Commands executed (reran after the `_telemetry_summary_path` tweak to keep tooling honest):
+  - `source .venv/bin/activate && ruff format src tests`
+  - `source .venv/bin/activate && ruff check src tests`
+  - `source .venv/bin/activate && pytest`
+  - `source .venv/bin/activate && sphinx-build -b html docs _build/html -W`
+  - `source .venv/bin/activate && pre-commit run --all-files`
+
+# 2025-12-10 — Resume workflow validation run
+- Exercised ``--resume-summary`` on the refreshed bogus manifest
+  (``data/datalad/bogus/manifests/XXXX-000_20251001_093000.csv``) and confirmed that the summary at
+  ``data/datalad/bogus/artifacts/telemetry/XXXX-000_20251001_093000_20251210T025842Z.jsonl.summary.json``
+  skips all 15 chunks with the expected console diagnostics.
+- Verified ``badc infer orchestrate --resume-completed``: the first ``--apply`` pass produced
+  ``data/datalad/bogus/artifacts/telemetry/infer/XXXX-000_20251001_093000.jsonl`` and the follow-up
+  run reused its summary automatically, logging the “resume enabled” warning and skipping every chunk
+  without manual CLI flags per manifest.
+- Notes updated in ``notes/inference-plan.md`` with the telemetry paths and workflow recap.
+- Commands executed:
+  - `source .venv/bin/activate && badc infer run data/datalad/bogus/manifests/XXXX-000_20251001_093000.csv --cpu-workers 1`
+  - `source .venv/bin/activate && badc infer run data/datalad/bogus/manifests/XXXX-000_20251001_093000.csv --resume-summary data/datalad/bogus/artifacts/telemetry/XXXX-000_20251001_093000_20251210T025842Z.jsonl.summary.json`
+  - `source .venv/bin/activate && badc infer orchestrate data/datalad/bogus --manifest-dir manifests --include-existing --apply --stub-runner --no-record-datalad`
+  - `source .venv/bin/activate && badc infer orchestrate data/datalad/bogus --manifest-dir manifests --include-existing --apply --stub-runner --no-record-datalad --resume-completed`
+
+# 2025-12-10 — Aggregation bundle helper
+- Added ``badc report bundle`` to run the quicklook, parquet, and DuckDB reporting commands in one
+  pass. The helper derives output directories from the Parquet stem (``detections_quicklook/``,
+  ``detections_parquet_report/``, ``detections_duckdb_exports/``, ``detections.duckdb``) while
+  offering overrides/toggles for each stage.
+- README + CLI/how-to docs now describe the bundle workflow, and ``notes/roadmap.md`` reflects the
+  Phase 2 aggregation progress.
+- Extended ``tests/test_report_cli.py`` with a regression test that exercises the bundle command and
+  verifies all artifacts are produced.
+
 # 2025-12-10 — Scheduler resume + Sockeye array helper
 - ``badc infer run`` now writes a resumable ``*.summary.json`` next to every telemetry log, recording
   per-worker metrics and the status of each chunk. ``run_job`` logs backoff delays, `_run_scheduler`

@@ -23,6 +23,7 @@
       infer_run_config
       list_gpus
       main
+      report_bundle
       report_duckdb
       report_parquet
       report_quicklook
