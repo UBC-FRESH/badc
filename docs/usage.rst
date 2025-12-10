@@ -4,10 +4,6 @@ Usage Overview
 The snippets below show the canonical BADC workflow end to end. Each section links back to the
 corresponding CLI reference page so you can dive deeper when needed.
 
-.. contents::
-   :local:
-   :depth: 1
-
 .. _usage-bootstrap:
 
 Bootstrap a checkout

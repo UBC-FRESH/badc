@@ -1456,6 +1456,13 @@
   - ``pytest``
   - ``sphinx-build -b html docs _build/html -W``
 
+# 2025-12-10 — Docs warning cleanup
+- Removed the redundant local contents block from ``docs/usage.rst`` so Furo stops flagging the
+  page; rebuilt Sphinx docs after cleaning ``docs/_build`` to verify a warning-free build.
+- Commands executed:
+  - ``rm -rf docs/_build``
+  - ``sphinx-build -b html docs _build/html -W``
+
 # 2025-12-09 — Parquet bundle notebook wiring
 - Updated ``docs/notebooks/aggregate_analysis.ipynb`` to load the new ``badc report parquet``
   outputs (labels/recordings/timeline CSVs + ``summary.json``) so plots and tables now reflect the
