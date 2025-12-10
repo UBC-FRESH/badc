@@ -14,6 +14,13 @@ from typing import Iterator
 
 from badc.audio import compute_sha256
 
+try:  # pragma: no cover - optional dependency imported lazily
+    import soundfile as sf  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - soundfile optional
+    sf = None  # type: ignore
+
+SOUNDFILE_BLOCK_FRAMES = 262_144
+
 
 @dataclass
 class ChunkMetadata:
@@ -85,7 +92,23 @@ def iter_chunk_metadata(
 
     output_dir = output_dir or Path("artifacts") / "chunks" / audio_path.stem
     output_dir.mkdir(parents=True, exist_ok=True)
+    suffix = audio_path.suffix.lower()
+    if suffix == ".wav":
+        yield from _iter_wav_chunks(audio_path, chunk_duration_s, overlap_s, output_dir)
+        return
+    if sf is None:
+        raise RuntimeError(
+            "soundfile is required to chunk non-WAV recordings. Install with `pip install soundfile`."
+        )
+    yield from _iter_soundfile_chunks(audio_path, chunk_duration_s, overlap_s, output_dir)
 
+
+def _iter_wav_chunks(
+    audio_path: Path,
+    chunk_duration_s: float,
+    overlap_s: float,
+    output_dir: Path,
+) -> Iterator[ChunkMetadata]:
     with wave.open(str(audio_path), "rb") as src:
         sample_rate = src.getframerate()
         sample_width = src.getsampwidth()
@@ -93,8 +116,8 @@ def iter_chunk_metadata(
         total_frames = src.getnframes()
         chunk_frames = max(int(chunk_duration_s * sample_rate), 1)
         overlap_frames = max(int(overlap_s * sample_rate), 0)
-        start_frame = 0
         overlap_ms = int(overlap_frames / sample_rate * 1000)
+        start_frame = 0
         while start_frame < total_frames:
             end_frame = min(start_frame + chunk_frames, total_frames)
             src.setpos(start_frame)
@@ -108,6 +131,61 @@ def iter_chunk_metadata(
                 dst.setsampwidth(sample_width)
                 dst.setframerate(sample_rate)
                 dst.writeframes(frames)
+            sha256 = compute_sha256(chunk_path)
+            yield ChunkMetadata(
+                chunk_id=chunk_id,
+                path=chunk_path,
+                start_ms=start_ms,
+                end_ms=end_ms,
+                overlap_ms=overlap_ms,
+                sha256=sha256,
+            )
+            start_frame = (
+                end_frame
+                if chunk_frames <= overlap_frames
+                else start_frame + chunk_frames - overlap_frames
+            )
+
+
+def _iter_soundfile_chunks(
+    audio_path: Path,
+    chunk_duration_s: float,
+    overlap_s: float,
+    output_dir: Path,
+) -> Iterator[ChunkMetadata]:
+    assert sf is not None  # for type checkers
+    with sf.SoundFile(str(audio_path), "r") as src:  # type: ignore[arg-type]
+        sample_rate = src.samplerate
+        channels = src.channels
+        total_frames = len(src)
+        chunk_frames = max(int(chunk_duration_s * sample_rate), 1)
+        overlap_frames = max(int(overlap_s * sample_rate), 0)
+        overlap_ms = int(overlap_frames / sample_rate * 1000)
+        start_frame = 0
+        while start_frame < total_frames:
+            end_frame = min(start_frame + chunk_frames, total_frames)
+            frames_to_copy = end_frame - start_frame
+            start_ms = int(start_frame / sample_rate * 1000)
+            end_ms = int(end_frame / sample_rate * 1000)
+            chunk_id = f"{audio_path.stem}_chunk_{start_ms}_{end_ms}"
+            chunk_path = output_dir / f"{chunk_id}.wav"
+            src.seek(start_frame)
+            with sf.SoundFile(  # type: ignore[arg-type]
+                str(chunk_path),
+                "w",
+                samplerate=sample_rate,
+                channels=channels,
+                subtype="PCM_16",
+                format="WAV",
+            ) as dst:
+                remaining = frames_to_copy
+                while remaining > 0:
+                    frames = min(remaining, SOUNDFILE_BLOCK_FRAMES)
+                    data = src.read(frames, dtype="float32", always_2d=True)
+                    if data.size == 0:
+                        break
+                    dst.write(data)
+                    remaining -= len(data)
             sha256 = compute_sha256(chunk_path)
             yield ChunkMetadata(
                 chunk_id=chunk_id,

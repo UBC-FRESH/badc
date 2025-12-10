@@ -1,8 +1,9 @@
 Chunk Audio Recordings
 ======================
 
-Use this guide when you need to turn long WAV recordings into inference-ready chunks across an
-entire DataLad dataset.
+Use this guide when you need to turn long WAV or FLAC recordings into inference-ready chunks across
+an entire DataLad dataset (BADC relies on ``soundfile``/libsndfile behind the scenes and always
+emits WAV chunks for HawkEars).
 
 1. **Probe a representative file** to determine safe chunk durations.
 
@@ -52,7 +53,9 @@ entire DataLad dataset.
    applied job in ``datalad run``; use ``--no-record-datalad`` plus ``--workers N`` when you want
    multi-recording parallelism without provenance tracking.
 
-   Every applied run writes ``artifacts/chunks/<recording>/.chunk_status.json`` recording whether the
+   Non-WAV inputs (e.g., FLAC) require ``soundfile`` (installed with BADC) and are automatically
+   transcoded to WAV before hashing. Every applied run writes
+   ``artifacts/chunks/<recording>/.chunk_status.json`` recording whether the
    job is ``in_progress``, ``completed``, or ``failed`` along with timestamps, manifest row counts,
    and the CLI arguments used. Follow-up orchestrate runs automatically resume anything marked
    ``failed``/``in_progress``; strictly reprocess completed recordings with ``--include-existing``.

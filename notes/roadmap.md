@@ -60,14 +60,16 @@ execution notes live alongside task-specific files under `notes/`.
       retry/backoff metadata plus a companion `*.workers.csv`, CLI runs warn when chunks retried, and
       Sockeye scripts accept `--sockeye-log-dir` (with resume/bundle logging) so telemetry can live
       under `$SCRATCH`. See `notes/inference-plan.md` for the detailed recap.)*
-- [ ] Parse HawkEars JSON outputs into canonical detection schema and wire DuckDB aggregation
+- [x] Parse HawkEars JSON outputs into canonical detection schema and wire DuckDB aggregation
       (`notes/pipeline-plan.md`). *(Real HawkEars detections from the bogus dataset now serialize to
-      canonical CSV/Parquet with model metadata + chunk hashes; next milestone is packaging DuckDB
-      helpers/notebooks for Phase 2 analytics.)*
+      canonical CSV/Parquet with model metadata + chunk hashes. The aggregator falls back to
+      parsing ``HawkEars_labels.csv`` directly when legacy JSON payloads omit detections, so
+      canonical exports always include label codes/names/confidences without rerunning inference.)*
 - [ ] Wire `badc data connect` to the bogus dataset submodule once published (`notes/bogus-datalad.md`).
-- [ ] Build `badc chunk run` per `notes/chunk-files.md` (real chunk WAV writer + manifest linking).
-      *(Implemented dataset-aware defaults + manifest hashing; next steps include ffmpeg/FLAC
-      support and performance tuning for multi-hour recordings.)*
+- [x] Build `badc chunk run` per `notes/chunk-files.md` (real chunk WAV writer + manifest linking).
+      *(The CLI now writes actual chunk WAVs, hashes each output, records chunk status files, and
+      supports WAV plus any libsndfile-compatible format (e.g., FLAC) via the new `soundfile`
+      dependency so DataLad datasets can keep audio in their original codec.)*
 - [x] Design the aggregated “bird call events” datastore (likely DuckDB/Parquet) and expose query
       helpers for down-stream stats/figures. *(Canonical Parquet export + ``badc report summary``,
       ``badc report quicklook``, ``badc report parquet``, ``badc report duckdb``, and the new

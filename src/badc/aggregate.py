@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Sequence
 
 from badc.data import find_dataset_root
+from badc.hawkears_parser import LABELS_FILENAME, parse_hawkears_labels
 
 
 @dataclass
@@ -91,8 +92,23 @@ def _parse_detection_entries(
     source_path = Path(chunk_source) if chunk_source else json_path
     if dataset_root is None and chunk_source:
         dataset_root = find_dataset_root(Path(chunk_source))
+    fallback_status: str | None = None
     detections = data.get("detections")
     model_version = data.get("model_version")
+    if (not detections) and data.get("hawkears_output"):
+        csv_path = Path(data["hawkears_output"]) / LABELS_FILENAME
+        chunk_names = {chunk_id}
+        if chunk_source:
+            chunk_names.add(Path(chunk_source).name)
+        if manifest_row and manifest_row.source_path:
+            chunk_names.add(manifest_row.source_path.name)
+        fallback_detections, fallback_status = parse_hawkears_labels(
+            csv_path, chunk_names=chunk_names
+        )
+        if fallback_detections:
+            detections = fallback_detections
+        else:
+            detections = detections or []
     if isinstance(detections, list) and detections:
         for det in detections:
             rel_ts = _to_int(det.get("timestamp_ms"))
@@ -119,7 +135,7 @@ def _parse_detection_entries(
                     confidence=float(det.get("confidence", 0.0))
                     if det.get("confidence") is not None
                     else None,
-                    status="ok",
+                    status=data.get("status") or fallback_status or "ok",
                     runner=runner,
                     model_version=model_version,
                     chunk_sha256=sha256,
@@ -128,6 +144,7 @@ def _parse_detection_entries(
                 )
             )
     else:
+        status_value = data.get("status") or fallback_status or "unknown"
         records.append(
             DetectionRecord(
                 recording_id=recording_id,
@@ -142,7 +159,7 @@ def _parse_detection_entries(
                 label_code=None,
                 label_name=None,
                 confidence=None,
-                status=data.get("status", "unknown"),
+                status=status_value,
                 runner=runner,
                 model_version=model_version,
                 chunk_sha256=sha256,

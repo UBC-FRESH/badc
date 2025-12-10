@@ -200,7 +200,8 @@ Help excerpt
 ``badc chunk run``
 ------------------
 
-Creates chunk WAVs and a manifest in one shot.
+Creates chunk WAVs and a manifest in one shot (accepts WAV or any libsndfile-compatible input such
+as FLAC and writes WAV chunks downstream inference tools expect).
 
 Usage::
 
@@ -211,6 +212,8 @@ Key behaviors:
 
 * When ``--dry-run`` is set, no files are written; BADC still reports where chunks would land.
 * ``--overlap`` applies a sliding window overlap (in seconds) for edge-sensitive detectors.
+* Non-WAV inputs (e.g., FLAC) require the ``soundfile`` dependency (installed by default) and are
+  transcoded to WAV chunks automatically so downstream HawkEars tooling receives a consistent format.
 * When ``--output-dir``/``--manifest`` are omitted, BADC looks for the surrounding DataLad dataset
   (``.datalad``). Chunks default to ``<dataset>/artifacts/chunks/<recording>`` and manifests to
   ``<dataset>/manifests/<recording>.csv``; outside datasets both directories are created alongside the
@@ -228,7 +231,8 @@ Option reference
      - Description
      - Default
    * - ``AUDIO.wav``
-     - Source WAV to split into fixed-length files.
+     - Source audio file to split into fixed-length files (WAV or any libsndfile-supported format such
+       as FLAC; chunks are always emitted as WAV).
      - Required
    * - ``--chunk-duration SECONDS``
      - Chunk length (seconds). Determines chunk count and manifest offsets.

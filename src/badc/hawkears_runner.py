@@ -7,7 +7,6 @@ outlined in ``notes/inference-plan.md``.
 
 from __future__ import annotations
 
-import csv
 import json
 import os
 import shlex
@@ -22,11 +21,11 @@ from typing import Sequence
 from badc import hawkears
 from badc.data import find_dataset_root
 from badc.gpu import GPUMetrics, query_gpu_metrics
+from badc.hawkears_parser import LABELS_FILENAME, parse_hawkears_labels
 from badc.infer_scheduler import GPUWorker, InferenceJob, log_scheduler_event
 from badc.telemetry import now_iso
 
 RAW_OUTPUT_SUFFIX = "_hawkears"
-LABELS_FILENAME = "HawkEars_labels.csv"
 
 
 @dataclass(slots=True)
@@ -129,68 +128,6 @@ def _write_stub_output(
     if dataset_root:
         payload["dataset_root"] = str(dataset_root)
     output_path.write_text(json.dumps(payload))
-
-
-def _seconds_to_ms(value: str | None) -> int | None:
-    if value is None or value == "":
-        return None
-    try:
-        return int(float(value) * 1000)
-    except ValueError:
-        return None
-
-
-def _parse_hawkears_labels(
-    csv_path: Path,
-    job: InferenceJob,
-    *,
-    dataset_root: Path | None,
-    runner: str,
-    model_version: str | None = None,
-) -> dict:
-    detections: list[dict[str, object]] = []
-    if csv_path.exists():
-        expected_names = {job.chunk_path.name}
-        try:
-            resolved_name = job.chunk_path.resolve().name
-        except FileNotFoundError:
-            resolved_name = None
-        if resolved_name:
-            expected_names.add(resolved_name)
-        with csv_path.open() as fh:
-            reader = csv.DictReader(fh)
-            for row in reader:
-                filename = Path(row.get("filename", "")).name
-                if filename and filename not in expected_names:
-                    continue
-                label_code = row.get("class_code") or None
-                label_name = row.get("class_name") or None
-                label = label_code or label_name or "unknown"
-                detections.append(
-                    {
-                        "timestamp_ms": _seconds_to_ms(row.get("start_time")),
-                        "end_ms": _seconds_to_ms(row.get("end_time")),
-                        "label_code": label_code,
-                        "label_name": label_name,
-                        "label": label,
-                        "confidence": float(row["score"]) if row.get("score") else None,
-                    }
-                )
-    status = "ok" if detections else "no_detections" if csv_path.exists() else "no_output"
-    payload = {
-        "chunk_id": job.chunk_id,
-        "recording_id": job.recording_id,
-        "source_path": str(job.chunk_path),
-        "status": status,
-        "detections": detections,
-        "chunk": _chunk_metadata(job),
-        "runner": runner,
-    }
-    if dataset_root:
-        payload["dataset_root"] = str(dataset_root)
-    if model_version:
-        payload["model_version"] = model_version
-    return payload
 
 
 def run_job(
@@ -314,13 +251,30 @@ def run_job(
 
             if use_hawkears:
                 labels_path = hawkears_output_dir / LABELS_FILENAME
-                payload = _parse_hawkears_labels(
+                chunk_names = {job.chunk_path.name}
+                try:
+                    resolved_name = job.chunk_path.resolve().name
+                except FileNotFoundError:
+                    resolved_name = None
+                if resolved_name:
+                    chunk_names.add(resolved_name)
+                detections, status = parse_hawkears_labels(
                     labels_path,
-                    job,
-                    dataset_root=dataset_root,
-                    runner=runner_label,
-                    model_version=model_version,
+                    chunk_names=chunk_names,
                 )
+                payload = {
+                    "chunk_id": job.chunk_id,
+                    "recording_id": job.recording_id,
+                    "source_path": str(job.chunk_path),
+                    "status": status,
+                    "detections": detections,
+                    "chunk": _chunk_metadata(job),
+                    "runner": runner_label,
+                }
+                if dataset_root:
+                    payload["dataset_root"] = str(dataset_root)
+                if model_version:
+                    payload["model_version"] = model_version
                 payload["hawkears_output"] = str(hawkears_output_dir)
                 output_path.write_text(json.dumps(payload))
             elif runner_cmd:

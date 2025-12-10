@@ -82,6 +82,8 @@ Observations:
 
 - ✅ Phase 1 requirement met: `badc chunk probe` (binary-search heuristic) + the HawkEars validation run give us the finalized chunk-size guidance for the dev Quadro RTX 4000 box, logged above.
 - 🔜 Automation idea: add a thin wrapper (e.g., `badc chunk validate`) that replays the validation run on fresh hardware, compares the observed VRAM usage to the probe estimate, and appends results to this note. Track under Phase 2 tooling once higher-priority work lands.
+- 2025-12-10 update: `badc chunk run` now uses ``soundfile`` when inputs are not WAV (e.g., FLAC)
+  so DataLad datasets can keep compressed sources while still emitting WAV chunks for HawkEars.
 
 ## Open questions
 - Does HawkEars expose a Python API we can call directly, or do we shell out to its CLI?

@@ -85,6 +85,38 @@ def test_load_detections_uses_manifest_metadata(tmp_path: Path) -> None:
     assert rec.dataset_root == dataset_root
 
 
+def test_load_detections_fills_from_hawkears_output(tmp_path: Path) -> None:
+    infer_dir = tmp_path / "artifacts" / "infer" / "rec1"
+    infer_dir.mkdir(parents=True)
+    chunk_path = tmp_path / "artifacts" / "chunks" / "rec1" / "rec1_chunk.wav"
+    chunk_path.parent.mkdir(parents=True)
+    chunk_path.write_bytes(b"\x00" * 10)
+    hawkears_dir = tmp_path / "raw"
+    hawkears_dir.mkdir()
+    labels_csv = hawkears_dir / "HawkEars_labels.csv"
+    labels_csv.write_text(
+        "filename,start_time,end_time,class_name,class_code,score\n"
+        f"{chunk_path.name},0.1,0.4,White-throated Sparrow,WTSP,0.92\n",
+        encoding="utf-8",
+    )
+    payload = {
+        "chunk_id": "rec1_chunk_0_500",
+        "recording_id": "rec1",
+        "source_path": str(chunk_path),
+        "status": "",
+        "chunk": {"start_ms": 0, "end_ms": 500, "sha256": "abc123"},
+        "hawkears_output": str(hawkears_dir),
+        "runner": "hawkears",
+    }
+    (infer_dir / "rec1_chunk.json").write_text(json.dumps(payload))
+    records = load_detections(tmp_path / "artifacts" / "infer")
+    assert len(records) == 1
+    rec = records[0]
+    assert rec.label_code == "WTSP"
+    assert rec.status == "ok"
+    assert rec.confidence == pytest.approx(0.92)
+
+
 def test_write_summary_and_parquet(tmp_path: Path) -> None:
     records = [
         DetectionRecord(

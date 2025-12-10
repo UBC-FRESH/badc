@@ -1,3 +1,20 @@
+# 2025-12-10 — HawkEars parsing fallback + FLAC chunking
+- Introduced ``badc.hawkears_parser`` so both the runner and aggregator share one code path for
+  parsing ``HawkEars_labels.csv``. ``badc infer aggregate`` now rehydrates detections directly from
+  raw HawkEars outputs whenever legacy JSON payloads lack the embedded detections, ensuring label
+  codes/names/confidences always reach the canonical CSV/Parquet exports.
+- Enhanced ``badc chunk run`` / ``iter_chunk_metadata`` to use ``soundfile`` when inputs are not WAV
+  (e.g., FLAC), emitting WAV chunks plus hashes while keeping manifests/telemetry unchanged. Added
+  regression tests covering both the HawkEars fallback path and FLAC chunking.
+- Docs/notes updated to highlight the new behavior (README, CLI/how-to pages, notebook guide, and
+  roadmap), and ``pyproject.toml`` now depends on ``soundfile`` so the feature works out of the box.
+- Commands executed:
+  - `source .venv/bin/activate && ruff format src tests`
+  - `source .venv/bin/activate && ruff check src tests`
+  - `source .venv/bin/activate && pytest`
+  - `source .venv/bin/activate && sphinx-build -b html docs _build/html -W`
+  - `source .venv/bin/activate && pre-commit run --all-files`
+
 # 2025-12-10 — Bundle rollup automation
 - Added `--bundle-rollup` (plus limit/export-dir knobs) to `badc infer orchestrate` so applied runs can
   trigger `badc report aggregate-dir` automatically after the per-recording bundles finish. The helper

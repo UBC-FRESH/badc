@@ -33,6 +33,11 @@ Step 1 — Aggregate JSON to CSV/Parquet
 3. Commit outputs with ``datalad save`` or ``git add`` as appropriate so the provenance of each
    inference batch is preserved.
 
+If you are aggregating older inference runs that predate the embedded JSON detections, BADC now
+re-parses ``HawkEars_labels.csv`` directly from the ``hawkears_output`` directory inside each chunk so
+the resulting CSV/Parquet files still carry real label codes, names, and confidences without
+rerunning HawkEars.
+
 Step 2 — Summaries via ``badc report summary``
 ----------------------------------------------
 

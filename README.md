@@ -76,9 +76,10 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
   the full chunk writer lands).
 - `badc chunk manifest` — generates a chunk manifest CSV, optionally writing chunk files + hashes
   via `--hash-chunks`.
-- `badc chunk run` — splits audio into chunk WAVs and produces a manifest for inference. When the
-  source lives inside a DataLad dataset the command defaults to writing chunks under
-  `<dataset>/artifacts/chunks/<recording>` and manifests under `<dataset>/manifests/<recording>.csv`.
+- `badc chunk run` — splits audio (WAV or any libsndfile-supported format such as FLAC) into chunk
+  WAVs and produces a manifest for inference. When the source lives inside a DataLad dataset the
+  command defaults to writing chunks under `<dataset>/artifacts/chunks/<recording>` and manifests
+  under `<dataset>/manifests/<recording>.csv`.
 - `badc chunk orchestrate` — scans a dataset’s `audio/` tree, lists recordings that still need
   manifests/chunk outputs, prints ready-to-run `datalad run` commands, persists CSV/JSON plans, and
   (with `--apply`) invokes `badc chunk run` for each recording. Applied runs write a
@@ -108,8 +109,9 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
 - `badc infer aggregate artifacts/infer --manifest chunk_manifest.csv --parquet artifacts/aggregate/detections.parquet`
   — reads detection JSON files, pulls in chunk metadata from the manifest when available (start/end
   offsets, hashes), ingests the real HawkEars label output (label code/name, detection end offset,
-  model version), writes a summary CSV, and (optionally) persists the canonical Parquet export for
-  DuckDB tooling.
+  model version), and even re-parses `HawkEars_labels.csv` directly when older JSON payloads are
+  missing detections. The command writes a summary CSV and (optionally) persists the canonical
+  Parquet export for DuckDB tooling.
 - `badc report summary --parquet artifacts/aggregate/detections.parquet --group-by label` — loads the
   Parquet detections export via DuckDB, prints grouped counts/average confidence, and optionally
   writes another CSV for downstream notebooks.
