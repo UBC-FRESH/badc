@@ -38,6 +38,11 @@
   - `sphinx-build -b html docs _build/html -W`
   - `pre-commit run --all-files`
 
+# 2025-12-10 — Production DataLad next actions
+- Added Phase 3 next steps to `notes/datalad-plan.md` (Chinook dataset creation, CLI wiring for a
+  `production` entry, and sibling-dataset decision for HawkEars outputs).
+- Commands executed: `apply_patch notes/datalad-plan.md`
+
 # 2025-12-10 — Pipeline doc map + Sockeye log guidance
 - Added a text-based pipeline map and troubleshooting checklist to ``docs/howto/pipeline-e2e.rst`` and
   linked it from README so operators can visualise chunk → infer → bundle flows and resolve common
