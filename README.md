@@ -180,7 +180,8 @@ loading) while keeping pandas/duckdb optional so lightweight scripts can still c
 ## End-to-end CLI workflow
 
 Need to move from raw audio to DuckDB-ready detections in one sitting? Follow
-``docs/howto/pipeline-e2e.rst`` for the full chunk → infer → aggregate/report loop. The guide shows:
+``docs/howto/pipeline-e2e.rst`` for the full chunk → infer → aggregate/report loop. The guide now
+opens with a pipeline map + troubleshooting checklist, then shows:
 
 1. Running ``badc chunk orchestrate --plan-json … --apply`` so every recording writes
    ``artifacts/chunks/<recording>/.chunk_status.json``.

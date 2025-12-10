@@ -65,7 +65,7 @@ execution notes live alongside task-specific files under `notes/`.
       canonical CSV/Parquet with model metadata + chunk hashes. The aggregator falls back to
       parsing ``HawkEars_labels.csv`` directly when legacy JSON payloads omit detections, so
       canonical exports always include label codes/names/confidences without rerunning inference.)*
-- [ ] Wire `badc data connect` to the bogus dataset submodule once published (`notes/bogus-datalad.md`).
+- [x] Wire `badc data connect` to the bogus dataset submodule once published (`notes/bogus-datalad.md`).
 - [x] Build `badc chunk run` per `notes/chunk-files.md` (real chunk WAV writer + manifest linking).
       *(The CLI now writes actual chunk WAVs, hashes each output, records chunk status files, and
       supports WAV plus any libsndfile-compatible format (e.g., FLAC) via the new `soundfile`
@@ -94,7 +94,7 @@ execution notes live alongside task-specific files under `notes/`.
       `~/.config/badc/data.toml`; still need to wire real datasets/submodules.)*
 - [x] Author Python API wrappers so notebooks and downstream tooling can reuse the workflow.
       *(:mod:`badc.aggregate_api` exposes detection loaders, pandas helpers, and DuckDB view accessors so notebooks/tests can reuse the workflow without shelling out to the CLI.)*
-- [ ] Extend docs with pipeline diagrams, config examples, and troubleshooting sections.
+- [x] Extend docs with pipeline diagrams, config examples, and troubleshooting sections.
 
 ## Phase 3 — HPC & Containerisation
 - [ ] Package the HawkEars runner + chunker into an Apptainer definition suitable for Sockeye GPU

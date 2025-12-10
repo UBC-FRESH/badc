@@ -137,6 +137,10 @@ Telemetry & monitoring
 * Use ``badc telemetry --log data/telemetry/infer/log.jsonl`` to inspect the last few chunks.
 * For real-time GPU stats, add ``nvidia-smi dmon -s pucm -i 0,1,2,3`` in a separate ``srun`` shell
   or run ``badc gpus`` at job start to confirm visibility.
+* Generate scripts with ``--sockeye-log-dir /scratch/$USER/badc-logs`` when SLURM nodes cannot write
+  telemetry into the DataLad tree. The script pre-creates that directory, redirects telemetry +
+  resume summaries there, and prints the final bundle artifact paths so you can tail logs from a
+  login node without `datalad get`.
 
 Common pitfalls
 ---------------

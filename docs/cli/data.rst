@@ -198,6 +198,41 @@ Help excerpt
      --dry-run / --apply             Preview actions without modifying files.
      --help                          Show this message and exit.
 
+``badc data status``
+~~~~~~~~~~~~~~~~~~~~
+List every dataset currently recorded in the registry along with its local path and whether the
+directory still exists. This is the fastest way to confirm that the bogus dataset submodule was
+connected correctly or to audit scratch mounts before a cleanup.
+
+Usage::
+
+   badc data status [--path PATH]
+
+Example output (after `git submodule update --init --recursive` followed by ``badc data connect bogus``)::
+
+   $ badc data status
+   NAME    PATH                                METHOD    STATUS       LAST_CONNECTED
+   bogus   /home/user/projects/badc/data/datalad/bogus  datalad  connected    2025-12-10T02:18:31+00:00
+
+If ``PATH`` is missing on disk the command prints ``missing`` in the ``STATUS`` column and suggests
+rerunning ``badc data connect NAME --pull``.
+
+Cleanup workflow
+----------------
+When you are done with a dataset copy (or need to reclaim space on a dev server), follow this pattern:
+
+1. ``datalad status`` inside the dataset to confirm there are no uncommitted changes.
+2. ``datalad drop --recursive --reckless auto`` to remove annexed content but keep metadata.
+3. ``badc data disconnect NAME --drop-content`` if you want to delete the working tree entirely **and**
+   remove it from the registry. Use ``--keep-content`` when you only want to mark it inactive.
+4. Rerun ``badc data status`` to confirm the entry flipped to ``disconnected``.
+
+Because the bogus dataset lives at ``data/datalad/bogus`` as a git submodule, ``badc data connect``
+prefers updating the existing checkout instead of recloning. If you *do* delete that directory,
+``badc data connect bogus`` automatically re-runs
+``git submodule update --init --recursive data/datalad/bogus`` before refreshing the registry entry.
+See ``notes/datalad-plan.md`` for end-to-end scenarios (clone, publish, cleanup).
+
 The registry retains the last known path and timestamp so future ``connect``
 operations can reconcile state when pointed at the same location.
 

@@ -29,6 +29,8 @@ POSIX workspace layout
   Chinook share paths.
 * Store large artifacts (e.g., aggregated CSVs) under ``/data/<pi>/badc`` if you need higher
   quotas; symlink them back into the DataLad dataset when saving commits.
+* When Sockeye jobs write telemetry to ``$SCRATCH`` via ``--sockeye-log-dir``, rsync that directory
+  back to Chinook alongside the DataLad pushes so log + resume files remain reachable for audits.
 
 Dataset lifecycle example
 ---------------------------

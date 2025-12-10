@@ -30,6 +30,10 @@ required for connecting/disconnecting datasets at runtime.
 - HawkEars outputs, chunk manifests, telemetry, and quicklook CSVs are annexed and synced to the
   `arbutus-s3` bucket via `datalad push --to origin` (metadata + git-annex branch) and
   `datalad push --to arbutus-s3 --data auto` (content).
+- 2025-12-10 refresh: retired the placeholder `XXXX-000_20251001_093000.wav` fixture and added four
+  real GNWT clips (mix of bird-rich and noisy segments). The dataset now carries five recordings,
+  so every test or smoke harness that touches bogus audio must document the longer durations and any
+  expected detections before landing in Phase 2. See `notes/roadmap.md` Detailed Next Steps item 6.
 
 #### Attaching in a new dev environment
 1. `git clone https://github.com/UBC-FRESH/badc.git && cd badc`

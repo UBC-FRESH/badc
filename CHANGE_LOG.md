@@ -1,3 +1,22 @@
+# 2025-12-10 — Pipeline doc map + Sockeye log guidance
+- Added a text-based pipeline map and troubleshooting checklist to ``docs/howto/pipeline-e2e.rst`` and
+  linked it from README so operators can visualise chunk → infer → bundle flows and resolve common
+  failure modes (missing chunk status, resume summaries, dirty DataLad trees).
+- Expanded ``docs/cli/data.rst`` with ``badc data status`` examples plus a cleanup workflow, and
+  refreshed ``notes/datalad-plan.md`` to note the new GNWT fixtures in the bogus dataset (tests need
+  to re-plan around the longer clips).
+- Documented Sockeye log redirection via ``--sockeye-log-dir`` and added a Chinook note to rsync
+  scratch logs back with dataset pushes.
+- Commands executed:
+  - `pip install numpy`
+  - `pip install duckdb pandas soundfile`
+  - `pip install pre-commit`
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `pre-commit run --all-files`
+
 # 2025-12-10 — Data submodule wiring + aggregation API
 - `badc data connect bogus` now detects the in-tree `data/datalad/bogus` git submodule and runs
   `git submodule update --init --recursive` automatically when the directory is missing, so the CLI

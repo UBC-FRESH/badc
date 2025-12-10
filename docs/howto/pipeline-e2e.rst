@@ -30,6 +30,41 @@ Prerequisites
   running with ``--use-hawkears``).
 * GPUs visible via ``badc gpus`` (or provide ``--cpu-workers`` for stub runs).
 
+Pipeline map
+------------
+``badc pipeline run`` simply strings together the commands below. When you need to reason about an
+interrupted run (or explain the workflow to HPC operators), keep this flow handy:
+
+.. code-block:: text
+
+         data/datalad/<dataset> (git/datalad clone)
+                          |
+                          |  badc chunk orchestrate --plan-json plans/chunks.json --apply
+                          v
+         artifacts/chunks/<recording>/.chunk_status.json + manifests/*.csv
+                          |
+                          |  badc infer orchestrate --chunk-plan plans/chunks.json --apply --bundle
+                          v
+         artifacts/infer/<recording>/*.{json,csv} + telemetry/*.jsonl + *.summary.json
+                          |
+                          |  badc infer aggregate + badc report bundle/aggregate-dir
+                          v
+         artifacts/aggregate/<RUN_ID>_{summary,parquet,duckdb,*quicklook}/
+                          |
+                          |  notebooks/docs/notebooks/aggregate_analysis.ipynb
+                          v
+         figures + tables for Erin (label_summary, recording_summary, timeline_summary)
+
+Each arrow enforces a guardrail:
+
+* Chunk orchestrator writes ``.chunk_status.json`` per recording; inference refuses to start when the
+  status is missing or not ``completed``.
+* Inference orchestrator creates telemetry JSONL logs *and* resumable ``*.summary.json`` files so
+  ``--resume-summary`` / ``--resume-completed`` can skip finished chunks.
+* ``--bundle`` consolidates aggregation/report helpers so every recording leaves behind Parquet,
+  quicklook CSVs, DuckDB bundles, and rollups under ``artifacts/aggregate``. ``--bundle-rollup``
+  triggers :command:`badc report aggregate-dir` for dataset-wide leaderboards automatically.
+
 Step 1 — Chunk the dataset
 --------------------------
 Generate manifests and chunk WAVs for every recording, capturing the plan for downstream commands
@@ -102,6 +137,28 @@ Open ``docs/notebooks/aggregate_analysis.ipynb`` (or your own notebooks) and poi
 ``artifacts/aggregate/<RUN_ID>.duckdb`` / Parquet bundle. Python helpers in
 ``badc.duckdb_helpers`` provide ready-to-use pandas DataFrames for ``label_summary``,
 ``recording_summary``, and ``timeline_summary`` views.
+
+Troubleshooting checklist
+-------------------------
+* **Chunk guard trip** — ``badc infer orchestrate`` prints “missing chunk status” when a recording
+  lacks ``artifacts/chunks/<recording>/.chunk_status.json`` or the status differs from
+  ``completed``. Re-run ``badc chunk orchestrate --plan-json … --apply --include-existing`` for only
+  the affected recordings, verify the status flips to ``completed``, then re-run inference.
+* **Telemetry resume missing** — Sockeye jobs print warnings when the resume summary listed in the
+  generated script does not exist. Run ``badc infer run --resume-summary <path>`` manually to confirm
+  the path, or delete the row from ``plans/chunks.json`` and regenerate the script after a fresh
+  ``badc infer orchestrate --chunk-plan … --apply`` run.
+* **Dataset not connected** — ``badc pipeline run`` expects the dataset to be registered via
+  ``badc data connect``. Run ``badc data status`` to confirm the path, or manually ``cd`` into
+  ``data/datalad/<dataset>`` and re-run the command from there so DataLad can materialise files.
+* **DataLad dirty tree** — ``datalad run`` refuses to wrap commands when the dataset already has
+  uncommitted files. Save or drop the pending work (`datalad status`, then `datalad save` or
+  `datalad drop`) before rerunning the orchestrator with ``--record-datalad``.
+* **Bundle rollup missing CSVs** — ``badc infer orchestrate --bundle-rollup`` writes
+  ``artifacts/aggregate/aggregate_summary/*.csv`` only after every recording finishes. If the
+  directory is empty, inspect telemetry logs for failed chunks, rerun the orchestrator with
+  ``--resume-completed``, and confirm ``badc report aggregate-dir`` succeeds manually before saving
+  artifacts.
 
 Next steps
 ----------
