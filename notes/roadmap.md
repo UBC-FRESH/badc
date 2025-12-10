@@ -109,8 +109,10 @@ execution notes live alongside task-specific files under `notes/`.
 - [ ] Plan bogus dataset contents and workflow (`notes/bogus-datalad.md`).
 - [ ] Stand up the restricted production DataLad dataset backed by Chinook object storage and
       document credential/bootstrap steps.
-- [ ] Provide submission templates/scripts for Sockeye job arrays (per-chunk or per-batch) with
-      telemetry collection.
+- [x] Provide submission templates/scripts for Sockeye job arrays (per-chunk or per-batch) with
+      telemetry collection. *(`badc infer orchestrate --sockeye-script` now emits array scripts with
+      chunk-status guards, resume summaries, bundle steps, and scratch logging; example at
+      `artifacts/sockeye/bogus_bundle.sh` with `--sockeye-log-dir`.)*
 - [ ] Stress-test the workflow on multi-hour recordings; capture performance, GPU usage, and
       failure-handling strategies in docs.
 
