@@ -72,7 +72,6 @@ def test_infer_orchestrate_plan(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     _write_chunk_status(dataset, "rec")
-    _write_chunk_status(dataset, "rec")
     result = runner.invoke(
         app,
         [
