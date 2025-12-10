@@ -325,6 +325,11 @@ Highlights:
 * ``--resume-completed`` tells ``--apply`` runs to look for the telemetry ``*.summary.json`` that the
   prior run produced and pass ``--resume-summary`` automatically so only unfinished chunks are
   retried.
+* ``--bundle`` mirrors the Sockeye automation locally: after each ``--apply`` recording finishes,
+  BADC aggregates detections into ``artifacts/aggregate/`` and runs ``badc report bundle`` so the
+  quicklook CSVs, parquet report, and DuckDB database live alongside the dataset without extra
+  commands. Override paths via ``--bundle-aggregate-dir`` and adjust the timeline window via
+  ``--bundle-bucket-minutes``.
 
 Combine this with :command:`badc chunk orchestrate` to move from chunk plans to inference runs in a
 single workflow.

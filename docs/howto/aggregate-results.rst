@@ -95,6 +95,10 @@ with ``--no-quicklook`` / ``--no-parquet-report`` / ``--no-duckdb-report`` or ov
 paths (e.g., ``--duckdb-database``) when needed. This is the fastest way to package Phase 2 review
 artifacts for Erin after each inference run.
 
+Tip: when running ``badc infer orchestrate --apply`` you can pass ``--bundle`` (plus the optional
+``--bundle-*`` overrides) so these aggregation/report steps run automatically after every recording —
+no need to invoke the commands manually unless you want custom tweaks.
+
 Step 5 — Materialize a DuckDB database
 --------------------------------------
 

@@ -116,6 +116,8 @@ GitHub Actions (`.github/workflows/ci.yml`) mirrors these commands on every push
 - `badc report bundle --parquet artifacts/aggregate/detections.parquet` — runs the quicklook, parquet,
   and DuckDB helpers in one shot, leaving behind `detections_quicklook/`,
   `detections_parquet_report/`, `detections.duckdb`, and matching CSV exports for reviewers.
+- `badc infer orchestrate --apply --bundle` — after each manifest is inferred, aggregate detections
+  and run the bundle helper automatically so Phase 2 artifacts stay in lockstep with inference runs.
 - `badc infer monitor --log data/telemetry/infer/<manifest>_<timestamp>.jsonl` — stream per-GPU
   telemetry tables with events/success/failure counts, trending utilization (min/avg/max), peak VRAM
   usage, rolling ASCII sparklines (utilization + VRAM), and a live tail of recent chunk status

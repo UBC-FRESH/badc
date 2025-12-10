@@ -61,6 +61,20 @@
   - `source .venv/bin/activate && sphinx-build -b html docs _build/html -W`
   - `source .venv/bin/activate && pre-commit run --all-files`
 
+# 2025-12-10 — Orchestrate bundle automation
+- Added ``--bundle`` (plus ``--bundle-*`` overrides) to ``badc infer orchestrate`` so local
+  ``--apply`` runs automatically invoke ``badc infer aggregate`` + ``badc report bundle`` per
+  recording. Reports now land under ``artifacts/aggregate/`` without extra commands, keeping quicklook
+  CSVs, parquet summaries, and DuckDB databases in sync with inference outputs.
+- ``docs/cli/infer.rst`` / ``docs/howto/aggregate-results.rst`` / README updated to describe the
+  workflow, and new CLI tests cover the bundle + Sockeye script paths.
+- Commands executed:
+  - `source .venv/bin/activate && ruff format src tests`
+  - `source .venv/bin/activate && ruff check src tests`
+  - `source .venv/bin/activate && pytest`
+  - `source .venv/bin/activate && sphinx-build -b html docs _build/html -W`
+  - `source .venv/bin/activate && pre-commit run --all-files`
+
 # 2025-12-10 — Scheduler resume + Sockeye array helper
 - ``badc infer run`` now writes a resumable ``*.summary.json`` next to every telemetry log, recording
   per-worker metrics and the status of each chunk. ``run_job`` logs backoff delays, `_run_scheduler`

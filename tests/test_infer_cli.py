@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+import badc.cli.main as cli_main
 from badc.aggregate import DetectionRecord, write_parquet
 from badc.cli.main import app
 from badc.telemetry import TelemetryRecord, log_telemetry, now_iso
@@ -487,3 +488,71 @@ def test_infer_orchestrate_sockeye_script_bundle(tmp_path: Path) -> None:
     assert "badc infer aggregate" in text
     assert "badc report bundle" in text
     assert "--bucket-minutes 15" in text
+
+
+def test_infer_orchestrate_apply_with_bundle(tmp_path: Path, monkeypatch) -> None:
+    pytest.importorskip("duckdb")
+    dataset = tmp_path / "dataset_bundle"
+    (dataset / ".datalad").mkdir(parents=True)
+    manifest_dir = dataset / "manifests"
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    chunk_path = dataset / "chunks" / "rec1" / "chunk.wav"
+    chunk_path.parent.mkdir(parents=True, exist_ok=True)
+    chunk_path.write_text("audio", encoding="utf-8")
+    manifest = manifest_dir / "rec1.csv"
+    manifest.write_text(
+        "recording_id,chunk_id,source_path,start_ms,end_ms,overlap_ms,sha256,notes\n"
+        f"rec1,rec1_chunk,{chunk_path},0,1000,0,hash,\n",
+        encoding="utf-8",
+    )
+
+    def fake_infer_run(**kwargs):
+        recording_id = Path(kwargs["manifest"]).stem
+        rec_dir = kwargs["output_dir"] / recording_id
+        rec_dir.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "recording_id": recording_id,
+            "chunk_id": f"{recording_id}_chunk",
+            "chunk": {"start_ms": 0, "end_ms": 1000},
+            "runner": "stub",
+            "status": "ok",
+            "detections": [
+                {
+                    "label": "WTSP",
+                    "label_name": "White-throated Sparrow",
+                    "confidence": 0.9,
+                    "start_ms": 10,
+                    "end_ms": 20,
+                }
+            ],
+        }
+        (rec_dir / f"{recording_id}_chunk.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    monkeypatch.setattr(cli_main, "infer_run", fake_infer_run)
+    aggregate_dir = dataset / "aggregates"
+    result = runner.invoke(
+        app,
+        [
+            "infer",
+            "orchestrate",
+            str(dataset),
+            "--manifest-dir",
+            str(manifest_dir),
+            "--include-existing",
+            "--apply",
+            "--bundle",
+            "--bundle-aggregate-dir",
+            "aggregates",
+            "--bundle-bucket-minutes",
+            "30",
+            "--stub-runner",
+            "--no-record-datalad",
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    assert (aggregate_dir / "rec1_summary.csv").exists()
+    parquet_path = aggregate_dir / "rec1.parquet"
+    assert parquet_path.exists()
+    assert (aggregate_dir / "rec1_quicklook" / "labels.csv").exists()
+    assert (aggregate_dir / "rec1_parquet_report" / "summary.json").exists()
+    assert (aggregate_dir / "rec1.duckdb").exists()

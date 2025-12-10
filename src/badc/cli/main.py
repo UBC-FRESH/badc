@@ -1207,6 +1207,27 @@ def infer_orchestrate(
             help="Bucket size (minutes) passed to `badc report bundle`.",
         ),
     ] = 60,
+    bundle: Annotated[
+        bool,
+        typer.Option(
+            "--bundle/--no-bundle",
+            help="After --apply runs, aggregate detections and run `badc report bundle` per manifest.",
+        ),
+    ] = False,
+    bundle_aggregate_dir: Annotated[
+        Path,
+        typer.Option(
+            "--bundle-aggregate-dir",
+            help="Directory (relative to dataset) where bundle artifacts should land.",
+        ),
+    ] = Path("artifacts/aggregate"),
+    bundle_bucket_minutes: Annotated[
+        int,
+        typer.Option(
+            "--bundle-bucket-minutes",
+            help="Bucket size (minutes) for the local bundle timeline view.",
+        ),
+    ] = 60,
 ) -> None:
     """Plan inference runs across manifests without executing them."""
 
@@ -1299,6 +1320,7 @@ def infer_orchestrate(
             console.print(f"[cyan]Inferring {plan.recording_id}[/]")
             plan.telemetry_log.parent.mkdir(parents=True, exist_ok=True)
             plan.output_dir.mkdir(parents=True, exist_ok=True)
+            bundle_succeeded = False
             resume_arg: Path | None = None
             if resume_completed:
                 summary_path = _telemetry_summary_path(plan.telemetry_log)
@@ -1325,6 +1347,8 @@ def infer_orchestrate(
                         style="red",
                     )
                     raise typer.Exit(code=exc.returncode) from exc
+                else:
+                    bundle_succeeded = True
             else:
                 infer_run(
                     manifest=plan.manifest_path,
@@ -1336,6 +1360,52 @@ def infer_orchestrate(
                     cpu_workers=plan.cpu_workers,
                     resume_summary=resume_arg,
                 )
+                bundle_succeeded = True
+            if bundle and bundle_succeeded:
+                _run_apply_bundle(
+                    dataset=dataset,
+                    plan=plan,
+                    aggregate_dir=bundle_aggregate_dir,
+                    bucket_minutes=bundle_bucket_minutes,
+                )
+
+
+def _run_apply_bundle(
+    *,
+    dataset: Path,
+    plan: infer_orchestrator.InferPlan,
+    aggregate_dir: Path,
+    bucket_minutes: int,
+) -> None:
+    """Aggregate detections for ``plan`` and run ``badc report bundle`` locally."""
+
+    try:
+        from badc.aggregate import load_detections, write_parquet, write_summary_csv
+    except ModuleNotFoundError as exc:  # pragma: no cover - duckdb optional
+        console.print(f"Skipping bundle for {plan.recording_id}: {exc}", style="yellow")
+        return
+
+    base_dir = aggregate_dir if aggregate_dir.is_absolute() else (dataset / aggregate_dir)
+    base_dir.mkdir(parents=True, exist_ok=True)
+    records = load_detections(plan.recording_output, manifest=plan.manifest_path)
+    if not records:
+        console.print(
+            f"No detections found for {plan.recording_id}; skipping bundle.", style="yellow"
+        )
+        return
+    summary_path = base_dir / f"{plan.recording_id}_summary.csv"
+    parquet_path = base_dir / f"{plan.recording_id}.parquet"
+    write_summary_csv(records, summary_path)
+    write_parquet(records, parquet_path)
+    console.print(
+        f"Aggregated detections for {plan.recording_id} → {summary_path.name} / {parquet_path.name}"
+    )
+    report_bundle(
+        parquet=parquet_path,
+        output_dir=base_dir,
+        run_prefix=plan.recording_id,
+        bucket_minutes=bucket_minutes,
+    )
 
 
 @infer_app.command("run-config")
