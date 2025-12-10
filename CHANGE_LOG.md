@@ -28,6 +28,16 @@
   - `source setup/datalad_config.sh && cd data/datalad/bogus && datalad push --to arbutus-s3`
   - `badc infer orchestrate data/datalad/bogus --chunk-plan $(pwd)/plans/bogus_chunks_unlocked.json --include-existing --resume-completed --apply --bundle --bundle-rollup --bundle-aggregate-dir /tmp/badc-aggregate --bundle-bucket-minutes 30 --bundle-rollup-export-dir /tmp/badc-aggregate/aggregate_summary --stub-runner --no-record-datalad --output-dir /tmp/badc-infer --telemetry-dir /tmp/badc-telemetry` *(validation-only; outputs left under /tmp)*
 
+# 2025-12-10 — Apptainer definition for HawkEars/BADC
+- Added ``hpc/apptainer/badc-hawkears.def`` (CUDA 12.2 base, git-annex/ffmpeg/libsndfile, venv
+  install of the repo) plus refreshed ``docs/hpc/apptainer.rst`` with build/push instructions.
+- Commands executed:
+  - `ruff format src tests`
+  - `ruff check src tests`
+  - `pytest`
+  - `sphinx-build -b html docs _build/html -W`
+  - `pre-commit run --all-files`
+
 # 2025-12-10 — Pipeline doc map + Sockeye log guidance
 - Added a text-based pipeline map and troubleshooting checklist to ``docs/howto/pipeline-e2e.rst`` and
   linked it from README so operators can visualise chunk → infer → bundle flows and resolve common

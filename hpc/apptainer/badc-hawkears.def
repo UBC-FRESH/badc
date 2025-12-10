@@ -1,0 +1,39 @@
+Bootstrap: docker
+From: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+
+%labels
+    Author BADC
+    Description "HawkEars + BADC CLI for Sockeye GPU runs"
+
+%files
+    ../.. /stage/badc-src
+
+%post
+    set -euo pipefail
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y --no-install-recommends \
+        python3 python3-venv python3-pip \
+        git ffmpeg git-annex \
+        libsndfile1 \
+        ca-certificates
+    rm -rf /var/lib/apt/lists/*
+
+    python3 -m venv /opt/badc/venv
+    . /opt/badc/venv/bin/activate
+    pip install --upgrade pip
+
+    mkdir -p /opt/badc/src
+    cp -a /stage/badc-src /opt/badc/src/repo
+    cd /opt/badc/src/repo
+    pip install --no-cache-dir .
+
+    mkdir -p /opt/badc/etc
+
+%environment
+    export PATH="/opt/badc/venv/bin:$PATH"
+    export BADC_DATA_CONFIG=${BADC_DATA_CONFIG:-/opt/badc/etc/data.toml}
+    export PYTHONUNBUFFERED=1
+
+%runscript
+    exec "$@"
