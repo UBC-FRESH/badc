@@ -55,3 +55,53 @@ There is extensive technical documentation for these HPC resources here
 https://confluence.it.ubc.ca/spaces/UARC/pages/168841652/UBC+ARC+Technical+User+Documentation
 
 but it is hidden behind a UBC CWL login (I can access as needed and paste snippets into notes documents).
+
+
+## Erin's Workflow Notes: Data format, directory structures, and HawkEars processing objective
+
+Overall objective: Process raw acoustic files in HawkEars to obtain species detections and confidence scores
+
+
+- Raw acoustic data: either .wav or .flac  acoustic files
+- Directory structures (vary by study area)
+	- Fort Smith data directory structure: StudyAreaName/ARU_data/SM/StationName/A/Data/acousticfiles.wav
+		- StationName folders have subfolders A and B, both of which contain Data folders with acoustic files
+	- ThaideneNene and NormanWells data directory structure: StudyAreaName/SubdirectoryA/StationName/acousticfiles.wav
+		- 'SubdirectoryA' is ARUType for NormanWells - BarLT and SongMeter - and TDN2022-01 and 02 for TDN
+	- Gameti and Edehzhie data directory structure: StudyAreaName/StationName/acousticfiles.wav
+	- Sambaa K'e WR 2018 and 2022 data has more complicated directory structure (based on chunks for data transfer - see README file) - simplify in upload to Chinook?
+- Each study area directory might have other csv or text files - HawkEars only needs the acoustic files (.wav or .flac)
+- Data to be extracted from file path: StudyAreaName (e.g., FortSmith2022), StationName (e.g., SRL-308-095-03)
+- Data to be extracted from acoustic file name: date (format YYYYMMDD), time (format HHMMSS)
+	- Fort Smith data has sensor ID in the file name, Sambaa K'e and Thaidene Nene have station name. Station name is what's important
+	- Samba K'e files also have '0+1' between the station name and date. Not sure what this is but I don't think it's necessary
+- Test HawkEars performance on target species - Can do this with WildTrax data, since they've been processed both manually and by HawkEars AND BirdNET
+	- still figuring out workflow for this - some of it will be manual (requires listening to recordings)
+
+- Datasets need to be transferred onto Chinook to access with UBC servers
+- HawkEars processing: use HawkEars python script to run automated species classification
+	- Target species (common names used in WildTrax reports): "Rock Ptarmigan", "Ruffed Grouse", "Sharp-tailed Grouse", "Spruce Grouse", "Willow Ptarmigan"
+	- Target species (species codes used in HawkEars): ROPT, RUGR, STGR, SPGR, WIPT
+	- Arguments for HawkEars script:
+		- -i filepath for acoustic files (in however large a chunk of data can be processed at once)
+		- -o filepath for output csv files (all files for single study area can go in one folder, though I might want sub-folders for each station?)
+		- --recurse (only use if input filepath contains sub-directories)
+		- --rtype csv (want output files to be CSVs)
+		- --region "CA-NT" (specifies species in the Northwest Territories)
+	- HawkEars output consists of a single csv file for each job processed (though if text file output is selected then there is a text file for each acoustic file) 
+		- HawkEars output fields:
+			- filename (name of acoustic file)
+			- start_time (time in seconds the detected vocalization begins within the recording)
+			- end_time (time in seconds the detected vocalization ends)
+			- class_name (species common name)
+			- class_code (species code)
+			- score (confidence code)
+	- Additional fields to be added to each CSV (data extracted from directory filepath or acoustic file name):
+		- study_area
+		- location
+		- recording_date_time
+			
+	- CSV outputs need to be merged together into a single CSV file for each study area (ideally all study areas together in one as a final data product)
+		- Will add station coordinates later - some of these need to be inspected and fixed
+
+
