@@ -271,8 +271,8 @@ git annex initremote arbutus-s3 \
   encryption=none \
   bucket=ubc-fresh-my-dataset \
   public=yes \
-  publicurl=https://object-arbutus.cloud.computecanada.ca/ubc-fresh-my-dataset \
-  host=object-arbutus.cloud.computecanada.ca \
+  publicurl=https://object-arbutus.alliancecan.ca/a0d141b801c74d0a819c09b4bde9c3fb:ubc-fresh-my-dataset \
+  host=object-arbutus.alliancecan.ca \
   protocol=https \
   requeststyle=path \
   autoenable=true
